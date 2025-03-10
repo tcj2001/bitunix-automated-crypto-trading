@@ -3,7 +3,7 @@
 A real-time cryptocurrency trading platform built with FastAPI and WebSocket technology using Bitunix API and websockets. The platform provides automated trading capabilities, real-time market data visualization, and portfolio management features.
 
 ## Current Issue
-Web page takes a long time to load, use to work fine, but now it takes a long time to load the page, need to investigate the issue
+sometimes Web page takes a long time to load, need to investigate the issue
 
 ## Features
 - Real-time private account/new postion/new order data streaming via WebSocket
