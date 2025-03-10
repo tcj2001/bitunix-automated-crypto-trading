@@ -2,15 +2,18 @@
 
 A real-time cryptocurrency trading platform built with FastAPI and WebSocket technology using Bitunix API and websockets. The platform provides automated trading capabilities, real-time market data visualization, and portfolio management features.
 
-## Features
+## Current Issue
+Web page takes a long time to load, use to work fine, but now it takes a long time to load the page, need to investigate the issue
 
+## Features
 - Real-time private account/new postion/new order data streaming via WebSocket
 - Real-time public depth/kline for bid, ask and last streaming via WebSocket or thru api calls, configurable in the config file
 - Automated trading strategies based on technical indicators
 - Portfolio management and position tracking
-- Interactive web interface with real-time updates
-- Candlestick charts for all timeframes (1m, 5m, 15m, 1h, 1d) on a single page with all indicators
-  - Chart is activated when you click on the ticker symbol
+- User interface is not a requirement for automated trading, all parmaeters can be configured in the config file 
+  - Interactive web interface with real-time updates, all manual trading
+  - Candlestick charts for all timeframes (1m, 5m, 15m, 1h, 1d) on a single page with all indicators
+    - Chart is activated when you click on the ticker symbol
 - Technical analysis including:
   - Moving Averages
   - MACD

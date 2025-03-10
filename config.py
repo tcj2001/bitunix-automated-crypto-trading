@@ -9,6 +9,9 @@ class Settings(BaseSettings):
     password: SecretStr  
     host: str = Field(default="127.0.0.1")
 
+    #start autotrading on start
+    autoTrade: bool = Field(default=False)
+
     # Trading Parameters
     leverage: int = Field(default=20, ge=1, le=100)
     threshold: float = Field(default=5.0, ge=0.0)

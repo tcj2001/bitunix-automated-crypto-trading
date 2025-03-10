@@ -40,7 +40,7 @@ class BitunixSignal:
         self.signal_interval = self.settings.signal_interval
         self.api_interval = self.settings.api_interval
         
-        self.autoTrade = False
+        self.autoTrade = self.settings.autoTrade
               
         #Ticker object
         self.tickerObjects = Tickers(self.settings)
@@ -413,12 +413,12 @@ class BitunixSignal:
                 tickerObj = self.tickerObjects.get(symbol)
                 if tickerObj:
                     tickerObj.set_last(last)
+            del data
+            gc.collect()
         except Exception as e:
             logger.info(f"Function: UpdateKlineData, {e}, {e.args}, {type(e).__name__}")
         if self.verbose_logging:
             logger.info(f"Function: UpdateKlineData, time:{ts}, symbol:{symbol}, last:{last}")
-        del data, tickerObj
-        gc.collect()
 
     async def GetportfolioData(self):
         start=time.time()
@@ -541,8 +541,10 @@ class BitunixSignal:
             if tickerObj:
                 tickerObj.set_bid(bid)
                 tickerObj.set_ask(ask)
+                del tickerObj
+                gc.collect()
             await asyncio.sleep(0)
-        del ddata, tickerObj
+        del ddata
         gc.collect()
                 
     async def BuySellList(self):
@@ -606,7 +608,7 @@ class BitunixSignal:
         gc.collect()
 
     async def AutoTradeProcess(self):
-        if not self.verbose_logging:
+        if self.verbose_logging:
             logger.info(f"AutoTradeProcess started")
         start=time.time()
         period = self.option_moving_average
@@ -719,142 +721,146 @@ class BitunixSignal:
                                 )
                             continue
 
-                        if self.check_ema and row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_fast'] < self.signaldf_full.at[row.symbol, f'{period}_medium']:
-                            last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
-                            price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
-                            datajs = await self.bitunixApi.PlaceOrder(
-                                positionId=row.positionId,
-                                ticker=row.symbol,
-                                qty=row.qty,
-                                price=price,
-                                side=row.side,
-                                tradeSide="CLOSE"
-                            )
-                            if datajs["code"] == 0:
-                                self.notifications.add_notification(
-                                    f'{colors.CYAN}Auto close submitted due to MA {period} crossover for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                        if f'{period}_fast' in self.signaldf_full.columns and f'{period}_medium' in self.signaldf_full.columns:
+                            if self.check_ema and row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_fast'] < self.signaldf_full.at[row.symbol, f'{period}_medium']:
+                                last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
+                                price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
+                                datajs = await self.bitunixApi.PlaceOrder(
+                                    positionId=row.positionId,
+                                    ticker=row.symbol,
+                                    qty=row.qty,
+                                    price=price,
+                                    side=row.side,
+                                    tradeSide="CLOSE"
                                 )
-                            continue
+                                if datajs["code"] == 0:
+                                    self.notifications.add_notification(
+                                        f'{colors.CYAN}Auto close submitted due to MA {period} crossover for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                                    )
+                                continue
 
-                        if self.check_ema and row.side == 'SELL' and self.signaldf_full.at[row.symbol, f'{period}_fast'] > self.signaldf_full.at[row.symbol, f'{period}_medium']:
-                            last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
-                            price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
-                            datajs = await self.bitunixApi.PlaceOrder(
-                                positionId=row.positionId,
-                                ticker=row.symbol,
-                                qty=row.qty,
-                                price=price,
-                                side=row.side,
-                                tradeSide="CLOSE"
-                            )
-                            if datajs["code"] == 0:
-                                self.notifications.add_notification(
-                                    f'{colors.CYAN}Auto close submitted due to MA {period} crossover for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                            if self.check_ema and row.side == 'SELL' and self.signaldf_full.at[row.symbol, f'{period}_fast'] > self.signaldf_full.at[row.symbol, f'{period}_medium']:
+                                last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
+                                price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
+                                datajs = await self.bitunixApi.PlaceOrder(
+                                    positionId=row.positionId,
+                                    ticker=row.symbol,
+                                    qty=row.qty,
+                                    price=price,
+                                    side=row.side,
+                                    tradeSide="CLOSE"
                                 )
-                            continue
+                                if datajs["code"] == 0:
+                                    self.notifications.add_notification(
+                                        f'{colors.CYAN}Auto close submitted due to MA {period} crossover for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                                    )
+                                continue
 
 
-                        if self.check_macd and row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_MACD_Line'] < self.signaldf_full.at[row.symbol, f'{period}_Signal_Line']:
-                            last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
-                            price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
-                            datajs = await self.bitunixApi.PlaceOrder(
-                                positionId=row.positionId,
-                                ticker=row.symbol,
-                                qty=row.qty,
-                                price=price,
-                                side=row.side,
-                                tradeSide="CLOSE"
-                            )
-                            if datajs["code"] == 0:
-                                self.notifications.add_notification(
-                                    f'{colors.CYAN}Auto close submitted due to MACD {period} crossover for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                        if f'{period}_MACD_Line' in self.signaldf_full.columns and f'{period}_Signal_Line' in self.signaldf_full.columns:
+                            if self.check_macd and row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_MACD_Line'] < self.signaldf_full.at[row.symbol, f'{period}_Signal_Line']:
+                                last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
+                                price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
+                                datajs = await self.bitunixApi.PlaceOrder(
+                                    positionId=row.positionId,
+                                    ticker=row.symbol,
+                                    qty=row.qty,
+                                    price=price,
+                                    side=row.side,
+                                    tradeSide="CLOSE"
                                 )
-                            continue
+                                if datajs["code"] == 0:
+                                    self.notifications.add_notification(
+                                        f'{colors.CYAN}Auto close submitted due to MACD {period} crossover for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                                    )
+                                continue
 
-                        if self.check_macd and row.side == 'SELL' and self.signaldf_full.at[row.symbol, f'{period}_MACD_Line'] > self.signaldf_full.at[row.symbol, f'{period}_Signal_Line']:
-                            last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
-                            price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
-                            datajs = await self.bitunixApi.PlaceOrder(
-                                positionId=row.positionId,
-                                ticker=row.symbol,
-                                qty=row.qty,
-                                price=price,
-                                side=row.side,
-                                tradeSide="CLOSE"
-                            )
-                            if datajs["code"] == 0:
-                                self.notifications.add_notification(
-                                    f'{colors.CYAN}Auto close submitted due to MACD {period} crossover for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                            if self.check_macd and row.side == 'SELL' and self.signaldf_full.at[row.symbol, f'{period}_MACD_Line'] > self.signaldf_full.at[row.symbol, f'{period}_Signal_Line']:
+                                last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
+                                price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
+                                datajs = await self.bitunixApi.PlaceOrder(
+                                    positionId=row.positionId,
+                                    ticker=row.symbol,
+                                    qty=row.qty,
+                                    price=price,
+                                    side=row.side,
+                                    tradeSide="CLOSE"
                                 )
-                            continue
+                                if datajs["code"] == 0:
+                                    self.notifications.add_notification(
+                                        f'{colors.CYAN}Auto close submitted due to MACD {period} crossover for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                                    )
+                                continue
 
-                        if self.check_bbm and row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_open'] < self.signaldf_full.at[row.symbol, f'{period}_BBM']:
-                            last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
-                            price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
-                            datajs = await self.bitunixApi.PlaceOrder(
-                                positionId=row.positionId,
-                                ticker=row.symbol,
-                                qty=row.qty,
-                                price=price,
-                                side=row.side,
-                                tradeSide="CLOSE"
-                            )
-                            if datajs["code"] == 0:
-                                self.notifications.add_notification(
-                                    f'{colors.CYAN}Auto close submitted due to BBM {period} crossover for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                        if f'{period}_open' in self.signaldf_full.columns and f'{period}_BBM' in self.signaldf_full.columns:
+                            if self.check_bbm and row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_open'] < self.signaldf_full.at[row.symbol, f'{period}_BBM']:
+                                last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
+                                price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
+                                datajs = await self.bitunixApi.PlaceOrder(
+                                    positionId=row.positionId,
+                                    ticker=row.symbol,
+                                    qty=row.qty,
+                                    price=price,
+                                    side=row.side,
+                                    tradeSide="CLOSE"
                                 )
-                            continue
+                                if datajs["code"] == 0:
+                                    self.notifications.add_notification(
+                                        f'{colors.CYAN}Auto close submitted due to BBM {period} crossover for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                                    )
+                                continue
 
-                        if self.check_bbm and row.side == 'SELL' and self.signaldf_full.at[row.symbol, f'{period}_open'] > self.signaldf_full.at[row.symbol, f'{period}_BBM']:
-                            last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
-                            price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
-                            datajs = await self.bitunixApi.PlaceOrder(
-                                positionId=row.positionId,
-                                ticker=row.symbol,
-                                qty=row.qty,
-                                price=price,
-                                side=row.side,
-                                tradeSide="CLOSE"
-                            )
-                            if datajs["code"] == 0:
-                                self.notifications.add_notification(
-                                    f'{colors.CYAN}Auto close submitted due to BBM {period} crossover for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                            if self.check_bbm and row.side == 'SELL' and self.signaldf_full.at[row.symbol, f'{period}_open'] > self.signaldf_full.at[row.symbol, f'{period}_BBM']:
+                                last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
+                                price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
+                                datajs = await self.bitunixApi.PlaceOrder(
+                                    positionId=row.positionId,
+                                    ticker=row.symbol,
+                                    qty=row.qty,
+                                    price=price,
+                                    side=row.side,
+                                    tradeSide="CLOSE"
                                 )
-                            continue
+                                if datajs["code"] == 0:
+                                    self.notifications.add_notification(
+                                        f'{colors.CYAN}Auto close submitted due to BBM {period} crossover for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                                    )
+                                continue
 
-                        if self.check_rsi and row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_RSI'] >=90:
-                            last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
-                            price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
-                            datajs = await self.bitunixApi.PlaceOrder(
-                                positionId=row.positionId,
-                                ticker=row.symbol,
-                                qty=row.qty,
-                                price=price,
-                                side=row.side,
-                                tradeSide="CLOSE"
-                            )
-                            if datajs["code"] == 0:
-                                self.notifications.add_notification(
-                                    f'{colors.CYAN}Auto close submitted due to RSI {period} crossover for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                        if f'{period}_RSI' in self.signaldf_full.columns:
+                            if self.check_rsi and row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_RSI'] >=90:
+                                last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
+                                price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
+                                datajs = await self.bitunixApi.PlaceOrder(
+                                    positionId=row.positionId,
+                                    ticker=row.symbol,
+                                    qty=row.qty,
+                                    price=price,
+                                    side=row.side,
+                                    tradeSide="CLOSE"
                                 )
-                            continue
+                                if datajs["code"] == 0:
+                                    self.notifications.add_notification(
+                                        f'{colors.CYAN}Auto close submitted due to RSI {period} crossover for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                                    )
+                                continue
 
-                        if self.check_rsi and row.side == 'SELL' and self.signaldf_full.at[row.symbol, f'{period}_RSI'] <= 10:
-                            last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
-                            price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
-                            datajs = await self.bitunixApi.PlaceOrder(
-                                positionId=row.positionId,
-                                ticker=row.symbol,
-                                qty=row.qty,
-                                price=price,
-                                side=row.side,
-                                tradeSide="CLOSE"
-                            )
-                            if datajs["code"] == 0:
-                                self.notifications.add_notification(
-                                    f'{colors.CYAN}Auto close submitted due to RSI {period} crossover for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                            if self.check_rsi and row.side == 'SELL' and self.signaldf_full.at[row.symbol, f'{period}_RSI'] <= 10:
+                                last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
+                                price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
+                                datajs = await self.bitunixApi.PlaceOrder(
+                                    positionId=row.positionId,
+                                    ticker=row.symbol,
+                                    qty=row.qty,
+                                    price=price,
+                                    side=row.side,
+                                    tradeSide="CLOSE"
                                 )
-                            continue
+                                if datajs["code"] == 0:
+                                    self.notifications.add_notification(
+                                        f'{colors.CYAN}Auto close submitted due to RSI {period} crossover for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                                    )
+                                continue
                     await asyncio.sleep(.10)
                     
         except Exception as e:
@@ -944,10 +950,9 @@ class BitunixSignal:
                         self.notifications.add_notification(
                             f'{colors.GREEN if profit>0 else colors.RED}{event} {side} position for {symbol} with {qty} qty @ {price} and {"profit" if profit>0 else "loss"} of {profit}'
                         )
-
+                    del datajs
+                    gc.collect()
                 self.tickerObjects.get(symbol).trades.append({'ctime': ts, 'symbol': symbol, 'qty': qty, 'side': side, 'price': price})
-                del datajs
-                gc.collect()
             del feed
             gc.collect()
         except Exception as e:
