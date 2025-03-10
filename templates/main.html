@@ -152,7 +152,7 @@
                         const element = document.getElementById(elementId);
                         if (element) {
                             if (element.type === 'checkbox') {
-                                element.checked = (state === "true");
+                                element.checked = (state.toString().toLowerCase() === "true");
                             } else if (element.tagName === 'SELECT' || element.tagName === 'INPUT') {
                                 element.value = state;
                             }
