@@ -205,35 +205,39 @@ async def websocket_endpoint(websocket: WebSocket):
             data={}
             try:
                 #portfolio data
-                df=pd.DataFrame()
                 if not bitunix.bitunixSignal.portfoliodf.empty:
                     df=bitunix.bitunixSignal.portfoliodf.copy(deep=True)
-                #portfoliodfStyle = tabulate(df, headers='keys', tablefmt='html')
-                portfoliodfStyle=df.style.set_table_attributes('class="dataframe"').to_html()
+                    #portfoliodfStyle = tabulate(df, headers='keys', tablefmt='html')
+                    portfoliodfStyle=df.style.set_table_attributes('class="dataframe"').to_html()
+                else:
+                    portfoliodfStyle=pd.DataFrame().style.set_table_attributes('class="dataframe"').to_html()
                     
                 #position data
-                df=pd.DataFrame()
                 dfcols=["symbol","qty","side","unrealizedPNL","realizedPNL","ctime","avgOpenPrice","bid","bidcolor","last","lastcolor","ask","askcolor","bitunix","action","add","reduce"]
                 if not bitunix.bitunixSignal.positiondf.empty and all(col in bitunix.bitunixSignal.positiondf.columns for col in dfcols):
                     df=bitunix.bitunixSignal.positiondf[dfcols].copy(deep=True)
-                #positiondfStyle = tabulate(df, headers='keys', tablefmt='html')
-                positiondfStyle=df.style.apply(apply_colors,axis=1).hide(["lastcolor","bidcolor","askcolor"],axis=1).set_table_attributes('class="dataframe"').to_html()
+                    #positiondfStyle = tabulate(df, headers='keys', tablefmt='html')
+                    positiondfStyle=df.style.apply(apply_colors,axis=1).hide(["lastcolor","bidcolor","askcolor"],axis=1).set_table_attributes('class="dataframe"').to_html()
+                else:
+                    positiondfStyle=pd.DataFrame().style.set_table_attributes('class="dataframe"').to_html()
                     
                 #order data
-                df=pd.DataFrame()
                 dfcols=["symbol","qty","side","price","ctime","status","reduceOnly","bitunix","action"]
                 if not bitunix.bitunixSignal.orderdf.empty and all(col in bitunix.bitunixSignal.orderdf.columns for col in dfcols):
                     df=bitunix.bitunixSignal.orderdf[dfcols].copy(deep=True)
-                #orderdfStyle = tabulate(df, headers='keys', tablefmt='html')
-                orderdfStyle=df.style.set_table_attributes('class="dataframe"').to_html()
+                    #orderdfStyle = tabulate(df, headers='keys', tablefmt='html')
+                    orderdfStyle=df.style.set_table_attributes('class="dataframe"').to_html()
+                else:
+                    orderdfStyle=pd.DataFrame().style.set_table_attributes('class="dataframe"').to_html()
                     
                 #signal data
-                df=pd.DataFrame()
                 dfcols=["symbol","1d_cb","1d_trend","1h_cb","1h_trend","15m_cb","15m_trend","5m_cb","5m_trend","1m_cb","1m_trend","bid","last","ask","bitunix","buy","sell","1d_barcolor","1h_barcolor","15m_barcolor","5m_barcolor","1m_barcolor","lastcolor","bidcolor","askcolor"]
                 if not bitunix.bitunixSignal.signaldf.empty and all(col in bitunix.bitunixSignal.signaldf.columns for col in dfcols):
                     df=bitunix.bitunixSignal.signaldf[dfcols].copy(deep=True)
-                #signaldfStyle = tabulate(df, headers='keys', tablefmt='html')
-                signaldfStyle=df.style.apply(apply_colors,axis=1).hide(["1d_barcolor","1h_barcolor","15m_barcolor","5m_barcolor","1m_barcolor","lastcolor","bidcolor","askcolor"],axis=1).set_table_attributes('class="dataframe"').to_html()
+                    #signaldfStyle = tabulate(df, headers='keys', tablefmt='html')
+                    signaldfStyle=df.style.apply(apply_colors,axis=1).hide(["1d_barcolor","1h_barcolor","15m_barcolor","5m_barcolor","1m_barcolor","lastcolor","bidcolor","askcolor"],axis=1).set_table_attributes('class="dataframe"').to_html()
+                else:
+                    signaldfStyle=pd.DataFrame().style.set_table_attributes('class="dataframe"').to_html()
 
                 del df,dfcols
                 gc.collect()
