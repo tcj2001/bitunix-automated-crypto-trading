@@ -25,6 +25,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from fastapi_login import LoginManager
 from fastapi_login.exceptions import InvalidCredentialsException
 import gc
+from tabulate import tabulate
 
 load_dotenv()
 settings = Settings()
@@ -51,6 +52,7 @@ logger.info(f"screen_refresh_interval: {settings.screen_refresh_interval}")
 logger.info(f"signal_interval: {settings.signal_interval}")
 logger.info(f"api_interval: {settings.api_interval}")
 logger.info(f"verbose_logging: {settings.verbose_logging}")
+logger.info(f"autoTrade: {settings.autoTrade}")
 
 
 class bitunix():
@@ -59,7 +61,7 @@ class bitunix():
         self.bars=self.settings.bars
         self.screen_refresh_interval =self.settings.screen_refresh_interval
         
-        self.autoTrade=False
+        self.autoTrade=self.settings.autoTrade
         
         self.password=self.settings.password.get_secret_value()
 
@@ -69,7 +71,7 @@ class bitunix():
         self.bitunixSignal = BitunixSignal(self.settings, self.threadManager, self.notifications, self.bitunixApi)
         
         self.websocket_connections = set()
-        self.DB = {"tcj2001": {"password": self.password}}
+        self.DB = {"admin": {"password": self.password}}
 
     async def start(self): 
         await asyncio.create_task(self.bitunixSignal.load_tickers())
@@ -108,6 +110,23 @@ SECRET=os.getenv('SECRET')
 manager = LoginManager(SECRET, token_url="/auth/login", use_cookie=True)
 manager.cookie_name = "auth_token"
 
+
+@app.post("/auth/login")
+async def login(data: OAuth2PasswordRequestForm = Depends()):
+    username = data.username
+    password = data.password
+    user = load_user(username, some_callable_object)
+    if not user or password != user["password"]:
+        raise InvalidCredentialsException
+    access_token = manager.create_access_token(data={"sub": username})
+    response = RedirectResponse(url="/main", status_code=302)
+    manager.set_cookie(response, access_token)
+    return response
+
+@app.get("/main", response_class=HTMLResponse)
+async def main_page(request: Request,  user=Depends(manager)):
+    return templates.TemplateResponse({"request": request, "user": user}, "main.html")
+
 #load inital states for html
 def get_server_states(bitunix, app):
     app.state.element_states = {}
@@ -138,7 +157,7 @@ def set_server_states():
 @app.on_event("startup")  
 async def startup_event():
     get_server_states(bitunix, app)
-    await asyncio.create_task(bitunix.start())
+    await bitunix.start()
 
 @app.post("/reload")
 async def refresh_detected():
@@ -185,35 +204,38 @@ async def websocket_endpoint(websocket: WebSocket):
             #portfolio data
             data={}
             try:
-
+                #portfolio data
+                df=pd.DataFrame()
                 if not bitunix.bitunixSignal.portfoliodf.empty:
                     df=bitunix.bitunixSignal.portfoliodf.copy(deep=True)
-                    portfoliodfStyle=df.style.set_table_attributes('class="dataframe"').to_html()
-                else:
-                    portfoliodfStyle=pd.DataFrame().style.to_html()
+                #portfoliodfStyle = tabulate(df, headers='keys', tablefmt='html')
+                portfoliodfStyle=df.style.set_table_attributes('class="dataframe"').to_html()
                     
                 #position data
-                if not bitunix.bitunixSignal.positiondf.empty:
-                    df=bitunix.bitunixSignal.positiondf.copy(deep=True)
-                    positiondfStyle=df.style.apply(apply_colors,axis=1).hide(["positionId","lastcolor","bidcolor","askcolor"],axis=1).set_table_attributes('class="dataframe"').to_html()
-                else:
-                    positiondfStyle=pd.DataFrame().style.to_html()
+                df=pd.DataFrame()
+                dfcols=["symbol","qty","side","unrealizedPNL","realizedPNL","ctime","avgOpenPrice","bid","bidcolor","last","lastcolor","ask","askcolor","bitunix","action","add","reduce"]
+                if not bitunix.bitunixSignal.positiondf.empty and all(col in bitunix.bitunixSignal.positiondf.columns for col in dfcols):
+                    df=bitunix.bitunixSignal.positiondf[dfcols].copy(deep=True)
+                #positiondfStyle = tabulate(df, headers='keys', tablefmt='html')
+                positiondfStyle=df.style.apply(apply_colors,axis=1).hide(["lastcolor","bidcolor","askcolor"],axis=1).set_table_attributes('class="dataframe"').to_html()
                     
                 #order data
-                if not bitunix.bitunixSignal.orderdf.empty:
-                    df=bitunix.bitunixSignal.orderdf.copy(deep=True)
-                    orderdfStyle=df.style.hide(["orderId"],axis=1).hide(["ctime"],axis=1).set_table_attributes('class="dataframe"').to_html()
-                else:
-                    orderdfStyle=pd.DataFrame().style.to_html()
+                df=pd.DataFrame()
+                dfcols=["symbol","qty","side","price","ctime","status","reduceOnly","bitunix","action"]
+                if not bitunix.bitunixSignal.orderdf.empty and all(col in bitunix.bitunixSignal.orderdf.columns for col in dfcols):
+                    df=bitunix.bitunixSignal.orderdf[dfcols].copy(deep=True)
+                #orderdfStyle = tabulate(df, headers='keys', tablefmt='html')
+                orderdfStyle=df.style.set_table_attributes('class="dataframe"').to_html()
                     
                 #signal data
-                if not bitunix.bitunixSignal.signaldf.empty:
-                    df=bitunix.bitunixSignal.signaldf.copy(deep=True)
-                    signaldfStyle=df.style.apply(apply_colors,axis=1).hide(["1d_barcolor","1h_barcolor","15m_barcolor","5m_barcolor","1m_barcolor","lastcolor","bidcolor","askcolor","symbol"],axis=1).set_table_attributes('class="dataframe"').to_html()
-                else:
-                    signaldfStyle=pd.DataFrame().style.to_html()
+                df=pd.DataFrame()
+                dfcols=["symbol","1d_cb","1d_trend","1h_cb","1h_trend","15m_cb","15m_trend","5m_cb","5m_trend","1m_cb","1m_trend","bid","last","ask","bitunix","buy","sell","1d_barcolor","1h_barcolor","15m_barcolor","5m_barcolor","1m_barcolor","lastcolor","bidcolor","askcolor"]
+                if not bitunix.bitunixSignal.signaldf.empty and all(col in bitunix.bitunixSignal.signaldf.columns for col in dfcols):
+                    df=bitunix.bitunixSignal.signaldf[dfcols].copy(deep=True)
+                #signaldfStyle = tabulate(df, headers='keys', tablefmt='html')
+                signaldfStyle=df.style.apply(apply_colors,axis=1).hide(["1d_barcolor","1h_barcolor","15m_barcolor","5m_barcolor","1m_barcolor","lastcolor","bidcolor","askcolor"],axis=1).set_table_attributes('class="dataframe"').to_html()
 
-                del df
+                del df,dfcols
                 gc.collect()
                 
                 #combined data
@@ -305,21 +327,6 @@ async def send_message(msg: str):
     await bitunix.send_message_to_websocket(msg)
     return {"message": f"Sent: {msg}"}        
 
-@app.post("/auth/login")
-async def login(data: OAuth2PasswordRequestForm = Depends()):
-    username = data.username
-    password = data.password
-    user = load_user(username, some_callable_object)
-    if not user or password != user["password"]:
-        raise InvalidCredentialsException
-    access_token = manager.create_access_token(data={"sub": username})
-    response = RedirectResponse(url="/main", status_code=302)
-    manager.set_cookie(response, access_token)
-    return response
-
-@app.get("/main", response_class=HTMLResponse)
-async def main_page(request: Request,  user=Depends(manager)):
-    return templates.TemplateResponse({"request": request, "user": user}, "main.html")
 
 @app.get("/private")
 async def get_private_endpoint(user=Depends(manager)):
