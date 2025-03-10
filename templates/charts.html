@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Candlestick Chart</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <style> 
+
+        body {
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        header, footer {
+            background: #f8f9fa;
+            padding: 1em;
+            text-align: center;
+            position: fixed;
+            width: 100%;
+            z-index: 1;
+        }
+        header {
+            top: 0;
+        }
+        footer {            
+            bottom: 0;
+        }         
+        .mainbody {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-top: 80px; /* Adjust according to header height */
+        }        
+        .box {padding: 10px; margin: 10px; border: 1px solid black; width: 45%; }
+        .label { font-weight: bold;}
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 10px;
+            width: 90%;
+            height: calc(100vh - 100px); /* Adjust according to header and footer height */
+        }
+        .chart-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        canvas {
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        .container {display: flex;justify-content: space-between;}
+        .left, .right {width: 45%; padding: 10px; border: 1px solid black;}
+
+        .message {background-color: #3a4141 ; color: white; padding: 16px; font-size: 16px; border: none; cursor: pointer;}
+        .dropdown-content { display: none; position: absolute; background-color: #f9f9f9; min-width: 250px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2); z-index: 1; }
+        .dropdown-content div { color: black; padding: 12px 16px; text-decoration: none; display: block; }
+        .dropdown-content div:hover { background-color: #f1f1f1; }
+        .show { display: block; }        
+    </style>        
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="right">
+                <div class="label">Symbol</div>
+                <div id='symbol'></div> 
+            </div>
+            <div class="right">
+                <div class="label">Close</div>
+                <div id='close'></div>
+            </div>
+        </div>
+    </header>
+    <div class="mainbody">
+        <div class="chart-grid"> 
+            <div class="chart-container"> 
+                <canvas id="chart1m"></canvas> 
+            </div> 
+            <div class="chart-container"> 
+                <canvas id="chart5m"></canvas> 
+            </div> 
+            <div class="chart-container"> 
+                <canvas id="chart15m"></canvas> 
+            </div> 
+            <div class="chart-container"> 
+                <canvas id="chart1h"></canvas> 
+            </div> 
+            <div class="chart-container"> 
+                <canvas id="chart1d"></canvas> 
+            </div> 
+        </div>    
+    </div>
+    <script>
+        function getQueryParam(param) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(param);
+        }
+        const symbol = getQueryParam('symbol');
+
+        const host = window.location.hostname;
+        const websocket = new WebSocket(`ws://${host}:8000/wschart?ticker=${symbol}`);
+        websocket.onopen = function() {
+        }
+        
+        websocket.onmessage = function(event) {
+            const messageElement = JSON.parse(event.data);
+            document.getElementById('symbol').innerHTML = messageElement.symbol;                
+            document.getElementById('close').innerHTML = messageElement.close;   
+
+            const data1m = messageElement.chart1m;
+            const data5m = messageElement.chart5m;
+            const data15m = messageElement.chart15m;
+            const data1h = messageElement.chart1h;
+            const data1d = messageElement.chart1d;
+            const buysell = messageElement.buysell;
+
+            createOrUpdateChart('chart1m', data1m, buysell, 'minute'); 
+            createOrUpdateChart('chart5m', data5m, buysell, 'minute'); 
+            createOrUpdateChart('chart15m', data15m, buysell, 'minute' ); 
+            createOrUpdateChart('chart1h', data1h, buysell,  'hour'); 
+            createOrUpdateChart('chart1d', data1d, buysell, 'day');
+        };
+
+        websocket.onerror = function(error) {
+        };
+
+        websocket.onclose = function() {
+        };
+
+
+        const charts = {};
+
+        // Function to create or update a chart
+        const createOrUpdateChart = (chartName, chartData, buysell, timeUnit) => {
+            const candlestickData = chartData.map(d => ({
+                x: parseInt(d.time),
+                o: parseFloat(d.open),
+                h: parseFloat(d.high),
+                l: parseFloat(d.low),
+                c: parseFloat(d.close)
+            }));
+
+            const slowMA = chartData.filter(d => parseFloat(d.slow) !== 0).map(d => ({
+                x: parseInt(d.time),
+                y: parseFloat(d.slow)
+            }));
+            
+            const mediumMA = chartData.filter(d => parseFloat(d.medium) !== 0).map(d => ({
+                x: parseInt(d.time),
+                y: parseFloat(d.medium)
+            }));
+
+            const fastMA = chartData.filter(d => parseFloat(d.medium) !== 0).map(d => ({
+                x: parseInt(d.time),
+                y: parseFloat(d.fast)
+            }));
+
+            const macdLine = chartData.filter(d => parseFloat(d.MACD_Line) !== 0).map(d => ({
+                x: parseInt(d.time),
+                y: parseFloat(d.MACD_Line)
+            }));
+
+            const signalLine = chartData.filter(d => parseFloat(d.Signal_Line) !== 0).map(d => ({
+                x: parseInt(d.time),
+                y: parseFloat(d.Signal_Line)
+            }));
+
+            const macdHistogram = chartData.filter(d => parseFloat(d.MACD_Histogram) !== 0).map(d => ({
+                x: parseInt(d.time),
+                y: parseFloat(d.MACD_Histogram)
+            }));
+
+            const BBL = chartData.filter(d => parseFloat(d.BBL) !== 0).map(d => ({
+                x: parseInt(d.time),
+                y: parseFloat(d.BBL)
+            }));
+            
+            const BBM = chartData.filter(d => parseFloat(d.BBM) !== 0).map(d => ({
+                x: parseInt(d.time),
+                y: parseFloat(d.BBM)
+            }));
+            
+            const BBU = chartData.filter(d => parseFloat(d.BBU) !== 0).map(d => ({
+                x: parseInt(d.time),
+                y: parseFloat(d.BBU)
+            }));
+            
+
+            // Find the min and max time from candlestickData
+            const times = candlestickData.map(d => d.x);
+            const minTime = Math.min(...times);
+            const maxTime = Math.max(...times);
+
+            const buyselldata = buysell.filter(d => {
+                const time = parseInt(d.ctime);
+                return time >= minTime && time <= maxTime;
+            }).map(d => ({
+                x: parseInt(d.ctime),
+                y: parseFloat(d.price),
+                side: d.side,
+                backgroundColor: d.side === 'BUY' ? 'rgba(0, 255, 0, 0.9)' : 'rgba(255, 0, 0, 0.9)', // Color based on buy/sell
+                borderColor: d.side === 'BUY' ? 'rgba(0, 255, 0, 1)' : 'rgba(255, 0, 0, 1)',
+                borderWidth: 2,
+                pointRadius: 2,
+                pointStyle: 'circle'
+            }));
+
+            const timeSettings = {
+                second: { unit: 'second', stepSize: 1, displayFormats: { second: 'HH:mm:ss' } },
+                minute: { unit: 'minute', stepSize: 1, displayFormats: { minute: 'HH:mm' } },
+                hour: { unit: 'hour', stepSize: 1, displayFormats: { hour: 'HH:mm' } },
+                day: { unit: 'day', stepSize: 1, displayFormats: { day: 'MMM dd' } }
+            };
+        
+            const timeConfig = timeSettings[timeUnit] || timeSettings['second'];
+
+            if (charts[chartName]) {
+                const chart = charts[chartName];
+                chart.data.datasets[0].data = candlestickData;
+                chart.data.datasets[1].data = slowMA;
+                chart.data.datasets[2].data = mediumMA;
+                chart.data.datasets[3].data = fastMA;
+                chart.data.datasets[4].data = macdLine;
+                chart.data.datasets[5].data = signalLine;
+                chart.data.datasets[6].data = macdHistogram;
+                chart.data.datasets[7].data = buyselldata;
+                chart.data.datasets[8].data = BBL;
+                chart.data.datasets[9].data = BBM;
+                chart.data.datasets[10].data = BBU;
+                chart.update();
+            } else {
+                const ctx = document.getElementById(chartName).getContext('2d');
+                charts[chartName] = new Chart(ctx, {
+                    type: 'candlestick',
+                    data: {
+                        datasets: [
+                            {
+                                label: chartName,
+                                data: candlestickData,
+                                type: 'candlestick',
+                                order: 1,
+                                yAxisID: 'y',
+                                xAxisID: 'x',
+                                hidden: false                                         
+                            },
+                            {
+                                label: 'Slow MA',
+                                data: slowMA,
+                                borderColor: 'rgba(255, 99, 132, 1)',
+                                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                                type: 'line',
+                                pointRadius: 0,
+                                borderWidth: 1,
+                                fill: false,
+                                order: 2,
+                                yAxisID: 'y',
+                                xAxisID: 'x',
+                                hidden: true
+                            },
+                            {
+                                label: 'Medium MA',
+                                data: mediumMA,
+                                borderColor: 'rgba(54, 162, 235, 1)',
+                                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                                type: 'line',
+                                pointRadius: 0,
+                                borderWidth: 1,
+                                fill: false,
+                                order: 3,
+                                yAxisID: 'y',
+                                xAxisID: 'x',
+                                hidden: true                                
+                            },
+                            {
+                                label: 'Fast MA',
+                                data: fastMA,
+                                borderColor: 'rgb(2, 12, 12)',
+                                backgroundColor: 'rgba(4, 15, 15, 0.2)',
+                                type: 'line',
+                                pointRadius: 0,
+                                borderWidth: 1,
+                                fill: false,
+                                order: 4,
+                                yAxisID: 'y',
+                                xAxisID: 'x',
+                                hidden: true                                
+                            },
+                            {
+                                label: 'MACD Line',
+                                type: 'line',
+                                data: macdLine,
+                                borderColor: 'blue',
+                                pointRadius: 0,
+                                borderWidth: 1,                                
+                                fill: false,
+                                order: 5,
+                                yAxisID: 'y2',
+                                xAxisID: 'x',                            
+                                hidden: true
+                            },
+                            {
+                                label: 'Signal Line',
+                                type: 'line',
+                                data: signalLine,
+                                borderColor: 'red',
+                                pointRadius: 0,
+                                borderWidth: 1,                                
+                                order: 6,
+                                fill: false,
+                                yAxisID: 'y2',
+                                xAxisID: 'x',                            
+                                hidden: true
+                            },
+                            {
+                                label: 'MACD Histogram',
+                                type: 'bar',
+                                data: macdHistogram,
+                                backgroundColor: 'green',
+                                order: 7,
+                                borderWidth: 1,
+                                yAxisID: 'y3',
+                                xAxisID: 'x',                            
+                                hidden: true
+                            },
+                            {
+                                label: 'BuySell',
+                                data: buyselldata,
+                                type: 'scatter',
+                                showLine: false,
+                                order: 8,
+                                backgroundColor: buyselldata.map(d => d.backgroundColor), // Explicitly set the colors
+                                borderColor: buyselldata.map(d => d.borderColor),
+                                borderWidth: buyselldata.map(d => d.borderWidth),
+                                pointRadius: buyselldata.map(d => d.pointRadius),
+                                pointStyle: buyselldata.map(d => d.pointStyle),
+                                hidden: false
+                            },
+                            {
+                                label: 'BBL',
+                                type: 'line',
+                                data: BBL,
+                                borderColor: 'black',
+                                pointRadius: 0,
+                                borderWidth: 1,                                
+                                order: 9,
+                                fill: false,
+                                yAxisID: 'y',
+                                xAxisID: 'x',
+                                hidden: false
+                            },
+                            {
+                                label: 'BBM',
+                                type: 'line',
+                                data: BBM,
+                                borderColor: 'green',
+                                pointRadius: 0,
+                                borderWidth: 1,                                
+                                order: 10,
+                                fill: false,
+                                yAxisID: 'y',
+                                xAxisID: 'x',
+                                hidden: false
+                            },
+                            {
+                                label: 'BBU',
+                                type: 'line',
+                                data: BBU,
+                                borderColor: 'brown',
+                                pointRadius: 0,
+                                borderWidth: 1,                                
+                                order: 11,
+                                fill: false,
+                                yAxisID: 'y',
+                                xAxisID: 'x',
+                                hidden: false
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const datasetIndex = context.datasetIndex;
+                                        const dataIndex = context.dataIndex;
+                                        if (datasetIndex === 0) { // Candlestick dataset
+                                            const data = chartData[dataIndex];
+                                            return `Open: ${data.open}, High: ${data.high}, Low: ${data.low}, Close: ${data.close}, Time: ${data.time}`;
+                                        } else if (datasetIndex === 7) { // BuySell dataset
+                                            const data = buysell[dataIndex];
+                                            return `Price: ${data.price}, Time: ${data.ctime}, Side: ${data.side}`;
+                                        } else {
+                                            return context.dataset.label + ': ' + context.raw.y;
+                                        }
+                                    }
+                                }
+                            },
+                            zoom: {
+                                pan: {
+                                    enabled: true,
+                                    mode: 'x'
+                                },
+                                zoom: {
+                                    enabled: true,
+                                    mode: 'x'
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                type: 'time',
+                                time: timeConfig,
+                                stacked: false
+                            },
+                            y: {
+                                type: 'linear',
+                                position: 'left',
+                                title: {
+                                    display: true,
+                                    text: 'CandleStick'
+                                },
+                                grid: {
+                                    drawOnChartArea: true // draw grid for the first y-axis
+                                }
+                            },
+                            y2: {
+                                type: 'linear',
+                                position: 'left',
+                                grid: {
+                                    drawOnChartArea: false // avoid grid overlap with the first y-axis
+                                },
+                            },
+                            y3: {
+                                type: 'linear',
+                                position: 'left',
+                                grid: {
+                                    drawOnChartArea: false // avoid grid overlap with the first y-axis
+                                },
+                            }
+                        },
+                        layout: {
+                            padding: {
+                                top: 20,
+                                bottom: 20
+                            }
+                        }
+                    }
+                });
+            }
+        };
+        
+        
+        
+        
+        
+
+    </script>
+</body>
+</html>

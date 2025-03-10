@@ -1,0 +1,33 @@
+# Web Framework
+fastapi
+uvicorn
+fastapi-login
+python-multipart
+
+# Template Engine
+jinja2
+
+# Data Processing
+numpy
+pandas<=2.2.3   # pandas-ta requires pandas<=2.2.3
+pandas-ta
+
+# Environment Variables
+python-dotenv
+pydantic
+pydantic-settings
+
+# HTTP/WebSocket
+websockets
+requests
+aiohttp
+
+# Date/Time
+pytz
+
+# Security
+cryptography
+
+# Utilities
+colorama
+
