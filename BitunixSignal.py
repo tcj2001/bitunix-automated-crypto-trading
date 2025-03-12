@@ -459,7 +459,7 @@ class BitunixSignal:
                 self.positiondf['lastcolor']=""
                 self.positiondf['ask']=0.0
                 self.positiondf['askcolor']=""
-                self.positiondf['ctime']=pd.to_datetime(self.positiondf['ctime'].astype(float), unit='ms').dt.tz_localize('UTC').dt.tz_convert(cst)
+                self.positiondf['ctime']=pd.to_datetime(self.positiondf['ctime'].astype(float), unit='ms').dt.tz_localize('UTC').dt.tz_convert(cst).dt.strftime('%Y-%m-%d %H:%M:%S')
 
                 try:
                     self.positiondf = self.positiondf.assign(
@@ -494,7 +494,7 @@ class BitunixSignal:
             self.pendingOrders = await self.bitunixApi.GetPendingOrderData()
             if self.pendingOrders and 'orderList' in self.pendingOrders:
                 self.orderdf = pd.DataFrame(self.pendingOrders['orderList'], columns=["orderId", "symbol", "qty", "side", "price", "ctime", "status", "reduceOnly"])
-                self.orderdf['rtime']=pd.to_datetime(self.orderdf['ctime'].astype(float), unit='ms').dt.tz_localize('UTC').dt.tz_convert(cst)
+                self.orderdf['rtime']=pd.to_datetime(self.orderdf['ctime'].astype(float), unit='ms').dt.tz_localize('UTC').dt.tz_convert(cst).dt.strftime('%Y-%m-%d %H:%M:%S')
                 self.orderdf['bitunix'] = self.orderdf.apply(self.add_bitunix_button, axis=1)
                 self.orderdf['action'] = self.orderdf.apply(self.add_order_close_button, axis=1)
             else:
@@ -510,7 +510,7 @@ class BitunixSignal:
             self.tradeHistoryData = await self.bitunixApi.GetTradeHistoryData()
             if self.tradeHistoryData and 'tradeList' in self.tradeHistoryData:
                 self.tradesdf = pd.DataFrame(self.tradeHistoryData['tradeList'], columns=["symbol", "ctime", "qty", "side", "price","realizedPNL","reduceOnly"])
-                self.tradesdf['ctime']=pd.to_datetime(self.tradesdf['ctime'].astype(float), unit='ms').dt.tz_localize('UTC').dt.tz_convert(cst)
+                self.tradesdf['ctime'] = pd.to_datetime(self.tradesdf['ctime'].astype(float), unit='ms').dt.tz_localize('UTC').dt.tz_convert(cst).dt.strftime('%Y-%m-%d %H:%M:%S')
                 df=self.tickerObjects.symbols().copy()
                 for symbol in df:
                     thdf = self.tradesdf[self.tradesdf['symbol'] == symbol]

@@ -190,6 +190,7 @@ async def wsmain(websocket):
     
     queue = asyncio.Queue()
     asyncio.create_task(send_data_queue(websocket, queue))    
+    
     await websocket.accept()
     bitunix.websocket_connections.add(websocket)
 
@@ -373,7 +374,7 @@ async def wschart(websocket):
                 "buysell": buysell,
                 "status_messages": [] if len(notifications)==0 else notifications
             }
-
+        
             await queue.put(json.dumps(data))
             
             del data, chart1m, chart5m, chart15m, chart1h, chart1d, buysell

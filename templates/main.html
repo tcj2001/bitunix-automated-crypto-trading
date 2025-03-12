@@ -362,7 +362,7 @@
                 table2.addEventListener('click', async (event) => { 
                     const target2 = event.target; 
                     const columnIndex2 = target2.cellIndex; 
-                    if (target2.tagName === 'TD' && (columnIndex2 === 1)) { 
+                    if (target2.tagName === 'TD' && (columnIndex2 === 0)) { 
                         const row2 = target2.parentNode
                         const headerCell2 = target2.closest('table').querySelector(`thead tr th:nth-child(${columnIndex2 + 1})`); 
                         const columnName2 = headerCell2.innerText;                        
@@ -371,7 +371,7 @@
                             headers: {
                                 'Content-Type': 'application/x-www-form-urlencoded',
                             },
-                            body: `symbol=${row2.cells[1].innerText}`
+                            body: `symbol=${row2.cells[0].innerText}`
                         });
                         const result = await response.json();
                         openURL(result.message);
