@@ -729,7 +729,7 @@ class BitunixSignal:
                                 )
                                 if datajs["code"] == 0:
                                     self.notifications.add_notification(
-                                        f'{colors.CYAN}Auto close submitted due to take profit for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                                        f'{colors.CYAN}Auto close submitted due to candle reversal for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
                                     )
                                 continue
 
@@ -747,7 +747,7 @@ class BitunixSignal:
                                 )
                                 if datajs["code"] == 0:
                                     self.notifications.add_notification(
-                                        f'{colors.CYAN}Auto close submitted due to take profit for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                                        f'{colors.CYAN}Auto close submitted due to candle reversal for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
                                     )
                                 continue
 
