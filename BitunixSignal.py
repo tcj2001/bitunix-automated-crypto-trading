@@ -714,8 +714,8 @@ class BitunixSignal:
                             
                         if select and int(self.max_auto_trades)!=0:
                         
-                            # Moving average comparison between fast and medium
-                            if float(self.profit_amount) > 0 and total_pnl > float(self.profit_amount):
+                            # candle reversed
+                            if row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_barcolor'] == self.red:
                                 last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                 price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
 
@@ -730,6 +730,43 @@ class BitunixSignal:
                                 if datajs["code"] == 0:
                                     self.notifications.add_notification(
                                         f'{colors.CYAN}Auto close submitted due to take profit for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                                    )
+                                continue
+
+                            if row.side == 'SELL' and self.signaldf_full.at[row.symbol, f'{period}_barcolor'] == self.green:
+                                last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
+                                price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
+
+                                datajs = await self.bitunixApi.PlaceOrder(
+                                    positionId=row.positionId,
+                                    ticker=row.symbol,
+                                    qty=row.qty,
+                                    price=price,
+                                    side=row.side,
+                                    tradeSide="CLOSE"
+                                )
+                                if datajs["code"] == 0:
+                                    self.notifications.add_notification(
+                                        f'{colors.CYAN}Auto close submitted due to take profit for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                                    )
+                                continue
+
+                            # check take portit or accept loss
+                            if float(self.loss_amount) > 0 and total_pnl < -float(self.loss_amount):
+                                last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
+                                price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
+
+                                datajs = await self.bitunixApi.PlaceOrder(
+                                    positionId=row.positionId,
+                                    ticker=row.symbol,
+                                    qty=row.qty,
+                                    price=price,
+                                    side=row.side,
+                                    tradeSide="CLOSE"
+                                )
+                                if datajs["code"] == 0:
+                                    self.notifications.add_notification(
+                                        f'{colors.CYAN}Auto close submitted due to stop loss for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
                                     )
                                 continue
 
@@ -751,6 +788,7 @@ class BitunixSignal:
                                     )
                                 continue
 
+                            # Moving average comparison between fast and medium
                             if self.check_ema and row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_fast'] < self.signaldf_full.at[row.symbol, f'{period}_medium']:
                                 last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                 price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
@@ -786,7 +824,7 @@ class BitunixSignal:
                                     )
                                 continue
 
-
+                            # MACD comparison between MACD and Signal
                             if self.check_macd and row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_MACD_Line'] < self.signaldf_full.at[row.symbol, f'{period}_Signal_Line']:
                                 last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                 price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
@@ -821,6 +859,7 @@ class BitunixSignal:
                                     )
                                 continue
 
+                            # Bollinger Band comparison between open and BBM
                             if self.check_bbm and row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_open'] < self.signaldf_full.at[row.symbol, f'{period}_BBM']:
                                 last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                 price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
@@ -854,7 +893,8 @@ class BitunixSignal:
                                         f'{colors.CYAN}Auto close submitted due to BBM {period} crossover for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
                                     )
                                 continue
-
+                            
+                            # RSI comparison
                             if self.check_rsi and row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_RSI'] >=90:
                                 last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                 price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
