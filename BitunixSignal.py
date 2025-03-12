@@ -509,7 +509,7 @@ class BitunixSignal:
         try:
             self.tradeHistoryData = await self.bitunixApi.GetTradeHistoryData()
             if self.tradeHistoryData and 'tradeList' in self.tradeHistoryData:
-                self.tradesdf = pd.DataFrame(self.tradeHistoryData['tradeList'], columns=["symbol", "ctime", "qty", "side", "price","realizedPNL"])
+                self.tradesdf = pd.DataFrame(self.tradeHistoryData['tradeList'], columns=["symbol", "ctime", "qty", "side", "price","realizedPNL","reduceOnly"])
                 self.tradesdf['ctime']=pd.to_datetime(self.tradesdf['ctime'].astype(float), unit='ms').dt.tz_localize('UTC').dt.tz_convert(cst)
                 df=self.tickerObjects.symbols().copy()
                 for symbol in df:
@@ -695,7 +695,7 @@ class BitunixSignal:
                     required_cols = set(inspectCols)
 
                     if not self.signaldf_full.columns.empty and self.signaldf_full['symbol'].isin([row.symbol]).any() and required_cols.issubset(set(self.signaldf_full.columns)):
-                        inspectDict={'time':row.ctime,'symbol':row.symbol,'side':row.side, 
+                        inspectDict={'symbol':row.symbol,'time':row.ctime,'side':row.side, 
                                     'total_pnl':total_pnl, 
                                     'open':self.signaldf_full.at[row.symbol, f'{period}_open'], 'close':self.signaldf_full.at[row.symbol, f'{period}_close'],
                                     'fast':self.signaldf_full.at[row.symbol, f'{period}_fast'], 'medium':self.signaldf_full.at[row.symbol, f'{period}_medium'],
@@ -893,7 +893,7 @@ class BitunixSignal:
                 self.inspectdf = pd.DataFrame(inspectList)
                 del inspectList
                 gc.collect()
-        
+                self.lastAutoTradeTime = time.time()
         except Exception as e:
             stack = traceback.extract_stack()
             function_name = stack[-1].name

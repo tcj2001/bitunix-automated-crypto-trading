@@ -132,8 +132,8 @@
                 table.addEventListener('click', async (event) => { 
                     const target = event.target; 
                     const columnIndex = target.cellIndex; 
-                    if (target.tagName === 'TH' && (columnIndex === 0) ) { 
-                        const row = target.parentNode
+                    if (target.tagName === 'TD' && columnIndex === 0) { 
+                        const row = target.parentNode;
                         const headerCell = target.closest('table').querySelector(`thead tr th:nth-child(${columnIndex + 1})`); 
                         const columnName = headerCell.innerText;                        
                         const response = await fetch('/get_charts', {
@@ -146,12 +146,12 @@
                         const result = await response.json();
                         openURL(result.message);
                     } 
-                }); 
+                });
                 const table2 = document.getElementById('trades'); 
                 table2.addEventListener('click', async (event) => { 
                     const target2 = event.target; 
                     const columnIndex2 = target2.cellIndex; 
-                    if (target2.tagName === 'TH' && (columnIndex2 === 0) ) { 
+                    if (target2.tagName === 'TD' && (columnIndex2 === 0) ) { 
                         const row = target2.parentNode
                         const headerCell = target2.closest('table').querySelector(`thead tr th:nth-child(${columnIndex2 + 1})`); 
                         const columnName = headerCell.innerText;                        

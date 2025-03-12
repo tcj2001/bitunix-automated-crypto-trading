@@ -193,25 +193,26 @@ async def wsmain(websocket):
     await websocket.accept()
     bitunix.websocket_connections.add(websocket)
 
-    try:
-        #html rendering setup
-        portfoliodfrenderer = DataFrameHtmlRenderer()
-        positiondfrenderer = DataFrameHtmlRenderer(hide_columns=["positionId", "lastcolor","bidcolor","askcolor"], \
-                                                color_column_mapping={"bid": "bidcolor",
-                                                                        "last": "lastcolor",
-                                                                        "ask": "askcolor"
-                                                            })
-        orderdfrenderer = DataFrameHtmlRenderer()
-        signaldfrenderer = DataFrameHtmlRenderer(hide_columns=["1d_barcolor","1h_barcolor","15m_barcolor","5m_barcolor","1m_barcolor","lastcolor","bidcolor","askcolor"], \
-                                                color_column_mapping={"bid": "bidcolor",
+    #html rendering setup
+    portfoliodfrenderer = DataFrameHtmlRenderer()
+    positiondfrenderer = DataFrameHtmlRenderer(hide_columns=["positionId", "lastcolor","bidcolor","askcolor"], \
+                                            color_column_mapping={"bid": "bidcolor",
                                                                     "last": "lastcolor",
-                                                                    "ask": "askcolor",
-                                                                    "1d_cb": "1d_barcolor",
-                                                                    "1h_cb": "1h_barcolor",
-                                                                    "15m_cb": "15m_barcolor",
-                                                                    "5m_cb": "5m_barcolor",
-                                                                    "1m_cb": "1m_barcolor"
-                                                            })
+                                                                    "ask": "askcolor"
+                                                        })
+    orderdfrenderer = DataFrameHtmlRenderer()
+    signaldfrenderer = DataFrameHtmlRenderer(hide_columns=["1d_barcolor","1h_barcolor","15m_barcolor","5m_barcolor","1m_barcolor","lastcolor","bidcolor","askcolor"], \
+                                            color_column_mapping={"bid": "bidcolor",
+                                                                "last": "lastcolor",
+                                                                "ask": "askcolor",
+                                                                "1d_cb": "1d_barcolor",
+                                                                "1h_cb": "1h_barcolor",
+                                                                "15m_cb": "15m_barcolor",
+                                                                "5m_cb": "5m_barcolor",
+                                                                "1m_cb": "1m_barcolor"
+                                                        })
+
+    try:
     
         while True:
             stime=time.time()
@@ -278,20 +279,19 @@ async def wsinspect(websocket):
     
     #html rendering setup
     inspectdfrenderer = DataFrameHtmlRenderer()
-    tradesdfrenderer = DataFrameHtmlRenderer()
+    tradesdfrenderer = DataFrameHtmlRenderer(hide_columns=["reduceOnly"])
     
     try:
         while True:
             stime=time.time()
-            utc_time = datetime.fromtimestamp(stime, tz=timezone.utc)
-            cst_time = utc_time.astimezone(timezone(timedelta(hours=-6))).strftime('%Y-%m-%d %H:%M:%S')
+
             data={}
             try:
                 #inspect data
                 inspectdfStyle= inspectdfrenderer.render_html(bitunix.bitunixSignal.inspectdf)
                 
                 #trades data
-                tradesdfStyle= tradesdfrenderer.render_html(bitunix.bitunixSignal.tradesdf)
+                tradesdfStyle= tradesdfrenderer.render_html(bitunix.bitunixSignal.tradesdf[bitunix.bitunixSignal.tradesdf["reduceOnly"] == True])
                 
             except Exception as e:
                 logger.info(f"error gathering data for main page, {e}, {e.args}, {type(e).__name__}")
@@ -302,6 +302,10 @@ async def wsinspect(websocket):
                 "trades" : tradesdfStyle, 
             }
             notifications=bitunix.bitunixSignal.notifications.get_notifications()          
+
+            utc_time = datetime.fromtimestamp(bitunix.bitunixSignal.lastAutoTradeTime, tz=timezone.utc)
+            cst_time = utc_time.astimezone(timezone(timedelta(hours=-6))).strftime('%Y-%m-%d %H:%M:%S')
+
             data = {
                 "dataframes": dataframes,
                 "profit" : bitunix.bitunixSignal.profit,

@@ -343,7 +343,7 @@
                 table.addEventListener('click', async (event) => { 
                     const target = event.target; 
                     const columnIndex = target.cellIndex; 
-                    if (target.tagName === 'TH' && (columnIndex === 0) ) { 
+                    if (target.tagName === 'TD' && (columnIndex === 0) ) { 
                         const row = target.parentNode
                         const headerCell = target.closest('table').querySelector(`thead tr th:nth-child(${columnIndex + 1})`); 
                         const columnName = headerCell.innerText;                        
