@@ -1,0 +1,201 @@
+<!DOCTYPE html> 
+<html> 
+    <head>
+        <meta charset="UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1.0">         
+        <title>DataFrame Display</title> 
+        <style> 
+            body { margin: 0; display: flex; flex-direction: column; height: 100vh; } 
+            header { background: #f8f9fa; padding: 1em; text-align: center; position: fixed; top: 0; width: 100%; z-index: 1; } 
+            footer { background: #f8f9fa; padding: 1em; text-align: center; position: fixed; bottom: 0; width: 100%; z-index: 1; } 
+            .mainbody { flex: 1; margin-top: 1px; /* Adjust this value according to the height of your header */ margin-bottom: 60px; /* Adjust this value according to the height of your footer */ overflow-y: auto; padding: 1em; }              
+            
+            .dataframe { font-family: Arial, Helvetica, sans-serif; border-collapse: collapse; width: 100%; } 
+            .dataframe td, .dataframe th { border: 1px solid #ddd; padding: 8px; } 
+            .dataframe tr:nth-child(even) { background-color: #f2f2f2; } 
+            .dataframe tr:hover { background-color: #ddd; } 
+            .dataframe th { padding-top: 12px; padding-bottom: 12px; text-align: left; background-color: #515a5a ; color: white; } 
+            .row {display: block; margin-bottom: 10px; border: 2px solid black; padding: 10px; }
+            #info { height: 40px; position: fixed; bottom:0%; width:100%; background-color: #f8f6f5; opacity: 1; }
+
+            .container {display: flex;justify-content: space-between;}
+            .left, .right {width: 45%; padding: 10px; border: 1px solid black;}
+            
+            .message {background-color: #3a4141 ; color: white; padding: 16px; font-size: 16px; border: none; cursor: pointer;}
+            .dropdown-content { display: none; position: absolute; background-color: #f9f9f9; min-width: 250px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2); z-index: 1; }
+            .dropdown-content div { color: black; padding: 12px 16px; text-decoration: none; display: block; }
+            .dropdown-content div:hover { background-color: #f1f1f1; }
+            .show { display: block; }
+        </style> 
+    </head> 
+    <body>
+        <div class="mainbody">
+            <div class="container">
+                <div class="left">
+                    <label for="autoTradeCycleTime">AutoTrade Cycle Time</label>
+                    <div id="autoTradeCycleTime">...</div>
+                </div>
+                <div class="right">
+                    <label for="totalProfit">Total Profit</label>
+                    <div id="totalProfit">...</div>
+                </div>
+            </div>        
+            <div class="row">
+                <div id="inspect"> 
+                    Loading studydata... 
+                </div> 
+            </div>
+            <div class="row">
+                <div id="trades"> 
+                    Loading trades... 
+                </div> 
+            </div>
+        </div>
+        <footer>
+            <div class="dropdown">
+                <div id="message" class="message" onclick="toggleDropdown()"></div>
+                <div id="dropdown-content" class="dropdown-content">
+                    <!-- Additional messages will be inserted here -->
+                </div>
+            </div>
+        </footer>
+       
+        <script>
+            const host = window.location.hostname;
+            const websocket_m = new WebSocket(`ws://${host}:8000/wsinspect`);
+            websocket_m.onopen = function() {
+                document.getElementById('message').innerHTML = "inspect page webSocket connection opened" 
+            }
+            
+            websocket_m.onmessage = function(event) {
+                const messageElement = JSON.parse(event.data);
+                document.getElementById("inspect").innerHTML = messageElement.dataframes.inspect;
+                document.getElementById("trades").innerHTML = messageElement.dataframes.trades;
+                document.getElementById("message").innerHTML = messageElement.status_messages;
+                document.getElementById("totalProfit").innerText = messageElement.profit;
+                document.getElementById("autoTradeCycleTime").innerText = messageElement.stime;
+                const messages = messageElement.status_messages;
+                displayNotifications(messages)
+            };
+
+
+            websocket_m.onerror = function(error) {
+                document.getElementById('message').innerHTML = "main page webSocket connection failed.";
+            };
+
+            websocket_m.onclose = function() {
+                document.getElementById('message').innerHTML = "main page webSocket connection closed.";
+            };
+        
+
+            window.onload = async function() {
+                const payload = {element_ids:['profitAmount']};
+                await fetchStates(payload);
+            };
+
+            // Batch Fetch State from Server
+            async function fetchStates(payload) {
+                // Send a POST request to /get_states with the list of element IDs
+                const response = await fetch('/get_states', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload), // Pass element IDs in the request body
+                });
+
+                // Parse the JSON response
+                data = await response.json();
+
+                // Iterate over the states and update the UI elements accordingly
+                for (const elementId of payload.element_ids) {
+                    const state = data.states[elementId] || "No state found";
+
+                    if (state !== "No state found") {
+                        const element = document.getElementById(elementId);
+                        if (element) {
+                            if (element.type === 'checkbox') {
+                                element.checked = (state.toString().toLowerCase() === "true");
+                            } else if (element.tagName === 'SELECT' || element.tagName === 'INPUT') {
+                                element.value = state;
+                            }
+                        }
+                    }
+                }
+            }
+
+            function openURL(url) { 
+                window.location.href = url; 
+            } 
+           
+            document.addEventListener('DOMContentLoaded', (event) => { 
+                const table = document.getElementById('inspect'); 
+                table.addEventListener('click', async (event) => { 
+                    const target = event.target; 
+                    const columnIndex = target.cellIndex; 
+                    if (target.tagName === 'TH' && (columnIndex === 0) ) { 
+                        const row = target.parentNode
+                        const headerCell = target.closest('table').querySelector(`thead tr th:nth-child(${columnIndex + 1})`); 
+                        const columnName = headerCell.innerText;                        
+                        const response = await fetch('/get_charts', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                            },
+                            body: `symbol=${row.cells[0].innerText}`
+                        });
+                        const result = await response.json();
+                        openURL(result.message);
+                    } 
+                }); 
+                const table2 = document.getElementById('trades'); 
+                table2.addEventListener('click', async (event) => { 
+                    const target2 = event.target; 
+                    const columnIndex2 = target2.cellIndex; 
+                    if (target2.tagName === 'TH' && (columnIndex2 === 0) ) { 
+                        const row = target2.parentNode
+                        const headerCell = target2.closest('table').querySelector(`thead tr th:nth-child(${columnIndex2 + 1})`); 
+                        const columnName = headerCell.innerText;                        
+                        const response = await fetch('/get_charts', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                            },
+                            body: `symbol=${row.cells[0].innerText}`
+                        });
+                        const result = await response.json();
+                        openURL(result.message);
+                    } 
+                }); 
+            });
+
+            function toggleDropdown() {
+                const dropdownContent = document.getElementById("dropdown-content");
+                dropdownContent.classList.toggle("show");
+            
+                // Adjust the position if the dropdown is near the bottom of the viewport
+                const rect = dropdownContent.getBoundingClientRect();
+                if (rect.bottom > window.innerHeight) {
+                    dropdownContent.style.top = `-${rect.height}px`;
+                } else {
+                    dropdownContent.style.top = '100%';
+                }
+            }
+
+            function displayNotifications(messages) {
+                const lastMessage = document.getElementById("message");
+                const dropdownContent = document.getElementById("dropdown-content");
+            
+                // Display the last message
+                lastMessage.textContent = messages[0];
+                // Display the rest of the messages in the dropdown
+                dropdownContent.innerHTML = '';
+                messages.slice(0).reverse().forEach(message => {
+                    const div = document.createElement("div");
+                    div.textContent = message;
+                    dropdownContent.appendChild(div);
+                });
+            }
+
+        </script>
+    </body> 
+</html>

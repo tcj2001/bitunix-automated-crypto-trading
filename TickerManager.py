@@ -350,7 +350,7 @@ class Tickers:
                         ticks = intervalObj.get_data()
                         if len(ticks)>=self.bars:
                             lastcandle = intervalObj.get_data()[-1]
-                            if len(lastcandle) >= 25:
+                            if len(lastcandle) >= 19:
                                 new_row = {
                                     'symbol' : symbol,
                                     'bid' : bid,
