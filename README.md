@@ -1,6 +1,6 @@
-# Bitunix Auto Trading Platform
+# Bitunix Futures Auto Trading Platform
 
-A real-time cryptocurrency trading platform built with FastAPI and WebSocket technology using Bitunix API and websockets. The platform provides automated trading capabilities, real-time market data visualization, and portfolio management features.
+A real-time cryptocurrency trading platform built with FastAPI and WebSocket technology using Bitunix API and websockets for Futures. The platform provides automated trading capabilities, real-time market data visualization, and portfolio management features.
 
 ## Current Issue
 sometimes Web page takes a long time to load, need to investigate the issue
@@ -14,6 +14,7 @@ sometimes Web page takes a long time to load, need to investigate the issue
   - Interactive web interface with real-time updates, all manual trading
   - Candlestick charts for all timeframes (1m, 5m, 15m, 1h, 1d) on a single page with all indicators
     - Chart is activated when you click on the ticker symbol
+  - Inspect page show study value for each symbol in the scope and past trades
 - Technical analysis including:
   - Moving Averages
   - MACD

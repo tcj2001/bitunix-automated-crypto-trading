@@ -5,7 +5,8 @@ import numpy as np
 import pandas as pd
 import json
 import time
-
+from datetime import datetime, timezone, timedelta
+import pytz
 from ThreadManager import ThreadManager
 from BitunixApi import BitunixApi
 from BitunixSignal import BitunixSignal
@@ -25,7 +26,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from fastapi_login import LoginManager
 from fastapi_login.exceptions import InvalidCredentialsException
 import gc
-from tabulate import tabulate
+from DataFrameHtmlRenderer import DataFrameHtmlRenderer
 
 load_dotenv()
 settings = Settings()
@@ -53,7 +54,6 @@ logger.info(f"signal_interval: {settings.signal_interval}")
 logger.info(f"api_interval: {settings.api_interval}")
 logger.info(f"verbose_logging: {settings.verbose_logging}")
 logger.info(f"autoTrade: {settings.autoTrade}")
-
 
 class bitunix():
     def __init__(self, settings):
@@ -90,20 +90,6 @@ class bitunix():
             for ws in self.bitunixSignal.websocket_connections:
                 await ws.send_text(message)
      
-def apply_colors(row):
-    return [
-        f'background-color: {row["1m_barcolor"]}' if col == '1m_cb' else
-        f'background-color: {row["5m_barcolor"]}' if col == '5m_cb' else
-        f'background-color: {row["15m_barcolor"]}' if col == '15m_cb' else
-        f'background-color: {row["1h_barcolor"]}' if col == '1h_cb' else 
-        f'background-color: {row["1d_barcolor"]}' if col == '1d_cb' else 
-        f'background-color: {row["lastcolor"]}' if col == 'last' else 
-        f'background-color: {row["bidcolor"]}' if col == 'bid' else 
-        f'background-color: {row["askcolor"]}' if col == 'ask' else ''
-        for col in row.index
-    ]
-
-
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 SECRET=os.getenv('SECRET')
@@ -115,6 +101,7 @@ manager.cookie_name = "auth_token"
 async def login(data: OAuth2PasswordRequestForm = Depends()):
     username = data.username
     password = data.password
+    
     user = load_user(username, some_callable_object)
     if not user or password != user["password"]:
         raise InvalidCredentialsException
@@ -127,37 +114,20 @@ async def login(data: OAuth2PasswordRequestForm = Depends()):
 async def main_page(request: Request,  user=Depends(manager)):
     return templates.TemplateResponse({"request": request, "user": user}, "main.html")
 
+  
+@app.on_event("startup")  
+async def startup_event():
+    await get_server_states(bitunix, app)
+    await bitunix.start()
+
 #load inital states for html
-def get_server_states(bitunix, app):
+async def get_server_states(bitunix, app):
     app.state.element_states = {}
     app.state.element_states['autoTrade']=bitunix.bitunixSignal.autoTrade
     app.state.element_states['optionMovingAverage']=bitunix.bitunixSignal.option_moving_average
     app.state.element_states['profitAmount']=bitunix.bitunixSignal.profit_amount
     app.state.element_states['lossAmount']=bitunix.bitunixSignal.loss_amount
     app.state.element_states['maxAutoTrades']=bitunix.bitunixSignal.max_auto_trades
-
-def set_server_states():
-    bitunix.bitunixSignal.autoTrade = True if app.state.element_states['autoTrade']=='true' else False
-
-    if bitunix.bitunixSignal.autoTrade:
-        bitunix.bitunixSignal.option_moving_average = app.state.element_states['optionMovingAverage']
-        bitunix.bitunixSignal.notifications.add_notification(f"optionMovingAverage: {bitunix.bitunixSignal.option_moving_average}")  
-
-        bitunix.bitunixSignal.profit_amount = app.state.element_states['profitAmount']
-        bitunix.bitunixSignal.notifications.add_notification(f"profitAmount: {bitunix.bitunixSignal.profit_amount}")  
-
-        bitunix.bitunixSignal.loss_amount = app.state.element_states['lossAmount']
-        bitunix.bitunixSignal.notifications.add_notification(f"lossAmount: {bitunix.bitunixSignal.loss_amount}")  
-
-        bitunix.bitunixSignal.max_auto_trades = app.state.element_states['maxAutoTrades']
-        bitunix.bitunixSignal.notifications.add_notification(f"maxAutoTrades: {bitunix.bitunixSignal.max_auto_trades}")  
-
-    bitunix.bitunixSignal.notifications.add_notification(" AutoTrade activated" if bitunix.bitunixSignal.autoTrade else "AutoTrade de-activated")  
-    
-@app.on_event("startup")  
-async def startup_event():
-    get_server_states(bitunix, app)
-    await bitunix.start()
 
 @app.post("/reload")
 async def refresh_detected():
@@ -177,8 +147,26 @@ async def get_states(payload: dict):
 
 @app.post("/autotrade")
 async def handle_autotrade():
-    set_server_states()
+    await set_server_states()
     return {"status":bitunix.bitunixSignal.autoTrade}
+
+async def set_server_states():
+    bitunix.bitunixSignal.autoTrade = True if app.state.element_states['autoTrade']=='true' else False
+
+    if bitunix.bitunixSignal.autoTrade:
+        bitunix.bitunixSignal.option_moving_average = app.state.element_states['optionMovingAverage']
+        bitunix.bitunixSignal.notifications.add_notification(f"optionMovingAverage: {bitunix.bitunixSignal.option_moving_average}")  
+
+        bitunix.bitunixSignal.profit_amount = app.state.element_states['profitAmount']
+        bitunix.bitunixSignal.notifications.add_notification(f"profitAmount: {bitunix.bitunixSignal.profit_amount}")  
+
+        bitunix.bitunixSignal.loss_amount = app.state.element_states['lossAmount']
+        bitunix.bitunixSignal.notifications.add_notification(f"lossAmount: {bitunix.bitunixSignal.loss_amount}")  
+
+        bitunix.bitunixSignal.max_auto_trades = app.state.element_states['maxAutoTrades']
+        bitunix.bitunixSignal.notifications.add_notification(f"maxAutoTrades: {bitunix.bitunixSignal.max_auto_trades}")  
+
+    bitunix.bitunixSignal.notifications.add_notification(" AutoTrade activated" if bitunix.bitunixSignal.autoTrade else "AutoTrade de-activated")  
 
 def some_callable_object():
     logger.info("called")
@@ -192,78 +180,143 @@ def load_user(username, some_callable=some_callable_object):
 async def read_root(request: Request):
     return templates.TemplateResponse({"request": request}, "login.html")
 
+
 @app.websocket("/wsmain")
 async def websocket_endpoint(websocket: WebSocket):
-    query_params = websocket.query_params
+    await asyncio.create_task(wsmain(websocket))
 
+async def wsmain(websocket):
+    query_params = websocket.query_params
+    
+    queue = asyncio.Queue()
+    asyncio.create_task(send_data_queue(websocket, queue))    
     await websocket.accept()
     bitunix.websocket_connections.add(websocket)
+
     try:
+        #html rendering setup
+        portfoliodfrenderer = DataFrameHtmlRenderer()
+        positiondfrenderer = DataFrameHtmlRenderer(hide_columns=["positionId", "lastcolor","bidcolor","askcolor"], \
+                                                color_column_mapping={"bid": "bidcolor",
+                                                                        "last": "lastcolor",
+                                                                        "ask": "askcolor"
+                                                            })
+        orderdfrenderer = DataFrameHtmlRenderer()
+        signaldfrenderer = DataFrameHtmlRenderer(hide_columns=["1d_barcolor","1h_barcolor","15m_barcolor","5m_barcolor","1m_barcolor","lastcolor","bidcolor","askcolor"], \
+                                                color_column_mapping={"bid": "bidcolor",
+                                                                    "last": "lastcolor",
+                                                                    "ask": "askcolor",
+                                                                    "1d_cb": "1d_barcolor",
+                                                                    "1h_cb": "1h_barcolor",
+                                                                    "15m_cb": "15m_barcolor",
+                                                                    "5m_cb": "5m_barcolor",
+                                                                    "1m_cb": "1m_barcolor"
+                                                            })
+    
         while True:
             stime=time.time()
-            #portfolio data
             data={}
             try:
                 #portfolio data
-                if not bitunix.bitunixSignal.portfoliodf.empty:
-                    df=bitunix.bitunixSignal.portfoliodf.copy(deep=True)
-                    #portfoliodfStyle = tabulate(df, headers='keys', tablefmt='html')
-                    portfoliodfStyle=df.style.set_table_attributes('class="dataframe"').to_html()
-                else:
-                    portfoliodfStyle=pd.DataFrame().style.set_table_attributes('class="dataframe"').to_html()
+                portfoliodfStyle= portfoliodfrenderer.render_html(bitunix.bitunixSignal.portfoliodf)
                     
                 #position data
-                dfcols=["symbol","qty","side","unrealizedPNL","realizedPNL","ctime","avgOpenPrice","bid","bidcolor","last","lastcolor","ask","askcolor","bitunix","action","add","reduce"]
-                if not bitunix.bitunixSignal.positiondf.empty and all(col in bitunix.bitunixSignal.positiondf.columns for col in dfcols):
-                    df=bitunix.bitunixSignal.positiondf[dfcols].copy(deep=True)
-                    #positiondfStyle = tabulate(df, headers='keys', tablefmt='html')
-                    positiondfStyle=df.style.apply(apply_colors,axis=1).hide(["lastcolor","bidcolor","askcolor"],axis=1).set_table_attributes('class="dataframe"').to_html()
-                else:
-                    positiondfStyle=pd.DataFrame().style.set_table_attributes('class="dataframe"').to_html()
+                positiondfStyle= positiondfrenderer.render_html(bitunix.bitunixSignal.positiondf)
                     
                 #order data
-                dfcols=["symbol","qty","side","price","ctime","status","reduceOnly","bitunix","action"]
-                if not bitunix.bitunixSignal.orderdf.empty and all(col in bitunix.bitunixSignal.orderdf.columns for col in dfcols):
-                    df=bitunix.bitunixSignal.orderdf[dfcols].copy(deep=True)
-                    #orderdfStyle = tabulate(df, headers='keys', tablefmt='html')
-                    orderdfStyle=df.style.set_table_attributes('class="dataframe"').to_html()
-                else:
-                    orderdfStyle=pd.DataFrame().style.set_table_attributes('class="dataframe"').to_html()
+                orderdfStyle= orderdfrenderer.render_html(bitunix.bitunixSignal.orderdf)
                     
                 #signal data
-                dfcols=["symbol","1d_cb","1d_trend","1h_cb","1h_trend","15m_cb","15m_trend","5m_cb","5m_trend","1m_cb","1m_trend","bid","last","ask","bitunix","buy","sell","1d_barcolor","1h_barcolor","15m_barcolor","5m_barcolor","1m_barcolor","lastcolor","bidcolor","askcolor"]
-                if not bitunix.bitunixSignal.signaldf.empty and all(col in bitunix.bitunixSignal.signaldf.columns for col in dfcols):
-                    df=bitunix.bitunixSignal.signaldf[dfcols].copy(deep=True)
-                    #signaldfStyle = tabulate(df, headers='keys', tablefmt='html')
-                    signaldfStyle=df.style.apply(apply_colors,axis=1).hide(["1d_barcolor","1h_barcolor","15m_barcolor","5m_barcolor","1m_barcolor","lastcolor","bidcolor","askcolor"],axis=1).set_table_attributes('class="dataframe"').to_html()
-                else:
-                    signaldfStyle=pd.DataFrame().style.set_table_attributes('class="dataframe"').to_html()
+                signaldfStyle= signaldfrenderer.render_html(bitunix.bitunixSignal.signaldf)
 
-                del df,dfcols
-                gc.collect()
-                
-                #combined data
-                dataframes={
-                    "portfolio" : portfoliodfStyle, 
-                    "positions" : positiondfStyle, 
-                    "orders" : orderdfStyle,
-                    "signals" : signaldfStyle
-                }
-                notifications=bitunix.bitunixSignal.notifications.get_notifications()          
-                data = {
-                    "dataframes": dataframes,
-                    "profit" : bitunix.bitunixSignal.profit,
-                    "status_messages": [] if len(notifications)==0 else notifications
-                }
-                await websocket.send_text(json.dumps(data))
-                del data
-                gc.collect()
             except Exception as e:
                 logger.info(f"error gathering data for main page, {e}, {e.args}, {type(e).__name__}")
+
+            #combined data
+            dataframes={
+                "portfolio" : portfoliodfStyle, 
+                "positions" : positiondfStyle, 
+                "orders" : orderdfStyle,
+                "signals" : signaldfStyle
+            }
+            notifications=bitunix.bitunixSignal.notifications.get_notifications()          
+            data = {
+                "dataframes": dataframes,
+                "profit" : bitunix.bitunixSignal.profit,
+                "status_messages": [] if len(notifications)==0 else notifications
+            }
+
+            await queue.put(json.dumps(data))
+
+            del data
+            gc.collect()
 
             elapsed_time = time.time() - stime
             if settings.verbose_logging:
                 logger.info(f"wsmain: elapsed time {elapsed_time}")
+            time_to_wait = max(0.01, bitunix.screen_refresh_interval - elapsed_time)
+            await asyncio.sleep(time_to_wait)
+            
+    except WebSocketDisconnect:
+        bitunix.websocket_connections.remove(websocket)
+        logger.info("local main page WebSocket connection closed")
+    except Exception as e:
+        logger.info(f"local main page websocket unexpected error: {e}")       
+
+@app.websocket("/wsinspect")
+async def websocket_endpoint(websocket: WebSocket):
+    await asyncio.create_task(wsinspect(websocket))
+
+async def wsinspect(websocket):    
+    query_params = websocket.query_params
+
+    queue = asyncio.Queue()
+    asyncio.create_task(send_data_queue(websocket, queue))    
+
+    await websocket.accept()
+    bitunix.websocket_connections.add(websocket)
+    
+    #html rendering setup
+    inspectdfrenderer = DataFrameHtmlRenderer()
+    tradesdfrenderer = DataFrameHtmlRenderer()
+    
+    try:
+        while True:
+            stime=time.time()
+            utc_time = datetime.fromtimestamp(stime, tz=timezone.utc)
+            cst_time = utc_time.astimezone(timezone(timedelta(hours=-6))).strftime('%Y-%m-%d %H:%M:%S')
+            data={}
+            try:
+                #inspect data
+                inspectdfStyle= inspectdfrenderer.render_html(bitunix.bitunixSignal.inspectdf)
+                
+                #trades data
+                tradesdfStyle= tradesdfrenderer.render_html(bitunix.bitunixSignal.tradesdf)
+                
+            except Exception as e:
+                logger.info(f"error gathering data for main page, {e}, {e.args}, {type(e).__name__}")
+
+            #combined data
+            dataframes={
+                "inspect" : inspectdfStyle, 
+                "trades" : tradesdfStyle, 
+            }
+            notifications=bitunix.bitunixSignal.notifications.get_notifications()          
+            data = {
+                "dataframes": dataframes,
+                "profit" : bitunix.bitunixSignal.profit,
+                "stime": cst_time,
+                "status_messages": [] if len(notifications)==0 else notifications
+            }
+            
+            await queue.put(json.dumps(data))
+            
+            del data
+            gc.collect()
+
+            elapsed_time = time.time() - stime
+            if settings.verbose_logging:
+                logger.info(f"wsinspect: elapsed time {elapsed_time}")
             time_to_wait = max(0.01, bitunix.screen_refresh_interval - elapsed_time)
             await asyncio.sleep(time_to_wait)
             
@@ -276,9 +329,15 @@ async def websocket_endpoint(websocket: WebSocket):
 
 @app.websocket("/wschart")
 async def websocket_endpoint(websocket: WebSocket):
+    await asyncio.create_task(wschart(websocket))
+
+async def wschart(websocket):    
     query_params = websocket.query_params
     ticker = query_params.get("ticker")
     
+    queue = asyncio.Queue()
+    asyncio.create_task(send_data_queue(websocket, queue))    
+
     await websocket.accept()
     bitunix.websocket_connections.add(websocket)
     try:
@@ -295,24 +354,26 @@ async def websocket_endpoint(websocket: WebSocket):
                     buysell=list(bitunix.bitunixSignal.tickerObjects.get(ticker).trades)
                     close=bitunix.bitunixSignal.tickerObjects.get(ticker).get_last()
                     notifications=bitunix.bitunixSignal.notifications.get_notifications()          
-                    data = {
-                        "symbol": ticker,
-                        "close":close,
-                        "chart1m":chart1m,
-                        "chart5m":chart5m,
-                        "chart15m":chart15m,
-                        "chart1h":chart1h,
-                        "chart1d":chart1d,
-                        "buysell": buysell,
-                        "status_messages": [] if len(notifications)==0 else notifications
-                    }
-                    await websocket.send_text(json.dumps(data))
-                    
-                    del data, chart1m, chart5m, chart15m, chart1h, chart1d, buysell
-                    gc.collect()
 
             except Exception as e:
                 logger.info(f"error gathering data for chart page, {e}, {e.args}, {type(e).__name__}")
+
+            data = {
+                "symbol": ticker,
+                "close":close,
+                "chart1m":chart1m,
+                "chart5m":chart5m,
+                "chart15m":chart15m,
+                "chart1h":chart1h,
+                "chart1d":chart1d,
+                "buysell": buysell,
+                "status_messages": [] if len(notifications)==0 else notifications
+            }
+
+            await queue.put(json.dumps(data))
+            
+            del data, chart1m, chart5m, chart15m, chart1h, chart1d, buysell
+            gc.collect()
 
             elapsed_time = time.time() - stime
             if settings.verbose_logging:
@@ -325,7 +386,15 @@ async def websocket_endpoint(websocket: WebSocket):
         logger.info("local chart page WebSocket connection closed")
     except Exception as e:
         logger.info(f"local chart page websocket unexpected error: {e}")        
-    
+
+async def send_data_queue(websocket, queue):
+    while True:
+        try:
+            data = await queue.get()
+            await websocket.send_text(data)
+        except Exception as e:
+            pass
+
 @app.get("/send-message/{msg}")
 async def send_message(msg: str):
     await bitunix.send_message_to_websocket(msg)
@@ -391,11 +460,21 @@ async def handle_chart_data(symbol: str = Form(...)):
     chart_url = f"/charts?symbol={symbol}"
     return JSONResponse(content={"message": chart_url})                                      
 
-#when chart page opens
+#when chart page detected
 @app.get("/charts", response_class=HTMLResponse) 
 async def show_detail(request: Request, symbol: str): 
     return templates.TemplateResponse({"request": request, "data": symbol}, "charts.html")
     
+@app.post("/get_inspect")
+async def inspect_detected():
+    inspect_url = f"/inspect"
+    return JSONResponse(content={"message": inspect_url})                                      
+
+#when inspect page detected
+@app.get("/inspect", response_class=HTMLResponse) 
+async def show_detail(request: Request): 
+    return templates.TemplateResponse({"request": request}, "inspect.html")
+
 if __name__ == '__main__': 
     bitunix = bitunix(settings)
 

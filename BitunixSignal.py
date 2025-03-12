@@ -51,6 +51,8 @@ class BitunixSignal:
         self.portfoliodf=pd.DataFrame()
         self.orderdf=pd.DataFrame()
         self.tickerdf=pd.DataFrame()
+        self.inspectdf=pd.DataFrame()
+        self.tradesdf=pd.DataFrame() 
         
         #postion, order, etc
         self.pendingOrders=None
@@ -370,12 +372,14 @@ class BitunixSignal:
                 if tickerObj:
                     tickerObj.set_bid(bid)
                     tickerObj.set_ask(ask)
+                del tickerObj
+                gc.collect()
+            del data
+            gc.collect()    
         except Exception as e:
             logger.info(f"Function: UpdateDepthData, {e}, {e.args}, {type(e).__name__}")
         if self.verbose_logging:
             logger.info(f"Function: UpdateDepthData, time:{ts}, symbol:{symbol}, bid:{bid}, ask:{ask}")
-        del data,  tickerObj
-        gc.collect()    
 
     async def UpdateTickerData(self, message):
         if message=="":
@@ -431,41 +435,6 @@ class BitunixSignal:
         if self.verbose_logging:
             logger.info(f"GetportfolioData: elapsed time {time.time()-start}")
                 
-    async def GetPendingOrderData(self):
-        start=time.time()
-        try:
-            self.pendingOrders = await self.bitunixApi.GetPendingOrderData()
-            if self.pendingOrders and 'orderList' in self.pendingOrders:
-                self.orderdf = pd.DataFrame(self.pendingOrders['orderList'], columns=["orderId", "symbol", "qty", "side", "price", "ctime", "status", "reduceOnly"])
-                self.orderdf['rtime']=pd.to_datetime(self.orderdf['ctime'].astype(float), unit='ms').dt.tz_localize('UTC').dt.tz_convert(cst)
-                self.orderdf['bitunix'] = self.orderdf.apply(self.add_bitunix_button, axis=1)
-                self.orderdf['action'] = self.orderdf.apply(self.add_order_close_button, axis=1)
-            else:
-                self.orderdf = pd.DataFrame()
-        except Exception as e:
-            logger.info(f"Function: GetPendingOrderData, {e}, {e.args}, {type(e).__name__}")
-        if self.verbose_logging:
-            logger.info(f"GetPendingOrderData: elapsed time {time.time()-start}")
-
-    async def GetTradeHistoryData(self):
-        start=time.time()
-        try:
-            self.tradeHistoryData = await self.bitunixApi.GetTradeHistoryData()
-            if self.tradeHistoryData and 'tradeList' in self.tradeHistoryData:
-                tradeHistory = pd.DataFrame(self.tradeHistoryData['tradeList'], columns=["ctime", "symbol", "qty", "side", "price"])
-                tradeHistory['ctime'] = tradeHistory['ctime'].astype(int)
-                df=self.tickerObjects.symbols().copy()
-                for symbol in df:
-                    thdf = tradeHistory[tradeHistory['symbol'] == symbol]
-                    if not thdf.empty:
-                        self.tickerObjects.setTrades(symbol,thdf.to_dict(orient='records'))
-        except Exception as e:
-            logger.info(f"Function: GetTradeHistoryData, {e}, {e.args}, {type(e).__name__}")
-        if self.verbose_logging:
-            logger.info(f"GetTradeHistoryData: elapsed time {time.time()-start}")
-        del tradeHistory, df, thdf
-        gc.collect()
-
     async def GetPendingPositionData(self):
         start=time.time()
         try:
@@ -518,6 +487,42 @@ class BitunixSignal:
             logger.info(f"Function: GetPendingPositionData, {e}, {e.args}, {type(e).__name__}")
         if self.verbose_logging:
             logger.info(f"GetPendingPositionData: elapsed time {time.time()-start}")
+
+    async def GetPendingOrderData(self):
+        start=time.time()
+        try:
+            self.pendingOrders = await self.bitunixApi.GetPendingOrderData()
+            if self.pendingOrders and 'orderList' in self.pendingOrders:
+                self.orderdf = pd.DataFrame(self.pendingOrders['orderList'], columns=["orderId", "symbol", "qty", "side", "price", "ctime", "status", "reduceOnly"])
+                self.orderdf['rtime']=pd.to_datetime(self.orderdf['ctime'].astype(float), unit='ms').dt.tz_localize('UTC').dt.tz_convert(cst)
+                self.orderdf['bitunix'] = self.orderdf.apply(self.add_bitunix_button, axis=1)
+                self.orderdf['action'] = self.orderdf.apply(self.add_order_close_button, axis=1)
+            else:
+                self.orderdf = pd.DataFrame()
+        except Exception as e:
+            logger.info(f"Function: GetPendingOrderData, {e}, {e.args}, {type(e).__name__}")
+        if self.verbose_logging:
+            logger.info(f"GetPendingOrderData: elapsed time {time.time()-start}")
+
+    async def GetTradeHistoryData(self):
+        start=time.time()
+        try:
+            self.tradeHistoryData = await self.bitunixApi.GetTradeHistoryData()
+            if self.tradeHistoryData and 'tradeList' in self.tradeHistoryData:
+                self.tradesdf = pd.DataFrame(self.tradeHistoryData['tradeList'], columns=["symbol", "ctime", "qty", "side", "price","realizedPNL"])
+                self.tradesdf['ctime']=pd.to_datetime(self.tradesdf['ctime'].astype(float), unit='ms').dt.tz_localize('UTC').dt.tz_convert(cst)
+                df=self.tickerObjects.symbols().copy()
+                for symbol in df:
+                    thdf = self.tradesdf[self.tradesdf['symbol'] == symbol]
+                    if not thdf.empty:
+                        self.tickerObjects.setTrades(symbol,thdf.to_dict(orient='records'))
+            del df, thdf
+            gc.collect()
+        except Exception as e:
+            logger.info(f"Function: GetTradeHistoryData, {e}, {e.args}, {type(e).__name__}")
+        if self.verbose_logging:
+            logger.info(f"GetTradeHistoryData: elapsed time {time.time()-start}")
+
 
     async def apply_last_data(self, symbols):
         try:
@@ -615,6 +620,7 @@ class BitunixSignal:
         try:
             if not self.autoTrade:
                 return
+            inspectList=[]
             ##############################################################################################################################
             # Buy or sell
             ##############################################################################################################################
@@ -628,9 +634,13 @@ class BitunixSignal:
 
             if count < int(self.max_auto_trades):
                 if not self.signaldf.empty:
-                    df=self.signaldf.copy(deep=True)
+                    df=self.signaldf.copy(deep=False)
                     for index, row in df.iterrows():
                         side = "BUY" if row[f'{period}_barcolor'] == self.green else "SELL" if row[f'{period}_barcolor'] == self.red else ""
+
+                        #inspectDict={'symbol':row.symbol,'side':side}
+                        #inspectList.append(inspectDict)
+
                         if side:
                             select = True
                             self.pendingPositions = await self.bitunixApi.GetPendingPositionData({'symbol': row.symbol})
@@ -644,12 +654,13 @@ class BitunixSignal:
                                 price = (bid if side == "BUY" else ask if side == "SELL" else last) if bid<=last<=ask else last
                                 balance = float(self.portfoliodf["available"].iloc[0]) + float(self.portfoliodf["crossUnrealizedPNL"].iloc[0])
                                 qty = str(max(balance * 0.01 / price * int(self.leverage),mtv))
+
                                 datajs = await self.bitunixApi.PlaceOrder(row.symbol, qty, price, side)
                                 if datajs["code"] == 0:
                                     self.notifications.add_notification(
                                         f'{colors.YELLOW} Auto open {side} submitted for {row.symbol} with {qty} qty @ {price}, ({datajs["code"]} {datajs["msg"]})'
                                     )
-                            count=count+1
+                                count=count+1
                             if count >= int(self.max_auto_trades):
                                 break
                             await asyncio.sleep(.10)
@@ -662,7 +673,7 @@ class BitunixSignal:
 
             # Close orders that are open for a while
             current_time = time.time() * 1000
-            df=self.orderdf.copy(deep=True)
+            df=self.orderdf.copy(deep=False)
             for index, row in df.iterrows():
                 if current_time - int(row.ctime) > 60000:
                     datajs = await self.bitunixApi.CancelOrder(row.symbol, row.orderId)
@@ -673,58 +684,77 @@ class BitunixSignal:
 
             # Close position if take profit or accept loss
             if not self.positiondf.empty:
-                df=self.positiondf.copy(deep=True)
+                df=self.positiondf.copy(deep=False)
                 for index, row in df.iterrows():
                     unrealized_pnl = float(row.unrealizedPNL)
                     realized_pnl = float(row.realizedPNL)
                     total_pnl = unrealized_pnl + realized_pnl
 
-                    # Check orders
-                    select = True
-                    self.pendingOrders = await self.bitunixApi.GetPendingOrderData({'symbol': row.symbol})
-                    if self.pendingOrders and len(self.pendingOrders['orderList']) == 1:
-                        select = False
+
+                    inspectCols=[f'{period}_open', f'{period}_close', f'{period}_fast', f'{period}_medium', f'{period}_MACD_Line', f'{period}_Signal_Line', f'{period}_BBM', f'{period}_RSI']    
+                    required_cols = set(inspectCols)
+
+                    if not self.signaldf_full.columns.empty and self.signaldf_full['symbol'].isin([row.symbol]).any() and required_cols.issubset(set(self.signaldf_full.columns)):
+                        inspectDict={'time':row.ctime,'symbol':row.symbol,'side':row.side, 
+                                    'total_pnl':total_pnl, 
+                                    'open':self.signaldf_full.at[row.symbol, f'{period}_open'], 'close':self.signaldf_full.at[row.symbol, f'{period}_close'],
+                                    'fast':self.signaldf_full.at[row.symbol, f'{period}_fast'], 'medium':self.signaldf_full.at[row.symbol, f'{period}_medium'],
+                                    'macd_line':self.signaldf_full.at[row.symbol, f'{period}_MACD_Line'], 'signal_line':self.signaldf_full.at[row.symbol, f'{period}_Signal_Line'],
+                                    'bbm':self.signaldf_full.at[row.symbol, f'{period}_BBM'], 'rsi':self.signaldf_full.at[row.symbol, f'{period}_RSI']
+                                    }    
+                        inspectList.append(inspectDict)
+                        del inspectDict
+                        gc.collect()
                         
-                    if select and int(self.max_auto_trades)!=0:
-                        # Moving average comparison between fast and medium
-                        if float(self.profit_amount) > 0 and total_pnl > float(self.profit_amount):
-                            last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
-                            price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
-                            datajs = await self.bitunixApi.PlaceOrder(
-                                positionId=row.positionId,
-                                ticker=row.symbol,
-                                qty=row.qty,
-                                price=price,
-                                side=row.side,
-                                tradeSide="CLOSE"
-                            )
-                            if datajs["code"] == 0:
-                                self.notifications.add_notification(
-                                    f'{colors.CYAN}Auto close submitted due to take profit for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
-                                )
-                            continue
+                        # Check orders
+                        select = True
+                        self.pendingOrders = await self.bitunixApi.GetPendingOrderData({'symbol': row.symbol})
+                        if self.pendingOrders and len(self.pendingOrders['orderList']) == 1:
+                            select = False
+                            
+                        if select and int(self.max_auto_trades)!=0:
+                        
+                            # Moving average comparison between fast and medium
+                            if float(self.profit_amount) > 0 and total_pnl > float(self.profit_amount):
+                                last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
+                                price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
 
-                        if float(self.loss_amount) > 0 and total_pnl < -float(self.loss_amount):
-                            last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
-                            price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
-                            datajs = await self.bitunixApi.PlaceOrder(
-                                positionId=row.positionId,
-                                ticker=row.symbol,
-                                qty=row.qty,
-                                price=price,
-                                side=row.side,
-                                tradeSide="CLOSE"
-                            )
-                            if datajs["code"] == 0:
-                                self.notifications.add_notification(
-                                    f'{colors.CYAN}Auto close submitted due to stop loss for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                                datajs = await self.bitunixApi.PlaceOrder(
+                                    positionId=row.positionId,
+                                    ticker=row.symbol,
+                                    qty=row.qty,
+                                    price=price,
+                                    side=row.side,
+                                    tradeSide="CLOSE"
                                 )
-                            continue
+                                if datajs["code"] == 0:
+                                    self.notifications.add_notification(
+                                        f'{colors.CYAN}Auto close submitted due to take profit for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                                    )
+                                continue
 
-                        if f'{period}_fast' in self.signaldf_full.columns and f'{period}_medium' in self.signaldf_full.columns:
+                            if float(self.loss_amount) > 0 and total_pnl < -float(self.loss_amount):
+                                last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
+                                price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
+
+                                datajs = await self.bitunixApi.PlaceOrder(
+                                    positionId=row.positionId,
+                                    ticker=row.symbol,
+                                    qty=row.qty,
+                                    price=price,
+                                    side=row.side,
+                                    tradeSide="CLOSE"
+                                )
+                                if datajs["code"] == 0:
+                                    self.notifications.add_notification(
+                                        f'{colors.CYAN}Auto close submitted due to stop loss for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                                    )
+                                continue
+
                             if self.check_ema and row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_fast'] < self.signaldf_full.at[row.symbol, f'{period}_medium']:
                                 last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                 price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
+
                                 datajs = await self.bitunixApi.PlaceOrder(
                                     positionId=row.positionId,
                                     ticker=row.symbol,
@@ -757,7 +787,6 @@ class BitunixSignal:
                                 continue
 
 
-                        if f'{period}_MACD_Line' in self.signaldf_full.columns and f'{period}_Signal_Line' in self.signaldf_full.columns:
                             if self.check_macd and row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_MACD_Line'] < self.signaldf_full.at[row.symbol, f'{period}_Signal_Line']:
                                 last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                 price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
@@ -792,7 +821,6 @@ class BitunixSignal:
                                     )
                                 continue
 
-                        if f'{period}_open' in self.signaldf_full.columns and f'{period}_BBM' in self.signaldf_full.columns:
                             if self.check_bbm and row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_open'] < self.signaldf_full.at[row.symbol, f'{period}_BBM']:
                                 last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                 price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
@@ -827,7 +855,6 @@ class BitunixSignal:
                                     )
                                 continue
 
-                        if f'{period}_RSI' in self.signaldf_full.columns:
                             if self.check_rsi and row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_RSI'] >=90:
                                 last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                 price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
@@ -862,14 +889,18 @@ class BitunixSignal:
                                     )
                                 continue
                     await asyncio.sleep(.10)
-                    
+            
+                self.inspectdf = pd.DataFrame(inspectList)
+                del inspectList
+                gc.collect()
+        
         except Exception as e:
             stack = traceback.extract_stack()
             function_name = stack[-1].name
             logger.info(f"Function: {function_name}, {e}, {e.args}, {type(e).__name__}")
             logger.info(traceback.print_exc())
                 
-        if not self.verbose_logging:
+        if self.verbose_logging:
             logger.info(f"AutoTradeProcess: elapsed time {time.time()-start}")
 
         del df

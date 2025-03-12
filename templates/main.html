@@ -38,7 +38,7 @@
         <div class="mainbody">
             <div class="container">
                 <div class="left">
-                    <button id="button">Re-Load</button>
+                    <button id="inspect">Inspect</button>
                 </div>
                 <div class="right">
                     <label for="optionMovingAverage">Moving Average</label>
@@ -212,9 +212,9 @@
                 openURL(result.message);
             }
 
-            document.getElementById("button").addEventListener('click', () => {
-                handleReloadButton();
-            });
+            //document.getElementById("reload").addEventListener('click', () => {
+            //    handleReloadButton();
+            //});
 
             async function handleReloadButton() {
                 const response = await fetch('/reload', {
@@ -224,6 +224,22 @@
                     },
                     body: `name=${name}`
                 });
+            }
+
+            document.getElementById("inspect").addEventListener('click', () => {
+                handleInspectButton();
+            });
+
+            async function handleInspectButton() {
+                const response = await fetch('/get_inspect', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `name=${name}`
+                });
+                const result = await response.json();
+                openURL(result.message);
             }
 
             async function handleAddButton(symbol,close) {
