@@ -405,8 +405,7 @@ class Tickers:
                 }
                 df.fillna(fill_values, inplace=True)
                 df.set_index("symbol", inplace=True, drop=False) 
-                       
-                self.signaldf_full = df.copy()
+                self.signaldf_full = df.copy().sort_values(by=[f'{period}_cb'], ascending=[False]) 
                 #signaldf only contain symbol that has cosecutive colored bar > 1 for buy or sell
                 trending_conditions = [
                     (

@@ -69,7 +69,7 @@
                     <div id="autoTradeCycleTime">...</div>
                 </div>
                 <div class="right">
-                    <button disabled id="notused">Not Used</button>
+                    <button disabled id="notused">not used</button>
                 </div>
              </div>        
              <span>Positions</span>
@@ -84,9 +84,15 @@
                     Loading orders... 
                 </div> 
             </div>
-            <span>signals</span>
+            <span>selected signals</span>
             <div class="row">
                 <div id="signals"> 
+                    Loading signals... 
+                </div> 
+            </div>
+            <span>all signals</span>        
+            <div class="row">
+                <div id="study"> 
                     Loading signals... 
                 </div> 
             </div>
@@ -111,6 +117,12 @@
             const websocket_m = new WebSocket(`ws://${host}:8000/wsmain`);
             websocket_m.onopen = function() {
                 document.getElementById('message').innerHTML = "main page webSocket connection opened" 
+                // Send a ping every 30 seconds
+                setInterval(() => {
+                    if (websocket_m.readyState === WebSocket.OPEN) {
+                        websocket_m.send("ping");
+                    }
+                }, 30000);                 
             }
             
             websocket_m.onmessage = function(event) {
@@ -119,6 +131,7 @@
                 document.getElementById("positions").innerHTML = messageElement.dataframes.positions;
                 document.getElementById("orders").innerHTML = messageElement.dataframes.orders;                
                 document.getElementById("signals").innerHTML = messageElement.dataframes.signals;                
+                document.getElementById("study").innerHTML = messageElement.dataframes.study;
                 document.getElementById("positionHistory").innerHTML = messageElement.dataframes.positionHistory;
                 document.getElementById('message').innerHTML = messageElement.status_messages;
                 document.getElementById('totalProfit').innerText = messageElement.profit;
@@ -238,12 +251,12 @@
                 });
             }
 
-            document.getElementById("trades").addEventListener('click', () => {
-                handleTradesButton();
+            document.getElementById("notused").addEventListener('click', () => {
+                handlenotusedButton();
             });
 
-            async function handleTradesButton() {
-                const response = await fetch('/get_trades', {
+            async function handlenotusedButton() {
+                const response = await fetch('/get_notused', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
@@ -350,84 +363,66 @@
                 window.location.href = url; 
             } 
             
-            document.addEventListener('DOMContentLoaded', (event) => { 
-                const table = document.getElementById('signals'); 
-                table.addEventListener('click', async (event) => { 
-                    const target = event.target; 
-                    const columnIndex = target.cellIndex; 
-                    if (target.tagName === 'TD' && (columnIndex === 0) ) { 
-                        const row = target.parentNode
-                        const headerCell = target.closest('table').querySelector(`thead tr th:nth-child(${columnIndex + 1})`); 
-                        const columnName = headerCell.innerText;                        
-                        const response = await fetch('/get_charts', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/x-www-form-urlencoded',
-                            },
-                            body: `symbol=${row.cells[0].innerText}`
-                        });
-                        const result = await response.json();
-                        openURL(result.message);
-                    } 
-                }); 
-                const table2 = document.getElementById('positions'); 
-                table2.addEventListener('click', async (event) => { 
-                    const target2 = event.target; 
-                    const columnIndex2 = target2.cellIndex; 
-                    if (target2.tagName === 'TD' && (columnIndex2 === 0)) { 
-                        const row2 = target2.parentNode
-                        const headerCell2 = target2.closest('table').querySelector(`thead tr th:nth-child(${columnIndex2 + 1})`); 
-                        const columnName2 = headerCell2.innerText;                        
-                        const response = await fetch('/get_charts', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/x-www-form-urlencoded',
-                            },
-                            body: `symbol=${row2.cells[0].innerText}`
-                        });
-                        const result = await response.json();
-                        openURL(result.message);
-                    } 
-                }); 
-                const table3 = document.getElementById('orders'); 
-                table3.addEventListener('click', async (event) => { 
-                    const target3 = event.target; 
-                    const columnIndex3 = target3.cellIndex; 
-                    if (target3.tagName === 'TD' && (columnIndex3 === 1)) { 
-                        const row3 = target3.parentNode
-                        const headerCell3 = target3.closest('table').querySelector(`thead tr th:nth-child(${columnIndex3 + 1})`); 
-                        const columnName3 = headerCell3.innerText;                        
-                        const response = await fetch('/get_charts', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/x-www-form-urlencoded',
-                            },
-                            body: `symbol=${row3.cells[1].innerText}`
-                        });
-                        const result = await response.json();
-                        openURL(result.message);
-                    } 
-                });
-                const table4 = document.getElementById('positionHistory'); 
-                table4.addEventListener('click', async (event) => { 
-                    const target4 = event.target; 
-                    const columnIndex4 = target.cellIndex; 
-                    if (target4.tagName === 'TD' && columnIndex4 === 0) { 
-                        const row = target4.parentNode;
-                        const headerCell = target4.closest('table4').querySelector(`thead tr th:nth-child(${columnIndex4 + 1})`); 
-                        const columnName = headerCell.innerText;                        
-                        const response = await fetch('/get_charts', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/x-www-form-urlencoded',
-                            },
-                            body: `symbol=${row.cells[0].innerText}`
-                        });
-                        const result = await response.json();
-                        openURL(result.message);
-                    } 
-                });
+            /**
+            * Attach click event to a table and handle cell clicks dynamically
+            * @param {string} tableId - The ID of the HTML table element.
+            * @param {string} targetColumnIndex - The column index to target (e.g., 0 for the first column).
+            * @param {string} endpoint - The server endpoint to fetch data from.
+            */
+            function attachTableClickHandler(tableId, targetColumnIndex, endpoint) {
+                const table = document.getElementById(tableId);
 
+                if (!table) {
+                    console.error(`Table with ID "${tableId}" not found.`);
+                    return;
+                }
+
+                table.addEventListener('click', async (event) => {
+                    const target = event.target;
+                    const columnIndex = target.cellIndex;
+
+                    // Check if clicked element is a TD and matches the target column index
+                    if (target.tagName === 'TD' && columnIndex === targetColumnIndex) {
+                        const row = target.parentNode;
+
+                        const headerCell = target
+                            .closest('table')
+                            .querySelector(`thead tr th:nth-child(${columnIndex + 1})`);
+
+                        const columnName = headerCell ? headerCell.innerText : `Column ${columnIndex + 1}`;
+                        
+                        try {
+                            const symbol = row.cells[targetColumnIndex].innerText;
+
+                            const response = await fetch(endpoint, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/x-www-form-urlencoded',
+                                },
+                                body: `symbol=${encodeURIComponent(symbol)}`, // Sanitize input
+                            });
+
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! Status: ${response.status}`);
+                            }
+
+                            const result = await response.json();
+                            openURL(result.message); // Call the custom openURL function
+                        } catch (error) {
+                            console.error(`Error fetching data for column "${columnName}":`, error);
+                            alert("An error occurred while processing your request.");
+                        }
+                    }
+                });
+            }
+
+
+            document.addEventListener('DOMContentLoaded', (event) => { 
+                attachTableClickHandler('positions', 0, '/get_charts');
+                attachTableClickHandler('orders', 0, '/get_charts');
+                attachTableClickHandler('signals', 0, '/get_charts');
+                attachTableClickHandler('study', 0, '/get_charts');
+                attachTableClickHandler('positionHistory', 0, '/get_charts');
             });
 
             //will not use this for now 

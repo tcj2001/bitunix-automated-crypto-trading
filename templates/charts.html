@@ -108,6 +108,12 @@
         const host = window.location.hostname;
         const websocket = new WebSocket(`ws://${host}:8000/wschart?ticker=${symbol}`);
         websocket.onopen = function() {
+            // Send a ping every 30 seconds
+            setInterval(() => {
+                if (websocket.readyState === WebSocket.OPEN) {
+                    websocket.send("ping");
+                }
+            }, 30000);                 
         }
         
         websocket.onmessage = function(event) {

@@ -225,6 +225,19 @@ async def wsmain(websocket):
                                                                 "1m_cb": "1m_barcolor"
                                                         })
 
+    #html rendering setup
+    period = bitunix.bitunixSignal.option_moving_average
+    allsignaldfrenderer = DataFrameHtmlRenderer(hide_columns=["1d_barcolor","1h_barcolor","15m_barcolor","5m_barcolor","1m_barcolor","lastcolor","bidcolor","askcolor"], \
+                                            color_column_mapping={"bid": "bidcolor",
+                                                                "last": "lastcolor",
+                                                                "ask": "askcolor",
+                                                                "1d_cb": "1d_barcolor",
+                                                                "1h_cb": "1h_barcolor",
+                                                                "15m_cb": "15m_barcolor",
+                                                                "5m_cb": "5m_barcolor",
+                                                                "1m_cb": "1m_barcolor"
+                                                        })
+
     positionHistorydfrenderer = DataFrameHtmlRenderer()
 
     try:
@@ -244,13 +257,28 @@ async def wsmain(websocket):
                     positiondfStyle= positiondfrenderer.render_html(bitunix.bitunixSignal.positiondf)
                     
                 #order data
-                orderdfStyle= orderdfrenderer.render_html(bitunix.bitunixSignal.orderdf)
+                if not bitunix.bitunixSignal.orderdf.empty:
+                    orderdfStyle= orderdfrenderer.render_html(bitunix.bitunixSignal.orderdf)
+                else:
+                    orderdfStyle= orderdfrenderer.render_html(pd.DataFrame())
                     
-                #signal data
-                signaldfStyle= signaldfrenderer.render_html(bitunix.bitunixSignal.signaldf)
+                #selected signal data
+                if not bitunix.bitunixSignal.signaldf.empty:
+                    signaldfStyle= signaldfrenderer.render_html(bitunix.bitunixSignal.signaldf)
+                else:
+                    signaldfStyle= signaldfrenderer.render_html(pd.DataFrame())
+
+                #all signal data
+                if not bitunix.bitunixSignal.signaldf_full.empty:
+                    allsignaldfStyle= allsignaldfrenderer.render_html(bitunix.bitunixSignal.signaldf_full)
+                else:
+                    allsignaldfStyle= allsignaldfrenderer.render_html(pd.DataFrame()) 
 
                 #positionHistory data
-                positionHistorydfstyle= positionHistorydfrenderer.render_html(bitunix.bitunixSignal.positionHistorydf)
+                if not bitunix.bitunixSignal.positionHistorydf.empty:
+                    positionHistorydfstyle= positionHistorydfrenderer.render_html(bitunix.bitunixSignal.positionHistorydf)
+                else:
+                    positionHistorydfstyle= positionHistorydfrenderer.render_html(pd.DataFrame())
 
             except Exception as e:
                 logger.info(f"error gathering data for main page, {e}, {e.args}, {type(e).__name__}")
@@ -261,6 +289,7 @@ async def wsmain(websocket):
                 "positions" : positiondfStyle, 
                 "orders" : orderdfStyle,
                 "signals" : signaldfStyle,
+                "study" : allsignaldfStyle,
                 "positionHistory" : positionHistorydfstyle
             }
             notifications=bitunix.bitunixSignal.notifications.get_notifications()          
@@ -432,25 +461,25 @@ async def handle_chart_data(symbol: str = Form(...)):
 async def show_detail(request: Request, symbol: str): 
     return templates.TemplateResponse({"request": request, "data": symbol}, "charts.html")
     
-@app.post("/get_trades")
+@app.post("/get_study")
 async def trades_detected():
-    trades_url = f"/trades"
-    return JSONResponse(content={"message": trades_url})                                      
+    study_url = f"/study"
+    return JSONResponse(content={"message": study_url})                                      
 
 #when trades page detected
-@app.get("/trades", response_class=HTMLResponse) 
+@app.get("/study", response_class=HTMLResponse) 
 async def show_detail(request: Request): 
-    return templates.TemplateResponse({"request": request}, "trades.html")
+    return templates.TemplateResponse({"request": request}, "study.html")
 
 if __name__ == '__main__': 
     bitunix = bitunix(settings)
     import uvicorn
     host = os.getenv("host")
-    config1 = uvicorn.Config(app, host=host, port=8000, log_level="debug", reload=True)
     if settings.verbose_logging:
-        config1.log_level = "debug"
+        llevel = "debug"
     else:
-        config1.log_level = "info"  
+        llevel = "debug"  
+    config1 = uvicorn.Config(app, host=host, port=8000, log_level=llevel, reload=True)
     server = uvicorn.Server(config1)
     server.run()
 else: 
