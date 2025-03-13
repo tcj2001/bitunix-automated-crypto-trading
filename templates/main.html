@@ -90,10 +90,10 @@
                     Loading signals... 
                 </div> 
             </div>
-            <span>trades</span>
+            <span>positionHistory</span>
             <div class="row">
-                <div id="trades"> 
-                    Loading trades... 
+                <div id="positionHistory"> 
+                    Loading positionHistory... 
                 </div> 
             </div>
         </div>
@@ -119,7 +119,7 @@
                 document.getElementById("positions").innerHTML = messageElement.dataframes.positions;
                 document.getElementById("orders").innerHTML = messageElement.dataframes.orders;                
                 document.getElementById("signals").innerHTML = messageElement.dataframes.signals;                
-                document.getElementById("trades").innerHTML = messageElement.dataframes.trades;
+                document.getElementById("positionHistory").innerHTML = messageElement.dataframes.positionHistory;
                 document.getElementById('message').innerHTML = messageElement.status_messages;
                 document.getElementById('totalProfit').innerText = messageElement.profit;
                 document.getElementById("autoTradeCycleTime").innerText = messageElement.stime;
@@ -408,7 +408,7 @@
                         openURL(result.message);
                     } 
                 });
-                const table4 = document.getElementById('trades'); 
+                const table4 = document.getElementById('positionHistory'); 
                 table4.addEventListener('click', async (event) => { 
                     const target4 = event.target; 
                     const columnIndex4 = target.cellIndex; 
