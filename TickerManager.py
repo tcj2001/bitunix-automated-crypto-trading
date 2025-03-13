@@ -334,6 +334,14 @@ class Tickers:
         ret = [d[symbol] for d in self._tickerObjects if symbol in d]
         return ret[0] if ret else None
     
+    def get_interval(self, symbol, intervalId):
+        ret = [d[symbol] for d in self._tickerObjects if symbol in d]
+        tickerObj = ret[0] if ret else None
+        if tickerObj:
+            return tickerObj.get_interval_ticks(intervalId)
+        else:
+            return None
+
     def setTrades(self, symbol, trades):
         ret = [d[symbol] for d in self._tickerObjects if symbol in d]
         if ret:
@@ -388,29 +396,27 @@ class Tickers:
                                 current_data.append(new_row)
                         
             df = pd.DataFrame(current_data)
-            fill_values = {
-                'lastcolor': "", 'bidcolor': "", 'askcolor': "", 'bid': 0.0, 'ask': 0.0, 'last': 0.0,
-                f"{intervalId}_cb":0, f"{intervalId}_barcolor": "", f"{intervalId}_trend": "",
-                f"{intervalId}_open": 0.0, f"{intervalId}_close": 0.0, f"{intervalId}_high": 0.0, f"{intervalId}_low": 0.0,
-                f"{intervalId}_ema": "", f"{intervalId}_macd": "", f"{intervalId}_bbm": "", f"{intervalId}_rsi": "", f"{intervalId}_close_proximity": ""
-            }
-            df.fillna(fill_values, inplace=True)        
             if not df.empty:
-
-                #group data at ticker level    
-                df = df.groupby('symbol').max()     
-                df["symbol"] = df.index
+                fill_values = {
+                    'lastcolor': "", 'bidcolor': "", 'askcolor': "", 'bid': 0.0, 'ask': 0.0, 'last': 0.0,
+                    f"{intervalId}_cb":0, f"{intervalId}_barcolor": "", f"{intervalId}_trend": "",
+                    f"{intervalId}_open": 0.0, f"{intervalId}_close": 0.0, f"{intervalId}_high": 0.0, f"{intervalId}_low": 0.0,
+                    f"{intervalId}_ema": "", f"{intervalId}_macd": "", f"{intervalId}_bbm": "", f"{intervalId}_rsi": "", f"{intervalId}_close_proximity": ""
+                }
+                df.fillna(fill_values, inplace=True)
+                df.set_index("symbol", inplace=True, drop=False) 
+                       
                 self.signaldf_full = df.copy()
-                if f'{period}_trend' not in df.columns:
-                    return
-                #apply selection criteria
+                #signaldf only contain symbol that has cosecutive colored bar > 1 for buy or sell
                 trending_conditions = [
                     (
-                        (df[f'{period}_trend'].str.contains(r'^buy.*$', case=False, na=False)) &
+                        (df[f'{period}_trend']=='BUY') &
+                        (df[f'{period}_cb']>1) &
                         (df[f'{period}_barcolor']==self.green) 
                     ),
                     (
-                        (df[f'{period}_trend'].str.contains(r'^sell.*$', case=False, na=False)) &
+                        (df[f'{period}_trend']=='SELL') &
+                        (df[f'{period}_cb']>1) &
                         (df[f'{period}_barcolor']==self.red) 
                     )
                 ]

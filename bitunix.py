@@ -27,6 +27,7 @@ from fastapi_login import LoginManager
 from fastapi_login.exceptions import InvalidCredentialsException
 import gc
 from DataFrameHtmlRenderer import DataFrameHtmlRenderer
+from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
 settings = Settings()
@@ -78,7 +79,7 @@ class bitunix():
         await asyncio.create_task(self.bitunixSignal.start_jobs())
         
     async def restart(self): 
-        await self.bitunixSignal.restart_jobs()
+       await asyncio.create_task(self.bitunixSignal.restart_jobs())
         
     async def send_message_to_websocket(self,message):
         async def send_to_all():
@@ -91,6 +92,13 @@ class bitunix():
                 await ws.send_text(message)
      
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Adjust this for production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 templates = Jinja2Templates(directory="templates")
 SECRET=os.getenv('SECRET')
 manager = LoginManager(SECRET, token_url="/auth/login", use_cookie=True)
@@ -99,6 +107,7 @@ manager.cookie_name = "auth_token"
 
 @app.post("/auth/login")
 async def login(data: OAuth2PasswordRequestForm = Depends()):
+    start=time.time()
     username = data.username
     password = data.password
     
@@ -108,6 +117,7 @@ async def login(data: OAuth2PasswordRequestForm = Depends()):
     access_token = manager.create_access_token(data={"sub": username})
     response = RedirectResponse(url="/main", status_code=302)
     manager.set_cookie(response, access_token)
+    logger.info(f"/auth/login: elapsed time {time.time()-start}")
     return response
 
 @app.get("/main", response_class=HTMLResponse)
@@ -117,7 +127,7 @@ async def main_page(request: Request,  user=Depends(manager)):
   
 @app.on_event("startup")  
 async def startup_event():
-    await get_server_states(bitunix, app)
+    await asyncio.create_task(get_server_states(bitunix, app))
     await bitunix.start()
 
 #load inital states for html
@@ -132,7 +142,7 @@ async def get_server_states(bitunix, app):
 @app.post("/reload")
 async def refresh_detected():
     bitunix.bitunixSignal.notifications.add_notification("Reload detected!")
-    await bitunix.restart()
+    await asyncio.create_task(bitunix.restart())
 
 @app.post("/save_states")
 async def save_states(states: dict):
@@ -147,7 +157,7 @@ async def get_states(payload: dict):
 
 @app.post("/autotrade")
 async def handle_autotrade():
-    await set_server_states()
+    await asyncio.create_task(set_server_states())
     return {"status":bitunix.bitunixSignal.autoTrade}
 
 async def set_server_states():
@@ -215,6 +225,8 @@ async def wsmain(websocket):
                                                                 "1m_cb": "1m_barcolor"
                                                         })
 
+    tradesdfrenderer = DataFrameHtmlRenderer(hide_columns=["reduceOnly"])
+
     try:
     
         while True:
@@ -225,17 +237,20 @@ async def wsmain(websocket):
                 portfoliodfStyle= portfoliodfrenderer.render_html(bitunix.bitunixSignal.portfoliodf)
                     
                 #position data
-                columns=["symbol", "ctime", "qty", "side", "unrealizedPNL", "realizedPNL", "bid", "last", "ask", f"{period}_open", f"{period}_close", f"{period}_high", f"{period}_low", f"{period}_ema", f"{period}_macd", f"{period}_bbm", f"{period}_rsi", f"{period}_close_proximity", f"{period}_trend", f"{period}_cb", f"{period}_barcolor", "buy", "sell", "reduce"]
+                columns=["symbol", "ctime", "qty", "side", "unrealizedPNL", "realizedPNL", "bid", "last", "ask", f"{period}_open", f"{period}_close", f"{period}_high", f"{period}_low", f"{period}_ema", f"{period}_macd", f"{period}_bbm", f"{period}_rsi", f"{period}_close_proximity", f"{period}_trend", f"{period}_cb", f"{period}_barcolor", "bitunix", "action", "add", "reduce"]
                 if set(columns).issubset(bitunix.bitunixSignal.positiondf2.columns):
                     positiondfStyle= positiondfrenderer.render_html(bitunix.bitunixSignal.positiondf2[columns])
                 else:
-                    positiondfStyle= positiondfrenderer.render_html(pd.DataFrame())
+                    positiondfStyle= positiondfrenderer.render_html(bitunix.bitunixSignal.positiondf)
                     
                 #order data
                 orderdfStyle= orderdfrenderer.render_html(bitunix.bitunixSignal.orderdf)
                     
                 #signal data
                 signaldfStyle= signaldfrenderer.render_html(bitunix.bitunixSignal.signaldf)
+
+                #trades data
+                tradesdfStyle= tradesdfrenderer.render_html(bitunix.bitunixSignal.tradesdf[bitunix.bitunixSignal.tradesdf["reduceOnly"] == True])
 
             except Exception as e:
                 logger.info(f"error gathering data for main page, {e}, {e.args}, {type(e).__name__}")
@@ -245,7 +260,8 @@ async def wsmain(websocket):
                 "portfolio" : portfoliodfStyle, 
                 "positions" : positiondfStyle, 
                 "orders" : orderdfStyle,
-                "signals" : signaldfStyle
+                "signals" : signaldfStyle,
+                "trades" : tradesdfStyle
             }
             notifications=bitunix.bitunixSignal.notifications.get_notifications()          
 
@@ -265,9 +281,11 @@ async def wsmain(websocket):
             gc.collect()
 
             elapsed_time = time.time() - stime
+            
             if settings.verbose_logging:
                 logger.info(f"wsmain: elapsed time {elapsed_time}")
             time_to_wait = max(0.01, bitunix.screen_refresh_interval - elapsed_time)
+            
             await asyncio.sleep(time_to_wait)
             
     except WebSocketDisconnect:
@@ -275,68 +293,6 @@ async def wsmain(websocket):
         logger.info("local main page WebSocket connection closed")
     except Exception as e:
         logger.info(f"local main page websocket unexpected error: {e}")       
-
-@app.websocket("/wstrades")
-async def websocket_endpoint(websocket: WebSocket):
-    await asyncio.create_task(wstrades(websocket))
-
-async def wstrades(websocket):    
-    query_params = websocket.query_params
-
-    queue = asyncio.Queue()
-    asyncio.create_task(send_data_queue(websocket, queue))    
-
-    await websocket.accept()
-    bitunix.websocket_connections.add(websocket)
-    
-    #html rendering setup
-    tradesdfrenderer = DataFrameHtmlRenderer(hide_columns=["reduceOnly"])
-    
-    try:
-        while True:
-            stime=time.time()
-
-            data={}
-            try:
-                #trades data
-                tradesdfStyle= tradesdfrenderer.render_html(bitunix.bitunixSignal.tradesdf[bitunix.bitunixSignal.tradesdf["reduceOnly"] == True])
-                
-            except Exception as e:
-                logger.info(f"error gathering data for trades page, {e}, {e.args}, {type(e).__name__}")
-
-            #combined data
-            dataframes={
-                "trades" : tradesdfStyle, 
-            }
-            notifications=bitunix.bitunixSignal.notifications.get_notifications()          
-
-            utc_time = datetime.fromtimestamp(bitunix.bitunixSignal.lastAutoTradeTime, tz=pytz.UTC)
-            cst_time = utc_time.astimezone(pytz.timezone('US/Central')).strftime('%Y-%m-%d %H:%M:%S')
-
-            data = {
-                "dataframes": dataframes,
-                "profit" : bitunix.bitunixSignal.profit,
-                "stime": cst_time,
-                "status_messages": [] if len(notifications)==0 else notifications
-            }
-            
-            await queue.put(json.dumps(data))
-            
-            del data
-            gc.collect()
-
-            elapsed_time = time.time() - stime
-            if settings.verbose_logging:
-                logger.info(f"wstrades: elapsed time {elapsed_time}")
-            time_to_wait = max(0.01, bitunix.screen_refresh_interval - elapsed_time)
-            await asyncio.sleep(time_to_wait)
-            
-    except WebSocketDisconnect:
-        bitunix.websocket_connections.remove(websocket)
-        logger.info("local trades page WebSocket connection closed")
-    except Exception as e:
-        logger.info(f"local trades page websocket unexpected error: {e}")        
-
 
 @app.websocket("/wschart")
 async def websocket_endpoint(websocket: WebSocket):
@@ -408,7 +364,7 @@ async def send_data_queue(websocket, queue):
 
 @app.get("/send-message/{msg}")
 async def send_message(msg: str):
-    await bitunix.send_message_to_websocket(msg)
+    await asyncio.create_task(bitunix.send_message_to_websocket(msg))
     return {"message": f"Sent: {msg}"}        
 
 
@@ -488,10 +444,13 @@ async def show_detail(request: Request):
 
 if __name__ == '__main__': 
     bitunix = bitunix(settings)
-
     import uvicorn
     host = os.getenv("host")
-    config1 = uvicorn.Config(app, host=host, port=8000)
+    config1 = uvicorn.Config(app, host=host, port=8000, log_level="debug", reload=True)
+    if settings.verbose_logging:
+        config1.log_level = "debug"
+    else:
+        config1.log_level = "info"  
     server = uvicorn.Server(config1)
     server.run()
 else: 
