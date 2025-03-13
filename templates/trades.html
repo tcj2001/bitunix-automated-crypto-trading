@@ -31,19 +31,14 @@
         <div class="mainbody">
             <div class="container">
                 <div class="left">
-                    <label for="autoTradeCycleTime">AutoTrade Cycle Time</label>
                     <div id="autoTradeCycleTime">...</div>
                 </div>
-                <div class="right">
+                <div class="left">
                     <label for="totalProfit">Total Profit</label>
                     <div id="totalProfit">...</div>
                 </div>
-            </div>        
-            <div class="row">
-                <div id="inspect"> 
-                    Loading studydata... 
-                </div> 
             </div>
+            <span>trades</span>        
             <div class="row">
                 <div id="trades"> 
                     Loading trades... 
@@ -61,14 +56,13 @@
        
         <script>
             const host = window.location.hostname;
-            const websocket_m = new WebSocket(`ws://${host}:8000/wsinspect`);
+            const websocket_m = new WebSocket(`ws://${host}:8000/wstrades`);
             websocket_m.onopen = function() {
-                document.getElementById('message').innerHTML = "inspect page webSocket connection opened" 
+                document.getElementById('message').innerHTML = "trades page webSocket connection opened" 
             }
             
             websocket_m.onmessage = function(event) {
                 const messageElement = JSON.parse(event.data);
-                document.getElementById("inspect").innerHTML = messageElement.dataframes.inspect;
                 document.getElementById("trades").innerHTML = messageElement.dataframes.trades;
                 document.getElementById("message").innerHTML = messageElement.status_messages;
                 document.getElementById("totalProfit").innerText = messageElement.profit;
@@ -79,11 +73,11 @@
 
 
             websocket_m.onerror = function(error) {
-                document.getElementById('message').innerHTML = "main page webSocket connection failed.";
+                document.getElementById('message').innerHTML = "trades page webSocket connection failed.";
             };
 
             websocket_m.onclose = function() {
-                document.getElementById('message').innerHTML = "main page webSocket connection closed.";
+                document.getElementById('message').innerHTML = "trades page webSocket connection closed.";
             };
         
 
@@ -128,7 +122,7 @@
             } 
            
             document.addEventListener('DOMContentLoaded', (event) => { 
-                const table = document.getElementById('inspect'); 
+                const table = document.getElementById('trades'); 
                 table.addEventListener('click', async (event) => { 
                     const target = event.target; 
                     const columnIndex = target.cellIndex; 
@@ -147,25 +141,6 @@
                         openURL(result.message);
                     } 
                 });
-                const table2 = document.getElementById('trades'); 
-                table2.addEventListener('click', async (event) => { 
-                    const target2 = event.target; 
-                    const columnIndex2 = target2.cellIndex; 
-                    if (target2.tagName === 'TD' && (columnIndex2 === 0) ) { 
-                        const row = target2.parentNode
-                        const headerCell = target2.closest('table').querySelector(`thead tr th:nth-child(${columnIndex2 + 1})`); 
-                        const columnName = headerCell.innerText;                        
-                        const response = await fetch('/get_charts', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/x-www-form-urlencoded',
-                            },
-                            body: `symbol=${row.cells[0].innerText}`
-                        });
-                        const result = await response.json();
-                        openURL(result.message);
-                    } 
-                }); 
             });
 
             function toggleDropdown() {

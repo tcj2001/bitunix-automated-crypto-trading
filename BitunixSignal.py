@@ -48,6 +48,7 @@ class BitunixSignal:
         #these are used for html rendering as well as storing
         self.signaldf= pd.DataFrame()
         self.positiondf= pd.DataFrame()
+        self.positiondf2= pd.DataFrame()
         self.portfoliodf=pd.DataFrame()
         self.orderdf=pd.DataFrame()
         self.tickerdf=pd.DataFrame()
@@ -83,6 +84,8 @@ class BitunixSignal:
         self.check_macd = settings.check_macd
         self.check_bbm = settings.check_bbm
         self.check_rsi = settings.check_rsi
+        
+        self.lastAutoTradeTime = time.time()
         
       
     async def load_tickers(self):
@@ -569,9 +572,15 @@ class BitunixSignal:
             self.tickerObjects.getCurrentData(period)
             self.signaldf_full = self.tickerObjects.signaldf_full
             self.signaldf_filtered = self.tickerObjects.signaldf_filtered
-            
-            if not self.signaldf_filtered.empty:
 
+            if not self.positiondf.empty:
+                columns=[f"{period}_open", f"{period}_close", f"{period}_high", f"{period}_low", f"{period}_ema", f"{period}_macd", f"{period}_bbm", f"{period}_rsi", f"{period}_close_proximity", f"{period}_trend", f"{period}_cb", f"{period}_barcolor"]
+                if set(columns).issubset(self.signaldf_full.columns):                
+                    self.positiondf2 = pd.merge(self.positiondf, self.signaldf_full[["symbol", f"{period}_open", f"{period}_close", f"{period}_high", f"{period}_low", 
+                            f"{period}_ema", f"{period}_macd", f"{period}_bbm", f"{period}_rsi", f"{period}_close_proximity",
+                            f"{period}_trend",f"{period}_cb", f"{period}_barcolor"]], left_on="symbol", right_index=True, how="left")    
+                        
+            if not self.signaldf_filtered.empty:
                 #remove those that are in positon and orders
                 self.signaldf_filtered = self.signaldf_filtered[~(self.signaldf_filtered['symbol'].isin(inuseTickers))]
 
@@ -579,12 +588,10 @@ class BitunixSignal:
                     # Assign to self.signaldf for HTML rendering
                     self.signaldf = self.signaldf_filtered[[
                         "symbol", 
-                        "1d_cb", "1d_barcolor", "1d_trend",
-                        "1h_cb", "1h_barcolor", "1h_trend", 
-                        "15m_cb", "15m_barcolor", "15m_trend", 
-                        "5m_cb", "5m_barcolor", "5m_trend",
-                        "1m_cb", "1m_barcolor", "1m_trend",  
-                        "bid", "last", "ask", "lastcolor", "bidcolor", "askcolor"
+                        'lastcolor', 'bidcolor', 'askcolor', 'bid', 'ask', 'last',
+                        f"{period}_open", f"{period}_close", f"{period}_high", f"{period}_low", 
+                        f"{period}_ema", f"{period}_macd", f"{period}_bbm", f"{period}_rsi",f"{period}_close_proximity",
+                        f"{period}_trend",f"{period}_cb", f"{period}_barcolor"
                     ]].sort_values(by=[f'{period}_cb'], ascending=[False])
 
                     # Add buttons
@@ -620,7 +627,6 @@ class BitunixSignal:
         try:
             if not self.autoTrade:
                 return
-            inspectList=[]
             ##############################################################################################################################
             # Buy or sell
             ##############################################################################################################################
@@ -638,10 +644,7 @@ class BitunixSignal:
                     for index, row in df.iterrows():
                         side = "BUY" if row[f'{period}_barcolor'] == self.green else "SELL" if row[f'{period}_barcolor'] == self.red else ""
 
-                        #inspectDict={'symbol':row.symbol,'side':side}
-                        #inspectList.append(inspectDict)
-
-                        if side:
+                        if side != "":
                             select = True
                             self.pendingPositions = await self.bitunixApi.GetPendingPositionData({'symbol': row.symbol})
                             if self.pendingPositions and len(self.pendingPositions) == 1:
@@ -691,20 +694,10 @@ class BitunixSignal:
                     total_pnl = unrealized_pnl + realized_pnl
 
 
-                    inspectCols=[f'{period}_open', f'{period}_close', f'{period}_fast', f'{period}_medium', f'{period}_MACD_Line', f'{period}_Signal_Line', f'{period}_BBM', f'{period}_RSI']    
-                    required_cols = set(inspectCols)
+                    requiredCols=[f'{period}_open', f'{period}_close', f'{period}_high', f'{period}_low', f'{period}_ema', f'{period}_macd', f'{period}_bbm', f'{period}_rsi', f'{period}_close_proximity', f'{period}_trend', f'{period}_cb', f'{period}_barcolor']    
+                    required_cols = set(requiredCols)
 
                     if not self.signaldf_full.columns.empty and self.signaldf_full['symbol'].isin([row.symbol]).any() and required_cols.issubset(set(self.signaldf_full.columns)):
-                        inspectDict={'symbol':row.symbol,'time':row.ctime,'side':row.side, 
-                                    'total_pnl':total_pnl, 
-                                    'open':self.signaldf_full.at[row.symbol, f'{period}_open'], 'close':self.signaldf_full.at[row.symbol, f'{period}_close'],
-                                    'fast':self.signaldf_full.at[row.symbol, f'{period}_fast'], 'medium':self.signaldf_full.at[row.symbol, f'{period}_medium'],
-                                    'macd_line':self.signaldf_full.at[row.symbol, f'{period}_MACD_Line'], 'signal_line':self.signaldf_full.at[row.symbol, f'{period}_Signal_Line'],
-                                    'bbm':self.signaldf_full.at[row.symbol, f'{period}_BBM'], 'rsi':self.signaldf_full.at[row.symbol, f'{period}_RSI']
-                                    }    
-                        inspectList.append(inspectDict)
-                        del inspectDict
-                        gc.collect()
                         
                         # Check orders
                         select = True
@@ -789,7 +782,7 @@ class BitunixSignal:
                                 continue
 
                             # Moving average comparison between fast and medium
-                            if self.check_ema and row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_fast'] < self.signaldf_full.at[row.symbol, f'{period}_medium']:
+                            if self.check_ema and row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_ema'] == "SELL":
                                 last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                 price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
 
@@ -807,7 +800,7 @@ class BitunixSignal:
                                     )
                                 continue
 
-                            if self.check_ema and row.side == 'SELL' and self.signaldf_full.at[row.symbol, f'{period}_fast'] > self.signaldf_full.at[row.symbol, f'{period}_medium']:
+                            if self.check_ema and row.side == 'SELL' and self.signaldf_full.at[row.symbol, f'{period}_ema'] == "BUY":
                                 last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                 price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
                                 datajs = await self.bitunixApi.PlaceOrder(
@@ -825,7 +818,7 @@ class BitunixSignal:
                                 continue
 
                             # MACD comparison between MACD and Signal
-                            if self.check_macd and row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_MACD_Line'] < self.signaldf_full.at[row.symbol, f'{period}_Signal_Line']:
+                            if self.check_macd and row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_macd'] == "SELL":
                                 last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                 price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
                                 datajs = await self.bitunixApi.PlaceOrder(
@@ -842,7 +835,7 @@ class BitunixSignal:
                                     )
                                 continue
 
-                            if self.check_macd and row.side == 'SELL' and self.signaldf_full.at[row.symbol, f'{period}_MACD_Line'] > self.signaldf_full.at[row.symbol, f'{period}_Signal_Line']:
+                            if self.check_macd and row.side == 'SELL'  and self.signaldf_full.at[row.symbol, f'{period}_macd'] == "BUY":
                                 last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                 price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
                                 datajs = await self.bitunixApi.PlaceOrder(
@@ -860,7 +853,7 @@ class BitunixSignal:
                                 continue
 
                             # Bollinger Band comparison between open and BBM
-                            if self.check_bbm and row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_open'] < self.signaldf_full.at[row.symbol, f'{period}_BBM']:
+                            if self.check_bbm and row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_bbm'] == "SELL":
                                 last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                 price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
                                 datajs = await self.bitunixApi.PlaceOrder(
@@ -877,7 +870,7 @@ class BitunixSignal:
                                     )
                                 continue
 
-                            if self.check_bbm and row.side == 'SELL' and self.signaldf_full.at[row.symbol, f'{period}_open'] > self.signaldf_full.at[row.symbol, f'{period}_BBM']:
+                            if self.check_bbm and row.side == 'SELL' and self.signaldf_full.at[row.symbol, f'{period}_bbm'] == "BUY":
                                 last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                 price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
                                 datajs = await self.bitunixApi.PlaceOrder(
@@ -895,7 +888,7 @@ class BitunixSignal:
                                 continue
                             
                             # RSI comparison
-                            if self.check_rsi and row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_RSI'] >=90:
+                            if self.check_rsi and row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_rsi'] == "SELL":
                                 last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                 price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
                                 datajs = await self.bitunixApi.PlaceOrder(
@@ -912,7 +905,7 @@ class BitunixSignal:
                                     )
                                 continue
 
-                            if self.check_rsi and row.side == 'SELL' and self.signaldf_full.at[row.symbol, f'{period}_RSI'] <= 10:
+                            if self.check_rsi and row.side == 'SELL' and self.signaldf_full.at[row.symbol, f'{period}_rsi'] == "BUY":
                                 last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                 price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
                                 datajs = await self.bitunixApi.PlaceOrder(
@@ -930,9 +923,6 @@ class BitunixSignal:
                                 continue
                     await asyncio.sleep(.10)
             
-                self.inspectdf = pd.DataFrame(inspectList)
-                del inspectList
-                gc.collect()
                 self.lastAutoTradeTime = time.time()
         except Exception as e:
             stack = traceback.extract_stack()
