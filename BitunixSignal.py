@@ -54,12 +54,14 @@ class BitunixSignal:
         self.tickerdf=pd.DataFrame()
         self.inspectdf=pd.DataFrame()
         self.tradesdf=pd.DataFrame() 
+        self.positionHistorydf=pd.DataFrame() 
         
         #postion, order, etc
         self.pendingOrders=None
         self.pendingPositions=None
         self.portfolioData=None
         self.tradeHistoryData=None
+        self.positionHistoryData=None
         
         #this contain all data
         self.signaldf_full = pd.DataFrame()
@@ -122,6 +124,9 @@ class BitunixSignal:
 
         self.GetTradeHistoryDataTask = AsyncThreadRunner(self.GetTradeHistoryData, interval=self.api_interval)
         self.GetTradeHistoryDataTask.start_thread(thread_name="GetTradeHistoryData")
+       
+        self.GetPositionHistoryDataTask = AsyncThreadRunner(self.GetPositionHistoryData, interval=self.api_interval)
+        self.GetPositionHistoryDataTask.start_thread(thread_name="GetPositionHistoryData")
        
         #run restartable asynch thread
         await self.restartable_jobs()
@@ -320,17 +325,6 @@ class BitunixSignal:
         del tickerdf, data, sleep_duration, next_minute, current_time
         gc.collect()
     
-    async def apply_last_data_to_form_candle(self, ts):
-        tasks = []
-        for tickerObjDict in self.tickerObjects._tickerObjects: 
-            for symbol, tickerObj in tickerObjDict.items():
-                last = tickerObj.get_last()
-                tasks.append(self.apply_candle_data(symbol, last, ts))
-                await asyncio.sleep(0)     
-        await asyncio.gather(*tasks) 
-        del tasks
-        gc.collect()  
-
     async def process_candle_data(self, tickerdf=None):
         tasks = []
         for _, row in tickerdf.iterrows():
@@ -359,6 +353,17 @@ class BitunixSignal:
         if tickerObj:
             tickerObj.form_candle(last, ts)
         del tickerObj
+        gc.collect()  
+
+    async def apply_last_data_to_form_candle(self, ts):
+        tasks = []
+        for tickerObjDict in self.tickerObjects._tickerObjects: 
+            for symbol, tickerObj in tickerObjDict.items():
+                last = tickerObj.get_last()
+                tasks.append(self.apply_candle_data(symbol, last, ts))
+                await asyncio.sleep(0)     
+        await asyncio.gather(*tasks) 
+        del tasks
         gc.collect()  
 
     async def UpdateDepthData(self, message):
@@ -519,12 +524,25 @@ class BitunixSignal:
                     thdf = self.tradesdf[self.tradesdf['symbol'] == symbol]
                     if not thdf.empty:
                         self.tickerObjects.setTrades(symbol,thdf.to_dict(orient='records'))
+                    await asyncio.sleep(0)                                
             del df, thdf
             gc.collect()
         except Exception as e:
             logger.info(f"Function: GetTradeHistoryData, {e}, {e.args}, {type(e).__name__}")
         if self.verbose_logging:
             logger.info(f"GetTradeHistoryData: elapsed time {time.time()-start}")
+
+    async def GetPositionHistoryData(self):
+        start=time.time()
+        try:
+            self.positionHistoryData = await self.bitunixApi.GetPositionHistoryData()
+            if self.positionHistoryData and 'positionList' in self.positionHistoryData:
+                self.positionHistorydf = pd.DataFrame(self.positionHistoryData['positionList'], columns=["symbol", "ctime", "maxQty", "side", "closePrice","realizedPNL","fee", "funding"])
+                self.positionHistorydf['ctime'] = pd.to_datetime(self.positionHistorydf['ctime'].astype(float), unit='ms').dt.tz_localize('UTC').dt.tz_convert(cst).dt.strftime('%Y-%m-%d %H:%M:%S')
+        except Exception as e:
+            logger.info(f"Function: GetPositionHistoryData, {e}, {e.args}, {type(e).__name__}")
+        if self.verbose_logging:
+            logger.info(f"GetPositionHistoryData: elapsed time {time.time()-start}")
 
 
     async def apply_last_data(self, symbols):
@@ -669,7 +687,7 @@ class BitunixSignal:
                                 count=count+1
                             if count >= int(self.max_auto_trades):
                                 break
-                            await asyncio.sleep(.10)
+                            await asyncio.sleep(0)
                     del df
                     gc.collect()
 
@@ -687,6 +705,7 @@ class BitunixSignal:
                         self.notifications.add_notification(
                             f'{colors.BLUE}Auto canceled order {row.orderId}, {row.symbol} {row.qty} created at {row.rtime} ({datajs["code"]} {datajs["msg"]})'
                         )
+                await asyncio.sleep(0)
 
             if not self.positiondf.empty:
                 df=self.positiondf.copy(deep=False)
@@ -924,7 +943,7 @@ class BitunixSignal:
                                         f'{colors.CYAN}Auto close submitted due to RSI {period} crossover for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
                                     )
                                 continue
-                    await asyncio.sleep(.10)
+                    await asyncio.sleep(0)
             
                 self.lastAutoTradeTime = time.time()
         except Exception as e:

@@ -225,7 +225,7 @@ async def wsmain(websocket):
                                                                 "1m_cb": "1m_barcolor"
                                                         })
 
-    tradesdfrenderer = DataFrameHtmlRenderer(hide_columns=["reduceOnly"])
+    positionHistorydfrenderer = DataFrameHtmlRenderer()
 
     try:
     
@@ -249,8 +249,8 @@ async def wsmain(websocket):
                 #signal data
                 signaldfStyle= signaldfrenderer.render_html(bitunix.bitunixSignal.signaldf)
 
-                #trades data
-                tradesdfStyle= tradesdfrenderer.render_html(bitunix.bitunixSignal.tradesdf[bitunix.bitunixSignal.tradesdf["reduceOnly"] == True])
+                #positionHistory data
+                positionHistorydfstyle= positionHistorydfrenderer.render_html(bitunix.bitunixSignal.positionHistorydf)
 
             except Exception as e:
                 logger.info(f"error gathering data for main page, {e}, {e.args}, {type(e).__name__}")
@@ -261,7 +261,7 @@ async def wsmain(websocket):
                 "positions" : positiondfStyle, 
                 "orders" : orderdfStyle,
                 "signals" : signaldfStyle,
-                "trades" : tradesdfStyle
+                "positionHistory" : positionHistorydfstyle
             }
             notifications=bitunix.bitunixSignal.notifications.get_notifications()          
 
@@ -286,7 +286,7 @@ async def wsmain(websocket):
                 logger.info(f"wsmain: elapsed time {elapsed_time}")
             time_to_wait = max(0.01, bitunix.screen_refresh_interval - elapsed_time)
             
-            await asyncio.sleep(time_to_wait)
+            await asyncio.sleep(0)
             
     except WebSocketDisconnect:
         bitunix.websocket_connections.remove(websocket)
@@ -346,7 +346,7 @@ async def wschart(websocket):
             if settings.verbose_logging:
                 logger.info(f"wschart: elapsed time {elapsed_time}")
             time_to_wait = max(0.01, bitunix.screen_refresh_interval - elapsed_time)
-            await asyncio.sleep(time_to_wait)
+            await asyncio.sleep(0)
             
     except WebSocketDisconnect:
         bitunix.websocket_connections.remove(websocket)
