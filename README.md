@@ -14,12 +14,14 @@ sometimes Web page takes a long time to load, need to investigate the issue
   - Interactive web interface with real-time updates, all manual trading
   - Candlestick charts for all timeframes (1m, 5m, 15m, 1h, 1d) on a single page with all indicators
     - Chart is activated when you click on the ticker symbol
-  - Inspect page show study value for each symbol in the scope and past trades
+  - Trades page shows past closed trades
 - Technical analysis including:
   - Moving Averages
   - MACD
   - Bollinger Bands
   - RSI
+  - Brearish or bullish candle based on the close near high or low of the current candle
+  - strength based on consecutive colored candles count
 - Secure authentication system
 - Configurable trading parameters
 - Real-time notifications
@@ -79,12 +81,14 @@ The platform can be configured through the `config.py` file or environment varia
   - It allow to select how many auto trades you want to open at a time
   - CalculateStudy Function inside TickerManager.py (Interval class)
     - You can setup current_signal (BUY,SELL,HOLD) and signal_strength (numeric value) based on your strategy
-    - current_signal can be setup based on Moving Average, MACD, Bollinger Band or RSI
+    - current_signal can be setup based on Moving Average, MACD, Bollinger Band, RSI or close proximity to high or low of the candle
     - signal_strength can be setup based on number of consecutive green or red candles or any other strategy
   - AutoTradeProcess function inside BitunixSignal.py, you can setup your opening and closing trading strategy
-    - User interface will list the stocks in the signal windowwith BUY or SELL signal based on the descending value of signal_strength
+    - User interface will list the stocks in the signal window with BUY or SELL signal based on the descending value of signal_strength
     - you have the option to manually initiate a trade or let the auto trade process to initiate the trade on top row in the signal window
     - You can manually close the trade on the current positions window or let the auto trade process to close the trade based on following conditions:
+      - If the current open position reversed direction, it will close the trade
+      - If the trade is in profit and greater than the profit_amount , it will close the trade
       - If the trade is in profit and greater than the profit_amount , it will close the trade
       - If the trade is in loss and greater than the loss_amount , it will close the trade
       - If the orderis open for more than 1 minute, it will close the open orders

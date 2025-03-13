@@ -573,13 +573,15 @@ class BitunixSignal:
             self.signaldf_full = self.tickerObjects.signaldf_full
             self.signaldf_filtered = self.tickerObjects.signaldf_filtered
 
-            if not self.positiondf.empty:
+            if not self.positiondf.empty and not self.signaldf_full.empty:
                 columns=[f"{period}_open", f"{period}_close", f"{period}_high", f"{period}_low", f"{period}_ema", f"{period}_macd", f"{period}_bbm", f"{period}_rsi", f"{period}_close_proximity", f"{period}_trend", f"{period}_cb", f"{period}_barcolor"]
                 if set(columns).issubset(self.signaldf_full.columns):                
                     self.positiondf2 = pd.merge(self.positiondf, self.signaldf_full[["symbol", f"{period}_open", f"{period}_close", f"{period}_high", f"{period}_low", 
                             f"{period}_ema", f"{period}_macd", f"{period}_bbm", f"{period}_rsi", f"{period}_close_proximity",
                             f"{period}_trend",f"{period}_cb", f"{period}_barcolor"]], left_on="symbol", right_index=True, how="left")    
-                        
+            else:
+                self.positiondf2 = pd.DataFrame()
+            
             if not self.signaldf_filtered.empty:
                 #remove those that are in positon and orders
                 self.signaldf_filtered = self.signaldf_filtered[~(self.signaldf_filtered['symbol'].isin(inuseTickers))]
@@ -628,7 +630,7 @@ class BitunixSignal:
             if not self.autoTrade:
                 return
             ##############################################################################################################################
-            # Buy or sell
+            # open long or short postition
             ##############################################################################################################################
             count=0
             self.pendingPositions = await self.bitunixApi.GetPendingPositionData({})
@@ -640,6 +642,7 @@ class BitunixSignal:
 
             if count < int(self.max_auto_trades):
                 if not self.signaldf.empty:
+                    #open position upto a max of max_auto_trades from the signal list
                     df=self.signaldf.copy(deep=False)
                     for index, row in df.iterrows():
                         side = "BUY" if row[f'{period}_barcolor'] == self.green else "SELL" if row[f'{period}_barcolor'] == self.red else ""
@@ -671,7 +674,7 @@ class BitunixSignal:
                     gc.collect()
 
             ##############################################################################################################################
-            # Close on profit or loss
+            # close long or short postition
             ##############################################################################################################################
 
             # Close orders that are open for a while
@@ -685,7 +688,6 @@ class BitunixSignal:
                             f'{colors.BLUE}Auto canceled order {row.orderId}, {row.symbol} {row.qty} created at {row.rtime} ({datajs["code"]} {datajs["msg"]})'
                         )
 
-            # Close position if take profit or accept loss
             if not self.positiondf.empty:
                 df=self.positiondf.copy(deep=False)
                 for index, row in df.iterrows():
@@ -697,6 +699,7 @@ class BitunixSignal:
                     requiredCols=[f'{period}_open', f'{period}_close', f'{period}_high', f'{period}_low', f'{period}_ema', f'{period}_macd', f'{period}_bbm', f'{period}_rsi', f'{period}_close_proximity', f'{period}_trend', f'{period}_cb', f'{period}_barcolor']    
                     required_cols = set(requiredCols)
 
+                    # Close position that fall the below criteria
                     if not self.signaldf_full.columns.empty and self.signaldf_full['symbol'].isin([row.symbol]).any() and required_cols.issubset(set(self.signaldf_full.columns)):
                         
                         # Check orders
@@ -708,7 +711,7 @@ class BitunixSignal:
                         if select and int(self.max_auto_trades)!=0:
                         
                             # candle reversed
-                            if row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_barcolor'] == self.red:
+                            if row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_barcolor'] == self.red and self.signaldf_full.at[row.symbol, f'{period}_close_proximity'] == "SELL":
                                 last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                 price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
 
@@ -722,11 +725,11 @@ class BitunixSignal:
                                 )
                                 if datajs["code"] == 0:
                                     self.notifications.add_notification(
-                                        f'{colors.CYAN}Auto close submitted due to candle reversal for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                                        f'{colors.CYAN}Auto close submitted due to bearish candle reversal for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
                                     )
                                 continue
 
-                            if row.side == 'SELL' and self.signaldf_full.at[row.symbol, f'{period}_barcolor'] == self.green:
+                            if row.side == 'SELL' and self.signaldf_full.at[row.symbol, f'{period}_barcolor'] == self.green  and self.signaldf_full.at[row.symbol, f'{period}_close_proximity'] == "BUY":
                                 last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                 price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
 
@@ -740,7 +743,7 @@ class BitunixSignal:
                                 )
                                 if datajs["code"] == 0:
                                     self.notifications.add_notification(
-                                        f'{colors.CYAN}Auto close submitted due to candle reversal for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                                        f'{colors.CYAN}Auto close submitted due to bullish candle reversal for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
                                     )
                                 continue
 
