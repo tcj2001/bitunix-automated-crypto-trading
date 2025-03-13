@@ -30,6 +30,8 @@ class Interval:
         self.ema_signal="HOLD"
         self.macd_signal="HOLD"
         self.bbm_signal="HOLD"
+        self.rsi_signal="HOLD"
+        self.close_proximity="HOLD"
         
         self.signal_strength=0
 
@@ -54,6 +56,15 @@ class Interval:
                 # Get the last color and its consecutive count
                 self.signal_strength = df['Consecutive'].iloc[-1]
                 
+                df['range'] = df['high'] - df['low']
+                df['close_proximity'] = ((df['close'] - df['low'])/df['range'])*100
+                if df['close_proximity'].iloc[-1] > 70:
+                    self.close_proximity = 'BUY'
+                elif df['close_proximity'].iloc[-1] < 30:
+                    self.close_proximity = 'SELL'
+                else:
+                    self.close_proximity = 'HOLD'      
+
                 df['RSI'] = ta.rsi(df['close'],length=14)
                 df.fillna({'RSI':0}, inplace=True)
                 
@@ -110,9 +121,9 @@ class Interval:
                     df.fillna({'slope':0}, inplace=True)
                     df.fillna({'angle':0}, inplace=True)                                    
                     if df['close'].iloc[-1] > df['fast'].iloc[-1] and df['fast'].iloc[-1] > df['medium'].iloc[-1]:
-                        self.ema_signal = "BUYe"
+                        self.ema_signal = "BUY"
                     elif df['close'].iloc[-1] < df['fast'].iloc[-1] and df['fast'].iloc[-1] < df['medium'].iloc[-1]:
-                        self.ema_signal = "SELLe"
+                        self.ema_signal = "SELL"
                     else:
                         self.ema_signal = "HOLD"
                     
@@ -122,9 +133,9 @@ class Interval:
                     df.fillna({'slope':0}, inplace=True)
                     df.fillna({'angle':0}, inplace=True)                                    
                     if df['MACD_Histogram'].iloc[-1] > df['MACD_Histogram'].iloc[-2] and df['slope'].iloc[-1]>0:
-                        self.macd_signal = "BUYm"
+                        self.macd_signal = "BUY"
                     elif df['MACD_Histogram'].iloc[-1] > df['MACD_Histogram'].iloc[-2] and df['slope'].iloc[-1]<0:
-                        self.macd_signal = "SELLm"
+                        self.macd_signal = "SELL"
                     else:
                         self.macd_signal = "HOLD"
 
@@ -134,9 +145,9 @@ class Interval:
                     df.fillna({'slope':0}, inplace=True)
                     df.fillna({'angle':0}, inplace=True)                                    
                     if df['close'].iloc[-1] > df['BBM'].iloc[-1] and df['close'].iloc[-2] > df['BBM'].iloc[-2] and df['slope'].iloc[-1]>0:
-                        self.bbm_signal = "BUYb"
+                        self.bbm_signal = "BUY"
                     elif df['close'].iloc[-1] < df['BBM'].iloc[-1] and df['close'].iloc[-2] < df['BBM'].iloc[-2] and df['slope'].iloc[-1]<0:
-                        self.bbm_signal = "SELLb"
+                        self.bbm_signal = "SELL"
                     else:
                         self.bbm_signal = "HOLD"
                 
@@ -145,16 +156,16 @@ class Interval:
                     df['angle'] = np.degrees(np.arctan(df['slope']))                                        
                     df.fillna({'slope':0}, inplace=True)
                     df.fillna({'angle':0}, inplace=True)                                    
-                    if df['RSI'].iloc[-1] <= 10 and df['slope'].iloc[-1]>0:
-                        self.rsi_signal = "BUYr"
-                    elif df['RSI'].iloc[-1] >= 90 and df['slope'].iloc[-1]<0:
-                        self.rsi_signal = "SELLr"
+                    if df['RSI'].iloc[-1] <= 70 and df['slope'].iloc[-1]>0:
+                        self.rsi_signal = "BUY"
+                    elif df['RSI'].iloc[-1] >= 30 and df['slope'].iloc[-1]<0:
+                        self.rsi_signal = "SELL"
                     else:
                         self.rsi_signal = "HOLD"
 
-                if self.ema_signal=="BUYe" and self.macd_signal=="BUYm" and self.bbm_signal=="BUYb":
+                if self.ema_signal=="BUY" and self.macd_signal=="BUY" and self.bbm_signal=="BUY" and self.rsi_signal=="BUY" and self.close_proximity=="BUY":
                     self.current_signal="BUY"
-                elif self.ema_signal=="SELLe" and self.macd_signal=="SELLm" and self.bbm_signal=="SELLb":
+                elif self.ema_signal=="SELL" and self.macd_signal=="SELL" and self.bbm_signal=="SELL" and self.rsi_signal=="SELL" and self.close_proximity=="SELL":
                     self.current_signal="SELL"
                 else:
                     self.current_signal="HOLD"
@@ -346,6 +357,8 @@ class Tickers:
                     askcolor = tickerObj.askcolor
 
                     for intervalId in tickerObj.intervals:
+                        if intervalId != period:
+                            continue    
                         intervalObj = tickerObj.get_interval_ticks(intervalId)
                         ticks = intervalObj.get_data()
                         if len(ticks)>=self.bars:
@@ -354,44 +367,32 @@ class Tickers:
                                 new_row = {
                                     'symbol' : symbol,
                                     'bid' : bid,
-                                    'last' : last,
-                                    'ask' : ask,
-                                    'lastcolor' : lastcolor,
                                     'bidcolor' : bidcolor,
+                                    'last' : last,
+                                    'lastcolor' : lastcolor,
+                                    'ask' : ask,
                                     'askcolor' : askcolor,
+                                    f"{intervalId}_cb": intervalObj.signal_strength,
                                     f"{intervalId}_barcolor": lastcandle['barcolor'],
+                                    f"{intervalId}_trend": intervalObj.current_signal,  
                                     f"{intervalId}_open": lastcandle['open'],
                                     f"{intervalId}_close": lastcandle['close'],
-                                    f"{intervalId}_fast": lastcandle["fast"],
-                                    f"{intervalId}_medium": lastcandle["medium"],
-                                    f"{intervalId}_slow": lastcandle["slow"],
-                                    f"{intervalId}_MACD_Line": lastcandle["MACD_Line"],
-                                    f"{intervalId}_Signal_Line": lastcandle["Signal_Line"],
-                                    f"{intervalId}_BBU": lastcandle["BBU"],
-                                    f"{intervalId}_BBM": lastcandle["BBM"],
-                                    f"{intervalId}_BBL": lastcandle["BBL"],
-                                    f"{intervalId}_RSI": lastcandle["RSI"],
-                                    f"{intervalId}_trend": intervalObj.current_signal,  
-                                    f"{intervalId}_cb": intervalObj.signal_strength
+                                    f"{intervalId}_high": lastcandle['high'],
+                                    f"{intervalId}_low": lastcandle['low'],
+                                    f"{intervalId}_ema": intervalObj.ema_signal,
+                                    f"{intervalId}_macd":intervalObj.macd_signal,
+                                    f"{intervalId}_bbm":intervalObj.bbm_signal,
+                                    f"{intervalId}_rsi":intervalObj.rsi_signal,
+                                    f"{intervalId}_close_proximity":intervalObj.close_proximity                                        
                                 }
                                 current_data.append(new_row)
                         
             df = pd.DataFrame(current_data)
             fill_values = {
-                '1m_barcolor': '','5m_barcolor': '', '15m_barcolor': '', '1h_barcolor': '', '1d_barcolor': '',
-                '1m_open': 0.0, '5m_open': 0.0, '15m_open': 0.0, '1h_open': 0.0, '1d_open': 0.0,
-                '1m_close': 0.0, '5m_close': 0.0, '15m_close': 0.0, '1h_close': 0.0, '1d_close': 0.0,
-                '1m_trend': '','5m_trend': '', '15m_trend': '', '1h_trend': '', '1d_trend': '',
-                '1m_cb': 0, '5m_cb': 0, '15m_cb': 0, '1h_cb': 0, '1d_cb': 0,
-                '1m_fast': 0.0,'5m_fast': 0.0, '15m_fast': 0.0, '1h_fast': 0.0, '1d_fast': 0.0,
-                '1m_medium': 0.0, '5m_medium': 0.0, '15m_medium': 0.0, '1h_medium': 0.0, '1d_medium': 0.0,
-                '1m_slow': 0.0, '5m_slow': 0.0, '15m_slow': 0.0, '1h_slow': 0.0, '1d_slow': 0.0,
-                '1m_MACD_Line': 0.0, '5m_MACD_Line': 0.0, '15m_MACD_Line': 0.0, '1h_MACD_Line': 0.0, '1d_MACD_Line': 0.0,
-                '1m_Signal_Line': 0.0, '5m_Signal_Line': 0.0, '15m_Signal_Line': 0.0, '1h_Signal_Line': 0.0, '1d_Signal_Line': 0.0,
-                '1m_BBU': 0.0, '5m_BBU': 0.0, '15m_BBU': 0.0, '1h_BBU': 0.0, '1d_BBU': 0.0,
-                '1m_BBM': 0.0, '5m_BBM': 0.0, '15m_BBM': 0.0, '1h_BBM': 0.0, '1d_BBM': 0.0,
-                '1m_BBL': 0.0, '5m_BBL': 0.0, '15m_BBL': 0.0, '1h_BBL': 0.0, '1d_BBL': 0.0,
-                'lastcolor': "", 'bidcolor': "", 'askcolor': "", 'bid': 0.0, 'ask': 0.0, 'last': 0.0
+                'lastcolor': "", 'bidcolor': "", 'askcolor': "", 'bid': 0.0, 'ask': 0.0, 'last': 0.0,
+                f"{intervalId}_cb":0, f"{intervalId}_barcolor": "", f"{intervalId}_trend": "",
+                f"{intervalId}_open": 0.0, f"{intervalId}_close": 0.0, f"{intervalId}_high": 0.0, f"{intervalId}_low": 0.0,
+                f"{intervalId}_ema": "", f"{intervalId}_macd": "", f"{intervalId}_bbm": "", f"{intervalId}_rsi": "", f"{intervalId}_close_proximity": ""
             }
             df.fillna(fill_values, inplace=True)        
             if not df.empty:
@@ -405,28 +406,12 @@ class Tickers:
                 #apply selection criteria
                 trending_conditions = [
                     (
-                        #((df[f'1d_trend']  == 'BUY')  if period in ['1m', '5m', '15m', '1h', '1d'] else True) &
-                        #((df[f'1h_trend']  == 'BUY')  if period in ['1m', '5m', '15m', '1h'] else True) &
-                        #((df[f'15m_trend'] == 'BUY')  if period in ['1m', '5m', '15m'] else True) &
-                        #((df[f'5m_trend']  == 'BUY')  if period in ['1m', '5m'] else True) &
-                        #((df[f'1m_trend']  == 'BUY')  if period in ['1m'] else True) &
                         (df[f'{period}_trend'].str.contains(r'^buy.*$', case=False, na=False)) &
                         (df[f'{period}_barcolor']==self.green) 
-                        #(df[f'{period}_cb'] > 1) &
-                        #(df['last'] > df[f'{period}_fast']) &
-                        #(df[f'{period}_fast'] > df[f'{period}_medium'])                    
                     ),
                     (
-                        #((df[f'1d_trend']  == 'SELL')  if period in ['1m', '5m', '15m', '1h', '1d'] else True) &
-                        #((df[f'1h_trend']  == 'SELL')  if period in ['1m', '5m', '15m', '1h'] else True) &
-                        #((df[f'15m_trend'] == 'SELL')  if period in ['1m', '5m', '15m'] else True) &
-                        #((df[f'5m_trend']  == 'SELL')  if period in ['1m', '5m'] else True) &
-                        #((df[f'1m_trend']  == 'SELL')  if period in ['1m'] else True) &
                         (df[f'{period}_trend'].str.contains(r'^sell.*$', case=False, na=False)) &
                         (df[f'{period}_barcolor']==self.red) 
-                        #(df[f'{period}_cb'] > 1) &
-                        #(df['last'] < df[f'{period}_fast']) &
-                        #(df[f'{period}_fast'] < df[f'{period}_medium'])                    
                     )
                 ]
                 self.signaldf_filtered = df[np.any(trending_conditions, axis=0)].copy()

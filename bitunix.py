@@ -195,11 +195,13 @@ async def wsmain(websocket):
     bitunix.websocket_connections.add(websocket)
 
     #html rendering setup
+    period = bitunix.bitunixSignal.option_moving_average
     portfoliodfrenderer = DataFrameHtmlRenderer()
-    positiondfrenderer = DataFrameHtmlRenderer(hide_columns=["positionId", "lastcolor","bidcolor","askcolor"], \
+    positiondfrenderer = DataFrameHtmlRenderer(hide_columns=["positionId", "lastcolor","bidcolor","askcolor",f"{period}_barcolor"], \
                                             color_column_mapping={"bid": "bidcolor",
                                                                     "last": "lastcolor",
-                                                                    "ask": "askcolor"
+                                                                    "ask": "askcolor",
+                                                                   f"{period}_cb": f"{period}_barcolor"
                                                         })
     orderdfrenderer = DataFrameHtmlRenderer()
     signaldfrenderer = DataFrameHtmlRenderer(hide_columns=["1d_barcolor","1h_barcolor","15m_barcolor","5m_barcolor","1m_barcolor","lastcolor","bidcolor","askcolor"], \
@@ -223,7 +225,11 @@ async def wsmain(websocket):
                 portfoliodfStyle= portfoliodfrenderer.render_html(bitunix.bitunixSignal.portfoliodf)
                     
                 #position data
-                positiondfStyle= positiondfrenderer.render_html(bitunix.bitunixSignal.positiondf)
+                columns=["symbol", "ctime", "qty", "side", "unrealizedPNL", "realizedPNL", "bid", "last", "ask", f"{period}_open", f"{period}_close", f"{period}_high", f"{period}_low", f"{period}_ema", f"{period}_macd", f"{period}_bbm", f"{period}_rsi", f"{period}_close_proximity", f"{period}_trend", f"{period}_cb", f"{period}_barcolor", "buy", "sell", "reduce"]
+                if set(columns).issubset(bitunix.bitunixSignal.positiondf2.columns):
+                    positiondfStyle= positiondfrenderer.render_html(bitunix.bitunixSignal.positiondf2[columns])
+                else:
+                    positiondfStyle= positiondfrenderer.render_html(pd.DataFrame())
                     
                 #order data
                 orderdfStyle= orderdfrenderer.render_html(bitunix.bitunixSignal.orderdf)
@@ -242,9 +248,14 @@ async def wsmain(websocket):
                 "signals" : signaldfStyle
             }
             notifications=bitunix.bitunixSignal.notifications.get_notifications()          
+
+            utc_time = datetime.fromtimestamp(bitunix.bitunixSignal.lastAutoTradeTime, tz=pytz.UTC)
+            cst_time = utc_time.astimezone(pytz.timezone('US/Central')).strftime('%Y-%m-%d %H:%M:%S')
+
             data = {
                 "dataframes": dataframes,
                 "profit" : bitunix.bitunixSignal.profit,
+                "stime": cst_time,
                 "status_messages": [] if len(notifications)==0 else notifications
             }
 
@@ -265,11 +276,11 @@ async def wsmain(websocket):
     except Exception as e:
         logger.info(f"local main page websocket unexpected error: {e}")       
 
-@app.websocket("/wsinspect")
+@app.websocket("/wstrades")
 async def websocket_endpoint(websocket: WebSocket):
-    await asyncio.create_task(wsinspect(websocket))
+    await asyncio.create_task(wstrades(websocket))
 
-async def wsinspect(websocket):    
+async def wstrades(websocket):    
     query_params = websocket.query_params
 
     queue = asyncio.Queue()
@@ -279,7 +290,6 @@ async def wsinspect(websocket):
     bitunix.websocket_connections.add(websocket)
     
     #html rendering setup
-    inspectdfrenderer = DataFrameHtmlRenderer()
     tradesdfrenderer = DataFrameHtmlRenderer(hide_columns=["reduceOnly"])
     
     try:
@@ -288,24 +298,20 @@ async def wsinspect(websocket):
 
             data={}
             try:
-                #inspect data
-                inspectdfStyle= inspectdfrenderer.render_html(bitunix.bitunixSignal.inspectdf)
-                
                 #trades data
                 tradesdfStyle= tradesdfrenderer.render_html(bitunix.bitunixSignal.tradesdf[bitunix.bitunixSignal.tradesdf["reduceOnly"] == True])
                 
             except Exception as e:
-                logger.info(f"error gathering data for main page, {e}, {e.args}, {type(e).__name__}")
+                logger.info(f"error gathering data for trades page, {e}, {e.args}, {type(e).__name__}")
 
             #combined data
             dataframes={
-                "inspect" : inspectdfStyle, 
                 "trades" : tradesdfStyle, 
             }
             notifications=bitunix.bitunixSignal.notifications.get_notifications()          
 
-            utc_time = datetime.fromtimestamp(bitunix.bitunixSignal.lastAutoTradeTime, tz=timezone.utc)
-            cst_time = utc_time.astimezone(timezone(timedelta(hours=-6))).strftime('%Y-%m-%d %H:%M:%S')
+            utc_time = datetime.fromtimestamp(bitunix.bitunixSignal.lastAutoTradeTime, tz=pytz.UTC)
+            cst_time = utc_time.astimezone(pytz.timezone('US/Central')).strftime('%Y-%m-%d %H:%M:%S')
 
             data = {
                 "dataframes": dataframes,
@@ -321,15 +327,15 @@ async def wsinspect(websocket):
 
             elapsed_time = time.time() - stime
             if settings.verbose_logging:
-                logger.info(f"wsinspect: elapsed time {elapsed_time}")
+                logger.info(f"wstrades: elapsed time {elapsed_time}")
             time_to_wait = max(0.01, bitunix.screen_refresh_interval - elapsed_time)
             await asyncio.sleep(time_to_wait)
             
     except WebSocketDisconnect:
         bitunix.websocket_connections.remove(websocket)
-        logger.info("local main page WebSocket connection closed")
+        logger.info("local trades page WebSocket connection closed")
     except Exception as e:
-        logger.info(f"local main page websocket unexpected error: {e}")        
+        logger.info(f"local trades page websocket unexpected error: {e}")        
 
 
 @app.websocket("/wschart")
@@ -470,15 +476,15 @@ async def handle_chart_data(symbol: str = Form(...)):
 async def show_detail(request: Request, symbol: str): 
     return templates.TemplateResponse({"request": request, "data": symbol}, "charts.html")
     
-@app.post("/get_inspect")
-async def inspect_detected():
-    inspect_url = f"/inspect"
-    return JSONResponse(content={"message": inspect_url})                                      
+@app.post("/get_trades")
+async def trades_detected():
+    trades_url = f"/trades"
+    return JSONResponse(content={"message": trades_url})                                      
 
-#when inspect page detected
-@app.get("/inspect", response_class=HTMLResponse) 
+#when trades page detected
+@app.get("/trades", response_class=HTMLResponse) 
 async def show_detail(request: Request): 
-    return templates.TemplateResponse({"request": request}, "inspect.html")
+    return templates.TemplateResponse({"request": request}, "trades.html")
 
 if __name__ == '__main__': 
     bitunix = bitunix(settings)

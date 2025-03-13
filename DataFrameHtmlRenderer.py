@@ -40,8 +40,8 @@ class DataFrameHtmlRenderer:
 
         # Jinja2 HTML template
         template = Template("""
-        <table border="1" style="border-collapse: collapse; width: 100%;">
-            <thead>
+        <table border="1" style="border-collapse: collapse; width: 100%; font-size: small;"> 
+        <thead>
                 <tr>
                     {% for column in columns if column not in hide_columns %}
                     <th>{{ column }}</th>
