@@ -59,9 +59,9 @@ class Interval:
                 df['range'] = df['high'] - df['low']
                 df['close_proximity'] = ((df['close'] - df['low'])/df['range'])*100
                 if df['close_proximity'].iloc[-1] > 70:
-                    self.close_proximity = 'BUY'
+                    self.close_proximity = 'HIGH'
                 elif df['close_proximity'].iloc[-1] < 30:
-                    self.close_proximity = 'SELL'
+                    self.close_proximity = 'LOW'
                 else:
                     self.close_proximity = 'HOLD'      
 
@@ -132,9 +132,9 @@ class Interval:
                     df['angle'] = np.degrees(np.arctan(df['slope']))                                        
                     df.fillna({'slope':0}, inplace=True)
                     df.fillna({'angle':0}, inplace=True)                                    
-                    if df['MACD_Histogram'].iloc[-1] > df['MACD_Histogram'].iloc[-2] and df['slope'].iloc[-1]>0:
+                    if df['MACD_Histogram'].iloc[-1] > df['MACD_Histogram'].iloc[-2] and df['MACD_Line'].iloc[-1] > df['Signal_Line'].iloc[-1]: 
                         self.macd_signal = "BUY"
-                    elif df['MACD_Histogram'].iloc[-1] > df['MACD_Histogram'].iloc[-2] and df['slope'].iloc[-1]<0:
+                    elif df['MACD_Histogram'].iloc[-1] > df['MACD_Histogram'].iloc[-2] and df['MACD_Line'].iloc[-1] < df['Signal_Line'].iloc[-1]:
                         self.macd_signal = "SELL"
                     else:
                         self.macd_signal = "HOLD"
@@ -163,9 +163,9 @@ class Interval:
                     else:
                         self.rsi_signal = "HOLD"
 
-                if self.ema_signal=="BUY" and self.macd_signal=="BUY" and self.bbm_signal=="BUY" and self.rsi_signal=="BUY" and self.close_proximity=="BUY":
+                if self.ema_signal=="BUY" and self.macd_signal=="BUY" and self.bbm_signal=="BUY" and self.rsi_signal=="BUY" and self.close_proximity=="HIGH":
                     self.current_signal="BUY"
-                elif self.ema_signal=="SELL" and self.macd_signal=="SELL" and self.bbm_signal=="SELL" and self.rsi_signal=="SELL" and self.close_proximity=="SELL":
+                elif self.ema_signal=="SELL" and self.macd_signal=="SELL" and self.bbm_signal=="SELL" and self.rsi_signal=="SELL" and self.close_proximity=="LOW":
                     self.current_signal="SELL"
                 else:
                     self.current_signal="HOLD"
