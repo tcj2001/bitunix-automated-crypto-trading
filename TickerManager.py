@@ -374,24 +374,24 @@ class Tickers:
                             if len(lastcandle) >= 19:
                                 new_row = {
                                     'symbol' : symbol,
+                                    f"{intervalId}_trend": intervalObj.current_signal,
+                                    f"{intervalId}_cb": intervalObj.signal_strength,
+                                    f"{intervalId}_barcolor": lastcandle['barcolor'],
+                                    f"{intervalId}_ema": intervalObj.ema_signal,
+                                    f"{intervalId}_macd":intervalObj.macd_signal,
+                                    f"{intervalId}_bbm":intervalObj.bbm_signal,
+                                    f"{intervalId}_rsi":intervalObj.rsi_signal,
+                                    f"{intervalId}_close_proximity":intervalObj.close_proximity,                                        
                                     'bid' : bid,
                                     'bidcolor' : bidcolor,
                                     'last' : last,
                                     'lastcolor' : lastcolor,
                                     'ask' : ask,
                                     'askcolor' : askcolor,
-                                    f"{intervalId}_cb": intervalObj.signal_strength,
-                                    f"{intervalId}_barcolor": lastcandle['barcolor'],
-                                    f"{intervalId}_trend": intervalObj.current_signal,  
                                     f"{intervalId}_open": lastcandle['open'],
                                     f"{intervalId}_close": lastcandle['close'],
                                     f"{intervalId}_high": lastcandle['high'],
                                     f"{intervalId}_low": lastcandle['low'],
-                                    f"{intervalId}_ema": intervalObj.ema_signal,
-                                    f"{intervalId}_macd":intervalObj.macd_signal,
-                                    f"{intervalId}_bbm":intervalObj.bbm_signal,
-                                    f"{intervalId}_rsi":intervalObj.rsi_signal,
-                                    f"{intervalId}_close_proximity":intervalObj.close_proximity                                        
                                 }
                                 current_data.append(new_row)
                         
