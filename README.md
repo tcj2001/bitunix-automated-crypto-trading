@@ -11,10 +11,18 @@ sometimes Web page takes a long time to load, need to investigate the issue
 - Automated trading strategies based on technical indicators
 - Portfolio management and position tracking
 - User interface is not a requirement for automated trading, all parmaeters can be configured in the config file 
-  - Interactive web interface with real-time updates, all manual trading
+  - login page
+  - main page:
+    - Interactive web interface with real-time updates, allows manual trading
+    - Real-time portfolio value
+    - Open positions, with signals and strength
+    - Active orders
+    - selected signals with strength
+    - all signals with strength
+    - position history
+    - clicking on the ticker symbol will open the chart page
   - Candlestick charts for all timeframes (1m, 5m, 15m, 1h, 1d) on a single page with all indicators
     - Chart is activated when you click on the ticker symbol
-  - Trades page shows past closed trades
 - Technical analysis including:
   - Moving Averages
   - MACD

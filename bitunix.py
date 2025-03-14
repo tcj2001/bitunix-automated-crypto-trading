@@ -255,9 +255,9 @@ async def wsmain(websocket):
                 #position data
                 columns=["symbol", "ctime", "qty", "side", "unrealizedPNL", "realizedPNL", "bid", "last", "ask", f"{period}_open", f"{period}_close", f"{period}_high", f"{period}_low", f"{period}_ema", f"{period}_macd", f"{period}_bbm", f"{period}_rsi", f"{period}_close_proximity", f"{period}_trend", f"{period}_cb", f"{period}_barcolor", "bitunix", "action", "add", "reduce"]
                 if set(columns).issubset(bitunix.bitunixSignal.positiondf2.columns):
-                    positiondfStyle= positiondfrenderer.render_html(bitunix.bitunixSignal.positiondf2[columns])
+                    positiondfStyle= positiondfrenderer.render_html(bitunix.bitunixSignal.positiondf2)
                 else:
-                    positiondfStyle= positiondfrenderer.render_html(bitunix.bitunixSignal.positiondf)
+                    positiondfStyle= positiondfrenderer.render_html(bitunix.bitunixSignal.positiondf["symbol", "side", "unrealizedPNL", "realizedPNL", "ctime", "qty", "avgOpenPrice", "bid", "last", "ask", "bitunix", "action", "add", "reduce"])
                     
                 #order data
                 if not bitunix.bitunixSignal.orderdf.empty:
@@ -288,7 +288,8 @@ async def wsmain(websocket):
                 logger.info("local main page WebSocket connection closed")
                 break
             except Exception as e:
-                logger.info(f"local main page websocket unexpected error: {e}")       
+                logger.info(f"local main page websocket unexpected error1: {e}") 
+                break      
 
             #combined data
             dataframes={
@@ -325,7 +326,7 @@ async def wsmain(websocket):
             await asyncio.sleep(0)
             
     except Exception as e:
-        logger.info(f"local main page websocket unexpected error: {e}")       
+        logger.info(f"local main page websocket unexpected error2: {e}")       
     finally:
         queueTask.cancel()
         try:
@@ -381,7 +382,8 @@ async def wschart(websocket):
                 logger.info("local chart page WebSocket connection closed")
                 break
             except Exception as e:
-                logger.info(f"local chart page websocket unexpected error: {e}")        
+                logger.info(f"local chart page websocket unexpected error1: {e}")
+                break        
 
             data = {
                 "symbol": ticker,
@@ -406,7 +408,7 @@ async def wschart(websocket):
             time_to_wait = max(0.01, bitunix.screen_refresh_interval - elapsed_time)
             await asyncio.sleep(0)
     except Exception as e:
-        logger.info(f"local chart page websocket unexpected error: {e}")     
+        logger.info(f"local chart page websocket unexpected error2: {e}")     
     finally:
         queueTask.cancel()
         try:
