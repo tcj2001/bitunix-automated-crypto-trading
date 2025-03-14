@@ -685,9 +685,9 @@ class BitunixSignal:
                                         f'{colors.YELLOW} Auto open {side} submitted for {row.symbol} with {qty} qty @ {price}, ({datajs["code"]} {datajs["msg"]})'
                                     )
                                 count=count+1
-                            if count >= int(self.max_auto_trades):
-                                break
-                            await asyncio.sleep(0)
+                        if count >= int(self.max_auto_trades):
+                            break
+                        await asyncio.sleep(0)
                     del df
                     gc.collect()
 
@@ -730,7 +730,7 @@ class BitunixSignal:
                         if select and int(self.max_auto_trades)!=0:
                         
                             # candle reversed
-                            if row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_barcolor'] == self.red and self.signaldf_full.at[row.symbol, f'{period}_close_proximity'] == "SELL":
+                            if row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_barcolor'] == self.red and self.signaldf_full.at[row.symbol, f'{period}_close_proximity'] == "xLOW":
                                 last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                 price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
 
@@ -748,7 +748,7 @@ class BitunixSignal:
                                     )
                                 continue
 
-                            if row.side == 'SELL' and self.signaldf_full.at[row.symbol, f'{period}_barcolor'] == self.green  and self.signaldf_full.at[row.symbol, f'{period}_close_proximity'] == "BUY":
+                            if row.side == 'SELL' and self.signaldf_full.at[row.symbol, f'{period}_barcolor'] == self.green  and self.signaldf_full.at[row.symbol, f'{period}_close_proximity'] == "xHIGH":
                                 last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                 price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
 
@@ -785,7 +785,7 @@ class BitunixSignal:
                                     )
                                 continue
 
-                            if float(self.loss_amount) > 0 and total_pnl < -float(self.loss_amount):
+                            if float(self.profit_amount) > 0 and total_pnl > float(self.profit_amount):
                                 last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                 price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
 
@@ -799,7 +799,7 @@ class BitunixSignal:
                                 )
                                 if datajs["code"] == 0:
                                     self.notifications.add_notification(
-                                        f'{colors.CYAN}Auto close submitted due to stop loss for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                                        f'{colors.CYAN}Auto close submitted due to take profit for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
                                     )
                                 continue
 
