@@ -14,17 +14,8 @@ class Interval:
         self.symbol = symbol
         self.intervalId = intervalId
         self.delta = delta
-        self.setting=settings
+        self.settings=settings
         self._data = data
-        
-        self.slow =  settings.ma_slow
-        self.medium = settings.ma_medium
-        self.fast = settings.ma_fast
-        self.bars = settings.bars
-        self.check_ema = settings.check_ema
-        self.check_macd = settings.check_macd
-        self.check_bbm = settings.check_bbm        
-        self.check_rsi = settings.check_rsi        
         
         self.current_signal="HOLD"
         self.ema_signal="HOLD"
@@ -44,7 +35,7 @@ class Interval:
             
     def calculate_study(self):
         df = pd.DataFrame(self._data)
-        if not df.empty and df.shape[0] >= self.bars:
+        if not df.empty and df.shape[0] >= self.settings.bars:
             try:
                 df['slope']=0.0
                 df['angle']=0.0
@@ -55,7 +46,8 @@ class Interval:
                 
                 # Get the last color and its consecutive count
                 self.signal_strength = df['Consecutive'].iloc[-1]
-                
+
+                # Calculate the close proximity                
                 df['range'] = df['high'] - df['low']
                 df['close_proximity'] = ((df['close'] - df['low'])/df['range'])*100
                 if df['close_proximity'].iloc[-1] > 70:
@@ -64,39 +56,46 @@ class Interval:
                     self.close_proximity = 'LOW'
                 else:
                     self.close_proximity = 'HOLD'      
+                df.fillna({'close_proximity':0}, inplace=True)
+                df.fillna({'range':0}, inplace=True)
 
-                df['RSI'] = ta.rsi(df['close'],length=14)
-                df.fillna({'RSI':0}, inplace=True)
+                # Calculate the RSI
+                df['rsi_fast'] = ta.rsi(df['close'],length=self.settings.rsi_fast)
+                df.fillna({'rsi_fast':0}, inplace=True)
                 
-                df['fast'] = df['close'].ewm(span=self.fast, adjust=False).mean()
-                df['fast'] = df['fast'].bfill()
-                df.fillna({'fast':0}, inplace=True)
-
-                df['slow'] = df['close'].ewm(span=self.slow, adjust=False).mean()
-                df['slow'] = df['slow'].bfill()
-                df.fillna({'slow':0}, inplace=True)
+                df['rsi_slow'] = ta.rsi(df['close'],length=self.settings.rsi_slow)
+                df.fillna({'rsi_slow':0}, inplace=True)
                 
-                df['medium'] = df['close'].ewm(span=self.medium, adjust=False).mean()
-                df['medium'] = df['medium'].bfill()
-                df.fillna({'medium':0}, inplace=True)
+                # Calculate the Moving Averages
+                df['ma_fast'] = df['close'].ewm(span=self.settings.ma_fast, adjust=False).mean()
+                df['ma_fast'] = df['ma_fast'].bfill()
+                df.fillna({'ma_fast':0}, inplace=True)
 
-                # Calculate Bollinger Bands  ('BBL_20_2','BBM_20_2','BBU_20_2','BBB_20_2','BBP_20_2')
+                df['ma_slow'] = df['close'].ewm(span=self.settings.ma_slow, adjust=False).mean()
+                df['ma_slow'] = df['ma_slow'].bfill()
+                df.fillna({'ma_slow':0}, inplace=True)
+                
+                df['ma_medium'] = df['close'].ewm(span=self.settings.ma_medium, adjust=False).mean()
+                df['ma_medium'] = df['ma_medium'].bfill()
+                df.fillna({'ma_medium':0}, inplace=True)
+
+                # Calculate Bollinger Bands  
                 df['BBL'] = 0.0
                 df['BBM'] = 0.0
                 df['BBU'] = 0.0
                 df['BBB'] = 0.0
                 df['BBP'] = 0.0
-                bbands = ta.bbands(df['close'], length=20, std=2)
+                bbands = ta.bbands(df['close'], length=self.settings.bbm_period, std=self.settings.bbm_std)
                 if bbands is not None:
-                    bbands.rename(columns={'BBL_20_2': 'BBL'}, inplace=True)
+                    bbands.rename(columns={f'BBL_{self.settings.bbm_period}_{self.settings.bbm_std}': 'BBL'}, inplace=True)
                     bbands.fillna({'BBL':0}, inplace=True)
-                    bbands.rename(columns={'BBM_20_2': 'BBM'}, inplace=True)
+                    bbands.rename(columns={f'BBM_{self.settings.bbm_period}_{self.settings.bbm_std}': 'BBM'}, inplace=True)
                     bbands.fillna({'BBM':0}, inplace=True)
-                    bbands.rename(columns={'BBU_20_2': 'BBU'}, inplace=True)
+                    bbands.rename(columns={f'BBU_{self.settings.bbm_period}_{self.settings.bbm_std}': 'BBU'}, inplace=True)
                     bbands.fillna({'BBU':0}, inplace=True)
-                    bbands.rename(columns={'BBB_20_2': 'BBB'}, inplace=True)
+                    bbands.rename(columns={f'BBB_{self.settings.bbm_period}_{self.settings.bbm_std}': 'BBB'}, inplace=True)
                     bbands.fillna({'BBB':0}, inplace=True)
-                    bbands.rename(columns={'BBP_20_2': 'BBP'}, inplace=True)
+                    bbands.rename(columns={f'BBP_{self.settings.bbm_period}_{self.settings.bbm_std}': 'BBP'}, inplace=True)
                     bbands.fillna({'BBP':0}, inplace=True)
                     # Add Bollinger Bands to the DataFrame
                     df['BBL'] = bbands['BBL']
@@ -104,42 +103,54 @@ class Interval:
                     df['BBU'] = bbands['BBU']
                     df['BBB'] = bbands['BBB']
                     df['BBP'] = bbands['BBP']
+                    df.fillna({'BBL':0}, inplace=True)
+                    df.fillna({'BBM':0}, inplace=True)
+                    df.fillna({'BBU':0}, inplace=True)
+                    df.fillna({'BBB':0}, inplace=True)
+                    df.fillna({'BBP':0}, inplace=True)
 
                 # Calculate the MACD Line
-                #macd = ta.macd(df['Close'], fast=12, slow=26, signal=9)
-                #df = df.join(macd)
-                df['MACD_Line'] = df['fast'] - df['medium']
-                # Calculate the Signal Line (EMA of the MACD Line)
-                df['Signal_Line'] = df['MACD_Line'].ewm(span=9, adjust=False).mean()
-                # Calculate MACD Histogram
-                df['MACD_Histogram'] = df['MACD_Line'] - df['Signal_Line']
+                df['MACD_Line'] = 0.0
+                df['MACD_Signal'] = 0.0
+                df['MACD_Histogram'] = 0.0
+                macd = ta.macd(df['close'], fast=self.settings.macd_short, slow=self.settings.macd_long, signal=self.settings.macd_period)
+                if macd is not None:
+                    macd.rename(columns={f'MACD_{self.settings.macd_short}_{self.settings.macd_long}_{self.settings.macd_period}': 'MACD_Line'}, inplace=True)
+                    macd.rename(columns={f'MACDs_{self.settings.macd_short}_{self.settings.macd_long}_{self.settings.macd_period}': 'MACD_Signal'}, inplace=True)
+                    macd.rename(columns={f'MACDh_{self.settings.macd_short}_{self.settings.macd_long}_{self.settings.macd_period}': 'MACD_Histogram'}, inplace=True)
+                    df['MACD_Line'] = macd['MACD_Line']
+                    df['MACD_Signal'] = macd['MACD_Signal']
+                    df['MACD_Histogram'] = macd['MACD_Histogram']
+                    df.fillna({'MACD_Line':0}, inplace=True)
+                    df.fillna({'MACD_Signal':0}, inplace=True)
+                    df.fillna({'MACD_Histogram':0}, inplace=True)
                                 
                 # Determine the signal based on the cross over
-                if self.check_ema:
-                    df['slope'] = df['medium'].diff()
+                if self.settings.check_ema:
+                    df['slope'] = df['ma_medium'].diff()
                     df['angle'] = np.degrees(np.arctan(df['slope']))    
                     df.fillna({'slope':0}, inplace=True)
                     df.fillna({'angle':0}, inplace=True)                                    
-                    if df['close'].iloc[-1] > df['fast'].iloc[-1] and df['fast'].iloc[-1] > df['medium'].iloc[-1]:
+                    if df['close'].iloc[-1] > df['ma_fast'].iloc[-1] and df['ma_fast'].iloc[-1] > df['ma_medium'].iloc[-1]:
                         self.ema_signal = "BUY"
-                    elif df['close'].iloc[-1] < df['fast'].iloc[-1] and df['fast'].iloc[-1] < df['medium'].iloc[-1]:
+                    elif df['close'].iloc[-1] < df['ma_fast'].iloc[-1] and df['ma_fast'].iloc[-1] < df['ma_medium'].iloc[-1]:
                         self.ema_signal = "SELL"
                     else:
                         self.ema_signal = "HOLD"
                     
-                if self.check_macd:
-                    df['slope'] = df['Signal_Line'].diff()
+                if self.settings.check_macd:
+                    df['slope'] = df['MACD_Signal'].diff()
                     df['angle'] = np.degrees(np.arctan(df['slope']))                                        
                     df.fillna({'slope':0}, inplace=True)
                     df.fillna({'angle':0}, inplace=True)                                    
-                    if df['MACD_Histogram'].iloc[-1] > df['MACD_Histogram'].iloc[-2] and df['MACD_Line'].iloc[-1] > df['Signal_Line'].iloc[-1]: 
+                    if df['MACD_Line'].iloc[-1] > df['MACD_Signal'].iloc[-1]: 
                         self.macd_signal = "BUY"
-                    elif df['MACD_Histogram'].iloc[-1] > df['MACD_Histogram'].iloc[-2] and df['MACD_Line'].iloc[-1] < df['Signal_Line'].iloc[-1]:
+                    elif df['MACD_Line'].iloc[-1] < df['MACD_Signal'].iloc[-1]:
                         self.macd_signal = "SELL"
                     else:
                         self.macd_signal = "HOLD"
 
-                if self.check_bbm:
+                if self.settings.check_bbm:
                     df['slope'] = df['BBM'].diff()
                     df['angle'] = np.degrees(np.arctan(df['slope']))                                        
                     df.fillna({'slope':0}, inplace=True)
@@ -151,21 +162,21 @@ class Interval:
                     else:
                         self.bbm_signal = "HOLD"
                 
-                if self.check_rsi:
-                    df['slope'] = df['fast'].diff()
+                if self.settings.check_rsi:
+                    df['slope'] = df['ma_fast'].diff()
                     df['angle'] = np.degrees(np.arctan(df['slope']))                                        
                     df.fillna({'slope':0}, inplace=True)
                     df.fillna({'angle':0}, inplace=True)                                    
-                    if df['RSI'].iloc[-1] <= 70 and df['slope'].iloc[-1]>0:
+                    if df['rsi_fast'].iloc[-1] > df['rsi_slow'].iloc[-1]:
                         self.rsi_signal = "BUY"
-                    elif df['RSI'].iloc[-1] >= 30 and df['slope'].iloc[-1]<0:
+                    elif df['rsi_fast'].iloc[-1] < df['rsi_slow'].iloc[-1]:
                         self.rsi_signal = "SELL"
                     else:
                         self.rsi_signal = "HOLD"
 
                 if self.ema_signal=="BUY" and self.macd_signal=="BUY" and self.bbm_signal=="BUY" and self.rsi_signal=="BUY" and self.close_proximity=="HIGH":
                     self.current_signal="BUY"
-                elif self.ema_signal=="SELL" and self.macd_signal=="SELL" and self.bbm_signal=="SELL" and self.rsi_signal=="SELL" and self.close_proximity=="LOW":
+                elif self.ema_signal=="SELL" and self.macd_signal=="SELL" and self.bbm_signal=="SELL" and self.rsi_signal=="SELL" and self.rsi_signal=="SELL" and self.close_proximity=="LOW":
                     self.current_signal="SELL"
                 else:
                     self.current_signal="HOLD"
@@ -186,7 +197,7 @@ class Ticker:
         self.symbol=symbol
         self.settings=settings
         
-        self.bars=self.settings.bars
+        self.settings.bars=self.settings.bars
         
         self._bid = 0.0
         self.bidcolor = ""
@@ -277,12 +288,13 @@ class Ticker:
                 'time': self.ts,
                 'barcolor': "",
                 'last':0.0,
-                'fast':0.0,
-                'slow':0.0,
-                'medium':0.0,
-                'RSI':0.0,
+                'ma_fast':0.0,
+                'ma_slow':0.0,
+                'ma_medium':0.0,
+                'rsi_fast':0.0,
+                'rsi_slow':0.0,
                 'MACD_Line':0.0,
-                'Signal_Line':0.0,
+                'MACD_Signal':0.0,
                 'MACD_Histogram':0.0,
                 'BBU':0.0,
                 'BBM':0.0,
@@ -294,7 +306,7 @@ class Ticker:
             if len(ticks_interval)==0 or self.ts - ticks_interval[-1]['time'] >= intervalObj.delta:
                 ticks_interval.append(new_item)
                 current_bar = ticks_interval[0]
-                if len(ticks_interval) > self.bars:
+                if len(ticks_interval) > self.settings.bars:
                     ticks_interval.pop(0)
             else:
                 current_bar = ticks_interval[-1]
@@ -314,7 +326,7 @@ class Tickers:
     def __init__(self, settings : Settings):
         self.settings=settings
         
-        self.bars = settings.bars
+        self.settings.bars = settings.bars
         
         self._tickerObjects=[]
         
@@ -369,9 +381,9 @@ class Tickers:
                             continue    
                         intervalObj = tickerObj.get_interval_ticks(intervalId)
                         ticks = intervalObj.get_data()
-                        if len(ticks)>=self.bars:
+                        if len(ticks)>=self.settings.bars:
                             lastcandle = intervalObj.get_data()[-1]
-                            if len(lastcandle) >= 19:
+                            if len(lastcandle) >= 20:
                                 new_row = {
                                     'symbol' : symbol,
                                     f"{intervalId}_trend": intervalObj.current_signal,

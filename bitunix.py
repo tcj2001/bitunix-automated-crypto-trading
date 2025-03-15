@@ -198,41 +198,6 @@ async def websocket_endpoint(websocket: WebSocket):
 async def wsmain(websocket):
     query_params = websocket.query_params
     
-    #html rendering setup
-    period = bitunix.bitunixSignal.option_moving_average
-    portfoliodfrenderer = DataFrameHtmlRenderer()
-    positiondfrenderer = DataFrameHtmlRenderer(hide_columns=["positionId", "lastcolor","bidcolor","askcolor",f"{period}_barcolor"], \
-                                            color_column_mapping={"bid": "bidcolor",
-                                                                    "last": "lastcolor",
-                                                                    "ask": "askcolor",
-                                                                   f"{period}_cb": f"{period}_barcolor"
-                                                        })
-    orderdfrenderer = DataFrameHtmlRenderer()
-    signaldfrenderer = DataFrameHtmlRenderer(hide_columns=["1d_barcolor","1h_barcolor","15m_barcolor","5m_barcolor","1m_barcolor","lastcolor","bidcolor","askcolor"], \
-                                            color_column_mapping={"bid": "bidcolor",
-                                                                "last": "lastcolor",
-                                                                "ask": "askcolor",
-                                                                "1d_cb": "1d_barcolor",
-                                                                "1h_cb": "1h_barcolor",
-                                                                "15m_cb": "15m_barcolor",
-                                                                "5m_cb": "5m_barcolor",
-                                                                "1m_cb": "1m_barcolor"
-                                                        })
-
-    #html rendering setup
-    period = bitunix.bitunixSignal.option_moving_average
-    allsignaldfrenderer = DataFrameHtmlRenderer(hide_columns=["1d_barcolor","1h_barcolor","15m_barcolor","5m_barcolor","1m_barcolor","lastcolor","bidcolor","askcolor"], \
-                                            color_column_mapping={"bid": "bidcolor",
-                                                                "last": "lastcolor",
-                                                                "ask": "askcolor",
-                                                                "1d_cb": "1d_barcolor",
-                                                                "1h_cb": "1h_barcolor",
-                                                                "15m_cb": "15m_barcolor",
-                                                                "5m_cb": "5m_barcolor",
-                                                                "1m_cb": "1m_barcolor"
-                                                        })
-
-    positionHistorydfrenderer = DataFrameHtmlRenderer()
     try:
         logger.info("local main page WebSocket connection opened")
         
@@ -249,40 +214,6 @@ async def wsmain(websocket):
                 # Handle incoming ping messages
                 await asyncio.create_task(send_pong(websocket,queue))
 
-                #portfolio data
-                portfoliodfStyle= portfoliodfrenderer.render_html(bitunix.bitunixSignal.portfoliodf)
-                    
-                #position data
-                columns=["symbol", "ctime", "qty", "side", "unrealizedPNL", "realizedPNL", "bid", "last", "ask", f"{period}_open", f"{period}_close", f"{period}_high", f"{period}_low", f"{period}_ema", f"{period}_macd", f"{period}_bbm", f"{period}_rsi", f"{period}_close_proximity", f"{period}_trend", f"{period}_cb", f"{period}_barcolor", "bitunix", "action", "add", "reduce"]
-                if set(columns).issubset(bitunix.bitunixSignal.positiondf2.columns):
-                    positiondfStyle= positiondfrenderer.render_html(bitunix.bitunixSignal.positiondf2)
-                else:
-                    positiondfStyle= positiondfrenderer.render_html(bitunix.bitunixSignal.positiondf["symbol", "side", "unrealizedPNL", "realizedPNL", "ctime", "qty", "avgOpenPrice", "bid", "last", "ask", "bitunix", "action", "add", "reduce"])
-                    
-                #order data
-                if not bitunix.bitunixSignal.orderdf.empty:
-                    orderdfStyle= orderdfrenderer.render_html(bitunix.bitunixSignal.orderdf)
-                else:
-                    orderdfStyle= orderdfrenderer.render_html(pd.DataFrame())
-                    
-                #selected signal data
-                if not bitunix.bitunixSignal.signaldf.empty:
-                    signaldfStyle= signaldfrenderer.render_html(bitunix.bitunixSignal.signaldf)
-                else:
-                    signaldfStyle= signaldfrenderer.render_html(pd.DataFrame())
-
-                #all signal data
-                if not bitunix.bitunixSignal.signaldf_full.empty:
-                    allsignaldfStyle= allsignaldfrenderer.render_html(bitunix.bitunixSignal.signaldf_full)
-                else:
-                    allsignaldfStyle= allsignaldfrenderer.render_html(pd.DataFrame()) 
-
-                #positionHistory data
-                if not bitunix.bitunixSignal.positionHistorydf.empty:
-                    positionHistorydfstyle= positionHistorydfrenderer.render_html(bitunix.bitunixSignal.positionHistorydf)
-                else:
-                    positionHistorydfstyle= positionHistorydfrenderer.render_html(pd.DataFrame())
-
             except WebSocketDisconnect:
                 bitunix.websocket_connections.remove(websocket)
                 logger.info("local main page WebSocket connection closed")
@@ -293,12 +224,12 @@ async def wsmain(websocket):
 
             #combined data
             dataframes={
-                "portfolio" : portfoliodfStyle, 
-                "positions" : positiondfStyle, 
-                "orders" : orderdfStyle,
-                "signals" : signaldfStyle,
-                "study" : allsignaldfStyle,
-                "positionHistory" : positionHistorydfstyle
+                "portfolio" : bitunix.bitunixSignal.portfoliodfStyle, 
+                "positions" : bitunix.bitunixSignal.positiondfStyle, 
+                "orders" : bitunix.bitunixSignal.orderdfStyle,
+                "signals" : bitunix.bitunixSignal.signaldfStyle,
+                "study" : bitunix.bitunixSignal.allsignaldfStyle,
+                "positionHistory" : bitunix.bitunixSignal.positionHistorydfStyle
             }
             notifications=bitunix.bitunixSignal.notifications.get_notifications()          
 
@@ -314,16 +245,13 @@ async def wsmain(websocket):
 
             await queue.put(json.dumps(data))
 
-            del data
-            gc.collect()
-
             elapsed_time = time.time() - stime
             
             if settings.verbose_logging:
                 logger.info(f"wsmain: elapsed time {elapsed_time}")
             time_to_wait = max(0.01, bitunix.screen_refresh_interval - elapsed_time)
             
-            await asyncio.sleep(0)
+            await asyncio.sleep(time_to_wait)
             
     except Exception as e:
         logger.info(f"local main page websocket unexpected error2: {e}")       
@@ -333,14 +261,7 @@ async def wsmain(websocket):
             await queueTask
         except asyncio.CancelledError:
             pass
-        
-        del portfoliodfrenderer
-        del positiondfrenderer
-        del orderdfrenderer
-        del signaldfrenderer
-        del allsignaldfrenderer
-        del positionHistorydfrenderer
-        gc.collect()
+       
         
 @app.websocket("/wschart")
 async def websocket_endpoint(websocket: WebSocket):
@@ -399,14 +320,11 @@ async def wschart(websocket):
         
             await queue.put(json.dumps(data))
             
-            del data, chart1m, chart5m, chart15m, chart1h, chart1d, buysell
-            gc.collect()
-
             elapsed_time = time.time() - stime
             if settings.verbose_logging:
                 logger.info(f"wschart: elapsed time {elapsed_time}")
             time_to_wait = max(0.01, bitunix.screen_refresh_interval - elapsed_time)
-            await asyncio.sleep(0)
+            await asyncio.sleep(time_to_wait)
     except Exception as e:
         logger.info(f"local chart page websocket unexpected error2: {e}")     
     finally:
@@ -418,9 +336,12 @@ async def wschart(websocket):
             
 async def send_pong(websocket, queue):
     # Handle incoming ping messages
-    message = await websocket.receive_text()
-    if message == "ping":
-        await queue.put("pong")
+    try:
+        message = await asyncio.wait_for(websocket.receive_text(), timeout=0.01)
+        if message == "ping":
+            await queue.put("pong")
+    except asyncio.TimeoutError:
+        pass
 
 async def send_data_queue(websocket, queue):
     while True:
@@ -517,7 +438,7 @@ if __name__ == '__main__':
     if settings.verbose_logging:
         llevel = "debug"
     else:
-        llevel = "info"  
+        llevel = "error"  
     config1 = uvicorn.Config(app, host=host, port=8000, log_level=llevel, reload=True)
     server = uvicorn.Server(config1)
     server.run()
