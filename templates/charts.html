@@ -117,6 +117,9 @@
         }
         
         websocket.onmessage = function(event) {
+            if (event.data === "pong") {
+                return;
+            }
             const messageElement = JSON.parse(event.data);
             document.getElementById('symbol').innerHTML = messageElement.symbol;                
             document.getElementById('close').innerHTML = messageElement.close;   
@@ -156,17 +159,17 @@
 
             const slowMA = chartData.filter(d => parseFloat(d.slow) !== 0).map(d => ({
                 x: parseInt(d.time),
-                y: parseFloat(d.slow)
+                y: parseFloat(d.ma_slow)
             }));
             
             const mediumMA = chartData.filter(d => parseFloat(d.medium) !== 0).map(d => ({
                 x: parseInt(d.time),
-                y: parseFloat(d.medium)
+                y: parseFloat(d.ma_medium)
             }));
 
             const fastMA = chartData.filter(d => parseFloat(d.medium) !== 0).map(d => ({
                 x: parseInt(d.time),
-                y: parseFloat(d.fast)
+                y: parseFloat(d.ma_fast)
             }));
 
             const macdLine = chartData.filter(d => parseFloat(d.MACD_Line) !== 0).map(d => ({
@@ -174,9 +177,9 @@
                 y: parseFloat(d.MACD_Line)
             }));
 
-            const signalLine = chartData.filter(d => parseFloat(d.Signal_Line) !== 0).map(d => ({
+            const signalLine = chartData.filter(d => parseFloat(d.MACD_Signal) !== 0).map(d => ({
                 x: parseInt(d.time),
-                y: parseFloat(d.Signal_Line)
+                y: parseFloat(d.MACD_Signal)
             }));
 
             const macdHistogram = chartData.filter(d => parseFloat(d.MACD_Histogram) !== 0).map(d => ({

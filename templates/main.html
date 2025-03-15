@@ -117,7 +117,7 @@
             const websocket_m = new WebSocket(`ws://${host}:8000/wsmain`);
             websocket_m.onopen = function() {
                 document.getElementById('message').innerHTML = "main page webSocket connection opened" 
-                // Send a ping every 30 seconds
+                //Send a ping every 30 seconds
                 setInterval(() => {
                     if (websocket_m.readyState === WebSocket.OPEN) {
                         websocket_m.send("ping");
@@ -126,6 +126,9 @@
             }
             
             websocket_m.onmessage = function(event) {
+                if (event.data === "pong") {
+                    return;
+                }               
                 const messageElement = JSON.parse(event.data);
                 document.getElementById("portfolio").innerHTML = messageElement.dataframes.portfolio;
                 document.getElementById("positions").innerHTML = messageElement.dataframes.positions;
