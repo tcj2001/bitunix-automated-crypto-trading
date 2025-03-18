@@ -648,7 +648,7 @@ class BitunixSignal:
                                 datajs = await self.bitunixApi.PlaceOrder(row.symbol, qty, price, side)
                                 if datajs["code"] == 0:
                                     self.notifications.add_notification(
-                                        f'{colors.YELLOW} Auto open {side} submitted for {row.symbol} with {qty} qty @ {price}, ({datajs["code"]} {datajs["msg"]})'
+                                        f'{colors.YELLOW} Opening {"long" if side=="BUY" else "short"} position for {row.symbol} with {qty} qty @ {price}, ({datajs["code"]} {datajs["msg"]})'
                                     )
                                 count=count+1
                         if count >= int(self.max_auto_trades):
@@ -669,7 +669,7 @@ class BitunixSignal:
                     datajs = await self.bitunixApi.CancelOrder(row.symbol, row.orderId)
                     if datajs["code"] == 0:
                         self.notifications.add_notification(
-                            f'{colors.BLUE}Auto canceled order {row.orderId}, {row.symbol} {row.qty} created at {row.rtime} ({datajs["code"]} {datajs["msg"]})'
+                            f'{colors.BLUE} Canceling order {row.orderId}, {row.symbol} {row.qty} created at {row.rtime} ({datajs["code"]} {datajs["msg"]})'
                         )
                 await asyncio.sleep(0)
 
@@ -710,7 +710,7 @@ class BitunixSignal:
                                 )
                                 if datajs["code"] == 0:
                                     self.notifications.add_notification(
-                                        f'{colors.CYAN}Auto close submitted due to stop loss for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                                        f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to stop loss for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
                                     )
                                 continue
 
@@ -728,7 +728,7 @@ class BitunixSignal:
                                 )
                                 if datajs["code"] == 0:
                                     self.notifications.add_notification(
-                                        f'{colors.CYAN}Auto close submitted due to take profit for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                                        f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position  due to take profit for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
                                     )
                                 continue
 
@@ -748,7 +748,7 @@ class BitunixSignal:
                                     )
                                     if datajs["code"] == 0:
                                         self.notifications.add_notification(
-                                            f'{colors.CYAN}Auto close submitted due to bearish candle reversal for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                                            f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to bearish candle reversal for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
                                         )
                                     continue
 
@@ -766,7 +766,7 @@ class BitunixSignal:
                                     )
                                     if datajs["code"] == 0:
                                         self.notifications.add_notification(
-                                            f'{colors.CYAN}Auto close submitted due to bullish candle reversal for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                                            f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to bullish candle reversal for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
                                         )
                                     continue
 
@@ -786,7 +786,7 @@ class BitunixSignal:
                                     )
                                     if datajs["code"] == 0:
                                         self.notifications.add_notification(
-                                            f'{colors.CYAN}Auto close submitted due to MA {period} crossover for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                                            f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to MA {period} crossover for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
                                         )
                                     continue
 
@@ -803,7 +803,7 @@ class BitunixSignal:
                                     )
                                     if datajs["code"] == 0:
                                         self.notifications.add_notification(
-                                            f'{colors.CYAN}Auto close submitted due to MA {period} crossover for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                                            f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to MA {period} crossover for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
                                         )
                                     continue
 
@@ -822,7 +822,7 @@ class BitunixSignal:
                                     )
                                     if datajs["code"] == 0:
                                         self.notifications.add_notification(
-                                            f'{colors.CYAN}Auto close submitted due to MACD {period} crossover for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                                            f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to MACD {period} crossover for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
                                         )
                                     continue
 
@@ -839,7 +839,7 @@ class BitunixSignal:
                                     )
                                     if datajs["code"] == 0:
                                         self.notifications.add_notification(
-                                            f'{colors.CYAN}Auto close submitted due to MACD {period} crossover for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                                            f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to MACD {period} crossover for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
                                         )
                                     continue
 
@@ -858,7 +858,7 @@ class BitunixSignal:
                                     )
                                     if datajs["code"] == 0:
                                         self.notifications.add_notification(
-                                            f'{colors.CYAN}Auto close submitted due to BBM {period} crossover for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                                            f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to BBM {period} crossover for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
                                         )
                                     continue
 
@@ -875,7 +875,7 @@ class BitunixSignal:
                                     )
                                     if datajs["code"] == 0:
                                         self.notifications.add_notification(
-                                            f'{colors.CYAN}Auto close submitted due to BBM {period} crossover for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                                            f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to BBM {period} crossover for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
                                         )
                                     continue
                             
@@ -894,7 +894,7 @@ class BitunixSignal:
                                     )
                                     if datajs["code"] == 0:
                                         self.notifications.add_notification(
-                                            f'{colors.CYAN}Auto close submitted due to RSI {period} crossover for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                                            f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to RSI {period} crossover for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
                                         )
                                     continue
 
@@ -911,7 +911,7 @@ class BitunixSignal:
                                     )
                                     if datajs["code"] == 0:
                                         self.notifications.add_notification(
-                                            f'{colors.CYAN}Auto close submitted due to RSI {period} crossover for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                                            f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to RSI {period} crossover for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
                                         )
                                     continue
                     await asyncio.sleep(0)
@@ -1000,7 +1000,7 @@ class BitunixSignal:
 
                 if event == "OPEN":
                     self.notifications.add_notification(
-                        f'{colors.PURPLE}{event} {side} position for {symbol} with {qty} qty @ {price}'
+                        f'{colors.PURPLE} Opened {"long" if side=="BUY" else "short"} position for {symbol} with {qty} qty @ {price}'
                     )
 
                 elif event == "CLOSE":
@@ -1012,7 +1012,7 @@ class BitunixSignal:
                         qty = float(position['maxQty'])
                         self.profit += profit
                         self.notifications.add_notification(
-                            f'{colors.GREEN if profit>0 else colors.RED}{event} {side} position for {symbol} with {qty} qty @ {price} and {"profit" if profit>0 else "loss"} of {profit}'
+                            f'{colors.GREEN if profit>0 else colors.RED} Closed {"long" if side=="BUY" else "short"} position for {symbol} with {qty} qty @ {price} and {"profit" if profit>0 else "loss"} of {profit}'
                         )
                     del datajs
                     gc.collect()
