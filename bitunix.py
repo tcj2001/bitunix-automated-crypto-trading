@@ -32,30 +32,6 @@ from fastapi.middleware.cors import CORSMiddleware
 load_dotenv()
 settings = Settings()
 
-
-#load env variable from .env
-logger.info(f"leverage: {settings.leverage}")
-logger.info(f"threshold: {settings.threshold}")
-logger.info(f"min_volume: {settings.min_volume}")
-logger.info(f"order_amount_percentage: {settings.order_amount_percentage}")
-logger.info(f"max_auto_trades: {settings.max_auto_trades}")
-logger.info(f"profit_amount: {settings.profit_amount}")
-logger.info(f"loss_amount: {settings.loss_amount}")
-logger.info(f"option_moving_average: {settings.option_moving_average}")
-logger.info(f"bars: {settings.bars}")
-logger.info(f"ma_fast: {settings.ma_fast}")
-logger.info(f"ma_medium: {settings.ma_medium}")
-logger.info(f"ma_slow: {settings.ma_slow}")
-logger.info(f"check_ema: {settings.check_ema}")
-logger.info(f"check_macd: {settings.check_macd}")
-logger.info(f"check_bbm: {settings.check_bbm}")
-logger.info(f"check_rsi: {settings.check_rsi}")
-logger.info(f"screen_refresh_interval: {settings.screen_refresh_interval}")
-logger.info(f"signal_interval: {settings.signal_interval}")
-logger.info(f"api_interval: {settings.api_interval}")
-logger.info(f"verbose_logging: {settings.verbose_logging}")
-logger.info(f"autoTrade: {settings.autoTrade}")
-
 class bitunix():
     def __init__(self, settings):
         self.settings=settings
@@ -133,11 +109,11 @@ async def startup_event():
 #load inital states for html
 async def get_server_states(bitunix, app):
     app.state.element_states = {}
-    app.state.element_states['autoTrade']=bitunix.bitunixSignal.autoTrade
-    app.state.element_states['optionMovingAverage']=bitunix.bitunixSignal.option_moving_average
-    app.state.element_states['profitAmount']=bitunix.bitunixSignal.profit_amount
-    app.state.element_states['lossAmount']=bitunix.bitunixSignal.loss_amount
-    app.state.element_states['maxAutoTrades']=bitunix.bitunixSignal.max_auto_trades
+    app.state.element_states['autoTrade']=settings.autoTrade
+    app.state.element_states['optionMovingAverage']=settings.option_moving_average
+    app.state.element_states['profitAmount']=settings.profit_amount
+    app.state.element_states['lossAmount']=settings.loss_amount
+    app.state.element_states['maxAutoTrades']=settings.max_auto_trades
 
 @app.post("/reload")
 async def refresh_detected():
@@ -214,6 +190,29 @@ async def wsmain(websocket):
                 # Handle incoming ping messages
                 await asyncio.create_task(send_pong(websocket,queue))
 
+                #combined data
+                dataframes={
+                    "portfolio" : bitunix.bitunixSignal.portfoliodfStyle, 
+                    "positions" : bitunix.bitunixSignal.positiondfStyle, 
+                    "orders" : bitunix.bitunixSignal.orderdfStyle,
+                    "signals" : bitunix.bitunixSignal.signaldfStyle,
+                    "study" : bitunix.bitunixSignal.allsignaldfStyle,
+                    "positionHistory" : bitunix.bitunixSignal.positionHistorydfStyle
+                }
+                notifications=bitunix.bitunixSignal.notifications.get_notifications()          
+
+                utc_time = datetime.fromtimestamp(bitunix.bitunixSignal.lastAutoTradeTime, tz=pytz.UTC)
+                cst_time = utc_time.astimezone(pytz.timezone('US/Central')).strftime('%Y-%m-%d %H:%M:%S')
+
+                data = {
+                    "dataframes": dataframes,
+                    "profit" : bitunix.bitunixSignal.profit,
+                    "stime": cst_time,
+                    "status_messages": [] if len(notifications)==0 else notifications
+                }
+
+                await queue.put(json.dumps(data))
+
             except WebSocketDisconnect:
                 bitunix.websocket_connections.remove(websocket)
                 logger.info("local main page WebSocket connection closed")
@@ -221,29 +220,6 @@ async def wsmain(websocket):
             except Exception as e:
                 logger.info(f"local main page websocket unexpected error1: {e}") 
                 break      
-
-            #combined data
-            dataframes={
-                "portfolio" : bitunix.bitunixSignal.portfoliodfStyle, 
-                "positions" : bitunix.bitunixSignal.positiondfStyle, 
-                "orders" : bitunix.bitunixSignal.orderdfStyle,
-                "signals" : bitunix.bitunixSignal.signaldfStyle,
-                "study" : bitunix.bitunixSignal.allsignaldfStyle,
-                "positionHistory" : bitunix.bitunixSignal.positionHistorydfStyle
-            }
-            notifications=bitunix.bitunixSignal.notifications.get_notifications()          
-
-            utc_time = datetime.fromtimestamp(bitunix.bitunixSignal.lastAutoTradeTime, tz=pytz.UTC)
-            cst_time = utc_time.astimezone(pytz.timezone('US/Central')).strftime('%Y-%m-%d %H:%M:%S')
-
-            data = {
-                "dataframes": dataframes,
-                "profit" : bitunix.bitunixSignal.profit,
-                "stime": cst_time,
-                "status_messages": [] if len(notifications)==0 else notifications
-            }
-
-            await queue.put(json.dumps(data))
 
             elapsed_time = time.time() - stime
             
@@ -298,6 +274,20 @@ async def wschart(websocket):
                     close=bitunix.bitunixSignal.tickerObjects.get(ticker).get_last()
                     notifications=bitunix.bitunixSignal.notifications.get_notifications()          
 
+                    data = {
+                        "symbol": ticker,
+                        "close":close,
+                        "chart1m":chart1m,
+                        "chart5m":chart5m,
+                        "chart15m":chart15m,
+                        "chart1h":chart1h,
+                        "chart1d":chart1d,
+                        "buysell": buysell,
+                        "status_messages": [] if len(notifications)==0 else notifications
+                    }
+                
+                    await queue.put(json.dumps(data))
+
             except WebSocketDisconnect:
                 bitunix.websocket_connections.remove(websocket)
                 logger.info("local chart page WebSocket connection closed")
@@ -306,19 +296,6 @@ async def wschart(websocket):
                 logger.info(f"local chart page websocket unexpected error1: {e}")
                 break        
 
-            data = {
-                "symbol": ticker,
-                "close":close,
-                "chart1m":chart1m,
-                "chart5m":chart5m,
-                "chart15m":chart15m,
-                "chart1h":chart1h,
-                "chart1d":chart1d,
-                "buysell": buysell,
-                "status_messages": [] if len(notifications)==0 else notifications
-            }
-        
-            await queue.put(json.dumps(data))
             
             elapsed_time = time.time() - stime
             if settings.verbose_logging:
@@ -433,15 +410,58 @@ async def show_detail(request: Request):
 
 if __name__ == '__main__': 
     bitunix = bitunix(settings)
+
+    #load env variable from .env
+    logger.info(f"autoTrade: {settings.autoTrade}")
+    logger.info(f"leverage: {settings.leverage}")
+    logger.info(f"threshold: {settings.threshold}")
+    logger.info(f"min_volume: {settings.min_volume}")
+    logger.info(f"order_amount_percentage: {settings.order_amount_percentage}")
+    logger.info(f"max_auto_trades: {settings.max_auto_trades}")
+    logger.info(f"profit_amount: {settings.profit_amount}")
+    logger.info(f"loss_amount: {settings.loss_amount}")
+    logger.info(f"option_moving_average: {settings.option_moving_average}")
+    logger.info(f"bars: {settings.bars}")
+    logger.info(f"ma_fast: {settings.ma_fast}")
+    logger.info(f"ma_medium: {settings.ma_medium}")
+    logger.info(f"ma_slow: {settings.ma_slow}")
+    logger.info(f"ema_study: {settings.ema_study}")
+    logger.info(f"macd_study: {settings.macd_study}")
+    logger.info(f"bbm_study: {settings.bbm_study}")
+    logger.info(f"rsi_study: {settings.rsi_study}")
+    logger.info(f"candle_trend_study: {settings.candle_trend_study}")
+    logger.info(f"ema_check_on_open: {settings.ema_check_on_open}")
+    logger.info(f"ema_check_on_close: {settings.ema_check_on_close}")
+    logger.info(f"macd_check_on_open: {settings.macd_check_on_open}")
+    logger.info(f"macd_check_on_close: {settings.macd_check_on_close}")
+    logger.info(f"bbm_check_on_open: {settings.bbm_check_on_open}")
+    logger.info(f"bbm_check_on_close: {settings.bbm_check_on_close}")
+    logger.info(f"rsi_check_on_open: {settings.rsi_check_on_open}")
+    logger.info(f"rsi_check_on_close: {settings.rsi_check_on_close}")
+    logger.info(f"candle_trend_check_on_open: {settings.candle_trend_check_on_open}")
+    logger.info(f"candle_trend_check_on_close: {settings.candle_trend_check_on_close}")
+    logger.info(f"close_on_reverse: {settings.close_on_reverse}")
+    logger.info(f"screen_refresh_interval: {settings.screen_refresh_interval}")
+    logger.info(f"signal_check_interval: {settings.signal_check_interval}")
+    logger.info(f"portfolio_api_interval: {settings.portfolio_api_interval}")
+    logger.info(f"pending_positions_api_interval: {settings.pending_positions_api_interval}")
+    logger.info(f"pending_orders_api_interval: {settings.pending_orders_api_interval}")
+    logger.info(f"trade_history_api_interval: {settings.trade_history_api_interval}")
+    logger.info(f"position_history_api_interval: {settings.position_history_api_interval}")
+    logger.info(f"ticker_data_api_interval: {settings.ticker_data_api_interval}")
+    logger.info(f"public_websocket_restart_interval: {settings.public_websocket_restart_interval}")
+    logger.info(f"use_public_websocket: {settings.use_public_websocket}")
+    logger.info(f"verbose_logging: {settings.verbose_logging}")
+    logger.info(f"benchmark: {settings.benchmark}")
+
+
     import uvicorn
     host = os.getenv("host")
     if settings.verbose_logging:
         llevel = "debug"
     else:
         llevel = "error"  
-    config1 = uvicorn.Config(app, host=host, port=8000, log_level=llevel, reload=True)
+    config1 = uvicorn.Config(app, host=host, port=8000, log_level=llevel, reload=False)
     server = uvicorn.Server(config1)
     server.run()
-else: 
-    bitunix = bitunix(settings)
 
