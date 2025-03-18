@@ -30,6 +30,7 @@ sometimes Web page takes a long time to load, need to investigate the issue
   - RSI
   - Brearish or bullish candle based on the close near high or low of the current candle
   - strength based on consecutive colored candles count
+  - control study using the environment variables
 - Secure authentication system
 - Configurable trading parameters
 - Real-time notifications

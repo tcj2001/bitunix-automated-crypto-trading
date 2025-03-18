@@ -1,34 +1,60 @@
-api_key = "your_api_key"
-secret_key = "your_secret_key"
-host = "127.0.0.1"
-leverage = 20
+api_key="your_api_key" # this is the api key for bitunix
+secret_key="your_secret_key" # this is the secret key for bitunix
+SECRET="your_secret" #some string like "7c4c22ef6ad145f922c72f5a18047b6bf6eff983381c975c" this is used to authenticate you login to web page
+password="your_password"  # this will be you password for web page login, user is admin
+host="127.0.0.1"
+
+autoTrade=True
+
+leverage=20
 threshold=5
-minVolume=10000000
-orderAmountPercentage = 0.01
-maxAutoTrades=1
-profitAmount=0.25
-lossAmount=5.0
-optionMovingAverage="1h"
+min_volume=10000000
+order_amount_percentage=0.01
+max_auto_trades=10
+profit_amount=0.1
+loss_amount=5.0
+option_moving_average="1h"
 bars=100
+
 ma_fast=12
 ma_medium=26
 ma_slow=50
-rsi_slow=24
 rsi_fast=6
+rsi_slow=24
 bbm_period=20
 bbm_std=2
 macd_period=9
 macd_short=12
 macd_long=26
-check_ema = True
-check_macd = True
-check_bbm = True
-check_rsi = True
-screen_refresh_interval=3
-signal_interval=3
-api_interval=3
+
+ema_study=True
+macd_study=True
+bbm_study=True
+rsi_study=True
+candle_trend_study=True
+
+ema_check_on_open=True
+ema_check_on_close=False
+macd_check_on_open=True
+macd_check_on_close=False
+bbm_check_on_open=True
+bbm_check_on_close=False
+rsi_check_on_open=True
+rsi_check_on_close=False
+candle_trend_check_on_open=True
+candle_trend_check_on_close=False
+close_on_reverse=False
+
+screen_refresh_interval=1
+signal_check_interval=15
+portfolio_api_interval=3
+pending_positions_api_interval=3
+pending_orders_api_interval=3
+trade_history_api_interval=3
+position_history_api_interval=3
+ticker_data_api_interval=30
 public_websocket_restart_interval=10800
-use_public_websocket=True
-SECRET = "your_secret" #some string like "7c4c22ef6ad145f922c72f5a18047b6bf6eff983381c975c" this is used to authenticate you login to web page
-password = "your_password"  # this will be you password for web page login, user is admin
-verbose_logging=True
+
+use_public_websocket=False
+verbose_logging=False
+benchmark=False
