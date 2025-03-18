@@ -2,9 +2,6 @@
 
 A real-time cryptocurrency trading platform built with FastAPI and WebSocket technology using Bitunix API and websockets for Futures. The platform provides automated trading capabilities, real-time market data visualization, and portfolio management features.
 
-## Current Issue
-sometimes Web page takes a long time to load, need to investigate the issue
-
 ## Features
 - Real-time private account/new postion/new order data streaming via WebSocket
 - Real-time public depth/kline for bid, ask and last streaming via WebSocket or thru api calls, configurable in the config file
@@ -36,39 +33,6 @@ sometimes Web page takes a long time to load, need to investigate the issue
 - Real-time notifications
 - Logging system with colored output
 
-## Prerequisites
-
-- Python 3.8+
-- pip package manager
-- Git
-
-## Installation
-
-1. Clone the repository:
-```bash
-git clone <repository-url>
-cd bitunix
-```
-
-2. Create and activate a virtual environment:
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-3. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
-
-4. Create a `.env` file in the root directory with your configuration:
-```env
-API_KEY=your_api_key
-SECRET_KEY=your_secret_key
-SECRET=your_jwt_secret
-PASSWORD=your_password
-HOST=127.0.0.1
-```
 
 ## Configuration
 
@@ -111,6 +75,40 @@ The platform can be configured through the `config.py` file or environment varia
         - if the trade is long and current close is less bollinger band middle line , it will close the trade
         - if the trade is short and the current close is above bollinger band middle line , it will close the trade
 
+## Prerequisites
+
+- Python 3.8+
+- pip package manager
+- Git
+
+## Installation
+
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd bitunix
+```
+
+2. Create and activate a virtual environment:
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
+
+3. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+4. Create a `.env` file in the root directory with your configuration:
+```env
+API_KEY=your_api_key
+SECRET_KEY=your_secret_key
+SECRET=your_jwt_secret
+PASSWORD=your_password
+HOST=127.0.0.1
+```
+
 ## Usage
 
 1. Start the server:
@@ -128,28 +126,6 @@ python bitunix.py
    - Active orders
    - Trading signals
 
-## Project Structure
-
-```
-bitunix/
-├── bitunix.py              # Main application file
-├── BitunixSignal.py        # Trading signals and strategy implementation
-├── BitunixApi.py           # API client implementation
-├── BitunixWebSocket.py     # Websocketclient implementation
-├── TickerManager.py        # Tickers, Ticker, Interval management
-├── NotificationManager.py  # Notification management               
-├── AsyncThreadRunner.py    # Async thread runner
-├── ThreadManager.py        # Thread management
-├── config.py               # Configuration management
-├── logger.py               # Logging configuration
-├── requirements.txt        # Project dependencies
-├── templates/              # HTML templates
-│   ├── main.html           # Main dashboard template
-│   ├── login.html          # Login page template
-│   └── charts.html         # Charts page template
-└── .env                    # Environment variables
-```
-
 ## Logging
 
 The platform includes a logging system with colored output for trade type
@@ -165,21 +141,7 @@ Logs are also stored in `app.log` with automatic rotation when size limits are r
 ## WebSocket Endpoints
 
 - `/wsmain`: Main WebSocket connection for real-time updates
-- `/ws`: Chart data WebSocket connection
-
-## Security
-
-- JWT-based authentication
-- Secure password hashing
-- Environment variable configuration
-- API key management
-
-## Development
-
-For development and debugging:
-- VS Code launch configuration is provided in `.vscode/launch.json`
-- Debug configuration is set up for Python debugging
-- Use the integrated terminal for running the application
+- `/wschart`: Chart data WebSocket connection
 
 ## Contributing
 
