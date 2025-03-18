@@ -18,6 +18,7 @@ A real-time cryptocurrency trading platform built with FastAPI and WebSocket tec
     - all signals with strength
     - position history
     - clicking on the ticker symbol will open the chart page
+    - maintians a list of notification which can be access by clicking on the notification
   - Candlestick charts for all timeframes (1m, 5m, 15m, 1h, 1d) on a single page with all indicators
     - Chart is activated when you click on the ticker symbol
 - Technical analysis including:
