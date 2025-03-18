@@ -439,7 +439,7 @@ class Tickers:
         ticker_obj, last, ts = args  # Unpack the tuple
         return ticker_obj.form_candle(last, ts)
     
-    # this uses cpu to process all ticker study when new lastprice is given, 
+    # this uses cpu to process all ticker study when new lastprice arrives, 
     # since the calulation is done at a different thread and uses a different memory space, 
     # the caluated value has to be reassigned to the original ticker class instance from the caluated ticker instance
     def form_candle(self, tuples_list):
