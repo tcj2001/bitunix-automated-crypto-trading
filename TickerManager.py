@@ -1,5 +1,5 @@
 import pandas as pd
-pd.set_option('future.no_silent_downcasting', True)
+#pd.set_option('future.no_silent_downcasting', True)
 import numpy as np
 import asyncio
 import pandas_ta as ta
