@@ -5,7 +5,7 @@ password="your_password"  # this will be you password for web page login, user i
 host="127.0.0.1"
 
 autoTrade=True
-
+ 
 leverage=20
 threshold=5
 min_volume=10000000
