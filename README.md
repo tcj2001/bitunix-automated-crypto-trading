@@ -76,73 +76,48 @@ The platform can be configured through the `config.py` file or environment varia
         - if the trade is long and current close is less bollinger band middle line , it will close the trade
         - if the trade is short and the current close is above bollinger band middle line , it will close the trade
 
-## Prerequisites
-
-- Python 3.8+
-- pip package manager
-- Git
 
 ## Installation
 
-1. Clone the repository:
-```bash
-git clone <repository-url>
-cd bitunix
-```
+Change the Ver1.0 to the latest version in the script
 
-2. Create and activate a virtual environment:
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
+bash -c "\
+apt-get install -y python3.9 python3.9-distutils python3-pip wget unzip dos2unix && \
+ln -sf /usr/bin/python3.9 /usr/bin/python3 && \
+python3 -m pip install --upgrade pip && \
+mkdir bitunix && cd bitunix && \
+wget https://github.com/tcj2001/bitunix-automated-crypto-trading/archive/refs/tags/Ver1.0.tar.gz -O bitunix.tar.gz && \
+mkdir code && \
+tar --strip-components=1 -xvzf bitunix.tar.gz -C code
+cd code
+pip3 install -r requirements.txt
+cp sampleenv.txt .env"
 
-3. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
+The package will be installed in the bitunix/code directory
 
-4. Create a `.env` file in the root directory with your configuration:
-```env
-API_KEY=your_api_key
-SECRET_KEY=your_secret_key
+make sure to update the .env file with your keys
+api_key=your_api_key
+secret_key=your_secret_key
 SECRET=your_jwt_secret
-PASSWORD=your_password
-HOST=127.0.0.1
-```
+password=your_password
+host=127.0.0.1
 
-## Usage
+cd bitunix/code
+python3 bitunix.py 
 
-1. Start the server:
-```bash
-python bitunix.py
-```
 
 2. Access the web interface:
    - Open your browser and navigate to `http://localhost:8000`
-   - Log in with your credentials (currenly user and password is memory based)
+   - Log in with your credentials (currenly user is admin and password is your_password in env file)
 
 3. Monitor your positions and trades:
    - Real-time portfolio value
    - Open positions
    - Active orders
    - Trading signals
+   - Position history
 
-## Logging
-
-The platform includes a logging system with colored output for trade type
-- CYAN: Closing trades
-- GREEN: Closed trades with profit
-- RED: Closed traded with loss 
-- YELLOW: Opening trades
-- PURPLE: Opened trades
-- BLUE: Auto canceled trades
-
-Logs are also stored in `app.log` with automatic rotation when size limits are reached.
-
-## WebSocket Endpoints
-
-- `/wsmain`: Main WebSocket connection for real-time updates
-- `/wschart`: Chart data WebSocket connection
+   To change any parameter in the screen you need to deactivate and activate AutoTrade checkbox
 
 ## Contributing
 
