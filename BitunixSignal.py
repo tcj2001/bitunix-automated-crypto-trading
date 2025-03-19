@@ -452,7 +452,7 @@ class BitunixSignal:
                 self.positiondf['ask'] = self.positiondf['ask'].astype('float64')
             else:
                 self.positiondf = pd.DataFrame()
-            self.positiondfStyle= self.positiondfrenderer.render_html(self.positiondf)    
+            #self.positiondfStyle= self.positiondfrenderer.render_html(self.positiondf)    
 
             #if not self.settings.use_public_websocket:                    
             #get bid las ask using api for the symbols in pending psotion
@@ -679,7 +679,7 @@ class BitunixSignal:
                     unrealized_pnl = float(row.unrealizedPNL)
                     realized_pnl = float(row.realizedPNL)
                     total_pnl = unrealized_pnl + realized_pnl
-
+                    side=row['side']
 
                     requiredCols=[f'{period}_open', f'{period}_close', f'{period}_high', f'{period}_low', f'{period}_ema', f'{period}_macd', f'{period}_bbm', f'{period}_rsi', f'{period}_candle_trend', f'{period}_trend', f'{period}_cb', f'{period}_barcolor']    
                     required_cols = set(requiredCols)
