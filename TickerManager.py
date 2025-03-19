@@ -274,7 +274,7 @@ class Ticker:
         self._ts = ts
         for intervalId in self.intervalIds:
             self.create_bar_with_last_and_ts( intervalId)
-        return self.get_intervals() 
+        return (self._last, self.lastcolor, self._ts, self.get_intervals())
 
     async def set_bidlastask(self, bid, last, ask):
         self.bidcolor = self.green if bid >= self._bid else self.red
@@ -446,7 +446,7 @@ class Tickers:
         with ProcessPoolExecutor() as executor:
             results = executor.map(self.process_ticker_candle, tuples_list, chunksize=10)
             for args, result in zip(tuples_list, results):
-                for intervalId, interval in result.items():
+                for intervalId, interval in result[3].items():
                     if not interval._data is None:
                         args[0].get_interval_ticks(intervalId)._data = interval._data
                         args[0].get_interval_ticks(intervalId).current_signal = interval.current_signal                        
@@ -455,7 +455,10 @@ class Tickers:
                         args[0].get_interval_ticks(intervalId).bbm_signal = interval.bbm_signal                        
                         args[0].get_interval_ticks(intervalId).rsi_signal = interval.rsi_signal
                         args[0].get_interval_ticks(intervalId).candle_trend = interval.candle_trend
-                        args[0].get_interval_ticks(intervalId).signal_strength = interval.signal_strength  
+                        args[0].get_interval_ticks(intervalId).signal_strength = interval.signal_strength 
+                        args[0]._last = result[0]
+                        args[0].lastcolor = result[1]
+                        args[0]._ts = result[2]
                                     
     def getCurrentData(self, period):
         current_data = []
