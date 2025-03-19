@@ -147,6 +147,20 @@
                 document.getElementById("tickerDataCycleTime").innerText = messageElement.tdctime;
                 const messages = messageElement.status_messages;
                 displayNotifications(messages)
+
+                const currentTime = new Date();
+                const atctime1 = Math.abs(currentTime - messageElement.atctime) / (1000 * 60);
+                if (atctime1 > 5) {
+                    document.getElementById("autoTradeCycleTime").style.color = "red";
+                  } else {
+                    document.getElementById("autoTradeCycleTime").style.color = "black";
+                }
+                const tdctime1 = Math.abs(currentTime - messageElement.tdctime) / (1000 * 60);
+                if (tdctime1 > 5) {
+                    document.getElementById("tickerDataCycleTime").style.color = "red";
+                  } else {
+                    document.getElementById("tickerDataCycleTime").style.color = "black";
+                }
             };
 
 
