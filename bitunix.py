@@ -202,12 +202,15 @@ async def wsmain(websocket):
                 notifications=bitunix.bitunixSignal.notifications.get_notifications()          
 
                 utc_time = datetime.fromtimestamp(bitunix.bitunixSignal.lastAutoTradeTime, tz=pytz.UTC)
-                cst_time = utc_time.astimezone(pytz.timezone('US/Central')).strftime('%Y-%m-%d %H:%M:%S')
+                atctime = utc_time.astimezone(pytz.timezone('US/Central')).strftime('%Y-%m-%d %H:%M:%S')
+                utc_time = datetime.fromtimestamp(bitunix.bitunixSignal.lastTickerDataTime, tz=pytz.UTC)
+                tdctime = utc_time.astimezone(pytz.timezone('US/Central')).strftime('%Y-%m-%d %H:%M:%S')
 
                 data = {
                     "dataframes": dataframes,
                     "profit" : bitunix.bitunixSignal.profit,
-                    "stime": cst_time,
+                    "atctime": atctime,
+                    "tdctime": tdctime,
                     "status_messages": [] if len(notifications)==0 else notifications
                 }
 

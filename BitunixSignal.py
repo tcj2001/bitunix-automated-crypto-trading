@@ -90,6 +90,7 @@ class BitunixSignal:
         self.profit=0
         
         self.lastAutoTradeTime = time.time()
+        self.lastTickerDataTime = time.time()
         
     async def load_tickers(self):
         symbols = await self.bitunixApi.GetTickerList(self.settings.threshold, self.settings.min_volume)
@@ -282,24 +283,24 @@ class BitunixSignal:
         ts = int(current_minute.timestamp())*1000
 
         #api used insted of websocket
-        if not self.settings.use_public_websocket:
-            data = await self.bitunixApi.GetTickerData()
-            self.tickerdf = pd.DataFrame()
-            if data:
-                
-                # Create a DataFrame from the data
-                self.tickerdf = pd.DataFrame(data, columns=["symbol", "last"])
-                
-                #remove not required symbols
-                self.tickerdf.loc[~self.tickerdf['symbol'].isin(self.tickerObjects.symbols()), :] = None
-                self.tickerdf.dropna(inplace=True)
-                
-                self.tickerdf['ts']=ts
-                self.tickerdf["tickerObj"] = self.tickerdf["symbol"].map(self.tickerObjects.get_tickerDict())
-                self.tuples_list = list(zip(self.tickerdf["tickerObj"],  self.tickerdf["last"].astype(float), self.tickerdf["ts"]))
-                self.tickerObjects.form_candle(self.tuples_list)
+        data = await self.bitunixApi.GetTickerData()
+        self.tickerdf = pd.DataFrame()
+        if data:
+            
+            # Create a DataFrame from the data
+            self.tickerdf = pd.DataFrame(data, columns=["symbol", "last"])
+            
+            #remove not required symbols
+            self.tickerdf.loc[~self.tickerdf['symbol'].isin(self.tickerObjects.symbols()), :] = None
+            self.tickerdf.dropna(inplace=True)
+            
+            self.tickerdf['ts']=ts
+            self.tickerdf["tickerObj"] = self.tickerdf["symbol"].map(self.tickerObjects.get_tickerDict())
+            self.tuples_list = list(zip(self.tickerdf["tickerObj"],  self.tickerdf["last"].astype(float), self.tickerdf["ts"]))
+            self.tickerObjects.form_candle(self.tuples_list)
 
-        if not self.settings.verbose_logging:
+        self.lastTickerDataTime = time.time()
+        if self.settings.verbose_logging:
             logger.info(f"GetTickerData: elapsed time {time.time()-start}")
     
     
@@ -527,7 +528,6 @@ class BitunixSignal:
     ###########################################################################################################
 
     async def BuySellList(self, period):
-        start=time.time()
         try:
             #ticker in positions and orders
             inuse1=[] 
@@ -596,8 +596,6 @@ class BitunixSignal:
         except Exception as e:
             logger.info(f"Function: BuySellList, {e}, {e.args}, {type(e).__name__}")
             logger.info(traceback.print_exc())
-        if self.settings.verbose_logging:
-            logger.info(f"BuySellList: elapsed time {time.time()-start}")
         del inuse1, inuse2, inuseTickers
         gc.collect()
 
@@ -923,7 +921,7 @@ class BitunixSignal:
             logger.info(f"Function: {function_name}, {e}, {e.args}, {type(e).__name__}")
             logger.info(traceback.print_exc())
                 
-        if not self.settings.verbose_logging:
+        if self.settings.verbose_logging:
             logger.info(f"AutoTradeProcess: elapsed time {time.time()-start}")
 
         del df
