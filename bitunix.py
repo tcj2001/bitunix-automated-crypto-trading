@@ -412,6 +412,9 @@ async def show_detail(request: Request):
     return templates.TemplateResponse({"request": request}, "study.html")
 
 if __name__ == '__main__': 
+    print(pd.__version__)
+    exit()
+    
     bitunix = bitunix(settings)
 
     #load env variable from .env
