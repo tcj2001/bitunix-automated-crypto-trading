@@ -16,6 +16,8 @@ class Colors:
     BLUE = Fore.BLUE
     PURPLE = Fore.MAGENTA
     CYAN = Fore.CYAN
+    LBLUE = Fore.LIGHTBLUE_EX
+
 
 class ColoredFormatter(logging.Formatter):
     COLORS = {

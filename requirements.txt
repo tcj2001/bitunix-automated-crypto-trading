@@ -8,7 +8,7 @@ python-multipart
 jinja2
 
 # Data Processing
-numpy
+numpy<=1.22.0   # pandas-ta requires numpy<=1.22.0
 pandas<=2.2.3   # pandas-ta requires pandas<=2.2.3
 pandas-ta
 
