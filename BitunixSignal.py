@@ -998,7 +998,7 @@ class BitunixSignal:
 
                 if event == "OPEN":
                     self.notifications.add_notification(
-                        f'{colors.PURPLE} Opened {"long" if side=="BUY" else "short"} position for {symbol} with {qty} qty @ {price}'
+                        f'{colors.PURPLE} Opened {"long" if side=="SELL" else "short"} position for {symbol} with {qty} qty @ {price}'
                     )
 
                 elif event == "CLOSE":
@@ -1010,7 +1010,7 @@ class BitunixSignal:
                         qty = float(position['maxQty'])
                         self.profit += profit
                         self.notifications.add_notification(
-                            f'{colors.GREEN if profit>0 else colors.RED} Closed {"long" if side=="BUY" else "short"} position for {symbol} with {qty} qty @ {price} and {"profit" if profit>0 else "loss"} of {profit}'
+                            f'{colors.GREEN if profit>0 else colors.RED} Closed {"long" if side=="SELL" else "short"} position for {symbol} with {qty} qty @ {price} and {"profit" if profit>0 else "loss"} of {profit}'
                         )
                     del datajs
                     gc.collect()
