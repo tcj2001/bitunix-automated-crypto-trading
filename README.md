@@ -102,6 +102,7 @@ SECRET=your_jwt_secret
 password=your_password
 host=127.0.0.1
 
+
 cd bitunix/code
 python3 bitunix.py 
 
