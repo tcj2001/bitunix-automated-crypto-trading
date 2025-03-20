@@ -95,11 +95,11 @@ The platform can be configured through the `config.py` file or environment varia
     mkdir bitunix && cd bitunix && \
     wget https://github.com/tcj2001/bitunix-automated-crypto-trading/archive/refs/tags/Ver1.0.tar.gz -O bitunix.tar.gz && \
     mkdir code && \
-    tar --strip-components=1 -xvzf bitunix.tar.gz -C code
-    cd code
-    pip3 install -r requirements.txt
+    tar --strip-components=1 -xvzf bitunix.tar.gz -C code && \
+    cd code && \
+    pip3 install -r requirements.txt && \
     cp sampleenv.txt .env"
-    
+
 
   - The package will be installed in the bitunix/code directory
 
