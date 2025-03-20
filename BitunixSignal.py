@@ -300,7 +300,7 @@ class BitunixSignal:
             self.tickerObjects.form_candle(self.tuples_list)
 
         self.lastTickerDataTime = time.time()
-        if not self.settings.verbose_logging:
+        if self.settings.verbose_logging:
             logger.info(f"GetTickerData: elapsed time {time.time()-start}")
     
     
