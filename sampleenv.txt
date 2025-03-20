@@ -2,7 +2,7 @@ api_key="your_api_key" # this is the api key for bitunix
 secret_key="your_secret_key" # this is the secret key for bitunix
 SECRET="your_secret" #some string like "7c4c22ef6ad145f922c72f5a18047b6bf6eff983381c975c" this is used to authenticate you login to web page
 password="your_password"  # this will be you password for web page login, user is admin
-host="127.0.0.1"
+host="0.0.0.0"   #id you are doin devlepoment on local machine, you can use "127.0.0.1"
 
 autoTrade=True
  
