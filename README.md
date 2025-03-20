@@ -39,6 +39,12 @@ A real-time cryptocurrency trading platform built with FastAPI and WebSocket tec
 
 The platform can be configured through the `config.py` file or environment variables. Key configuration parameters include:
 
+- API Keys
+  - `api_key`: Bitunix API key
+  - `secret_key`: Bitunix secret key
+  - `SECRET`: JWT secret for authentication, some string like "7c4c22ef6ad145f922c72f5a18047b6bf6eff983381c975c"
+  - `password`: Password for the web interface
+
 - Trading Parameters:
   - `leverage`: Trading leverage (1-100)
   - `threshold`: Ticker selection based close near high or low of the day
@@ -95,7 +101,7 @@ The platform can be configured through the `config.py` file or environment varia
     - `ticker_data_api_interval`: Ticker data API interval
     - `public_websocket_restart_interval`: Public WebSocket restart interval
 
-  - Currently no using public websocket for depth and ticker data
+  - Currently not using public websocket for depth and ticker data as the data is lagging or missing sometime
     - `use_public_websocket`=False
 
 - Logging Parameters:
