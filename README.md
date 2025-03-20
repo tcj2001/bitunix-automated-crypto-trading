@@ -77,39 +77,40 @@ The platform can be configured through the `config.py` file or environment varia
         - if the trade is short and the current close is above bollinger band middle line , it will close the trade
 
 
-## Installation
+## Instructions
 
-This uses TA-LIb
-- For windows install using precompiled wheel using
-  - pip install https://github.com/cgohlke/talib-build/releases/download/v0.6.3/ta_lib-0.6.3-cp313-cp313-win_amd64.whl
-- For linux download
-  - wget https://github.com/ta-lib/ta-lib/releases/download/v0.6.4/ta-lib_0.6.4_amd64.deb
-  - sudo dpkg -i ta-lib_0.6.4_amd64.deb
-    
-- Change the Ver1.0 to the latest version in the script
-- bash -c "\
-  apt-get install -y python3.9 python3.9-distutils python3-pip wget unzip dos2unix && \
-  ln -sf /usr/bin/python3.9 /usr/bin/python3 && \
-  python3 -m pip install --upgrade pip && \
-  mkdir bitunix && cd bitunix && \
-  wget https://github.com/tcj2001/bitunix-automated-crypto-trading/archive/refs/tags/Ver1.0.tar.gz -O bitunix.tar.gz && \
-  mkdir code && \
-  tar --strip-components=1 -xvzf bitunix.tar.gz -C code
-  cd code
-  pip3 install -r requirements.txt
-  cp sampleenv.txt .env"
+1. Installation
+  - This uses TA-LIb
+    - For windows install using precompiled wheel using
+      - pip install https://github.com/cgohlke/talib-build/releases/download/v0.6.3/ta_lib-0.6.3-cp313-cp313-win_amd64.whl
+    - For linux download
+      - wget https://github.com/ta-lib/ta-lib/releases/download/v0.6.4/ta-lib_0.6.4_amd64.deb
+      - sudo dpkg -i ta-lib_0.6.4_amd64.deb
+      
+  - Change the Ver1.0 to the latest version in the script
+  - bash -c "\
+    apt-get install -y python3.9 python3.9-distutils python3-pip wget unzip dos2unix && \
+    ln -sf /usr/bin/python3.9 /usr/bin/python3 && \
+    python3 -m pip install --upgrade pip && \
+    mkdir bitunix && cd bitunix && \
+    wget https://github.com/tcj2001/bitunix-automated-crypto-trading/archive/refs/tags/Ver1.0.tar.gz -O bitunix.tar.gz && \
+    mkdir code && \
+    tar --strip-components=1 -xvzf bitunix.tar.gz -C code
+    cd code
+    pip3 install -r requirements.txt
+    cp sampleenv.txt .env"
 
-- The package will be installed in the bitunix/code directory
+  - The package will be installed in the bitunix/code directory
 
-- make sure to update the .env file with your keys
-  api_key=your_api_key
-  secret_key=your_secret_key
-  SECRET=your_jwt_secret
-  password=your_password
-  host=127.0.0.1
+  - make sure to update the .env file with your keys
+    api_key=your_api_key
+    secret_key=your_secret_key
+    SECRET=your_jwt_secret
+    password=your_password
+    host=127.0.0.1
 
-- cd bitunix/code
-- python3 bitunix.py 
+  - cd bitunix/code
+  - python3 bitunix.py 
 
 2. Access the web interface:
    - Open your browser and navigate to `http://localhost:8000`
@@ -123,14 +124,6 @@ This uses TA-LIb
    - Position history
 
    To change any parameter in the screen you need to deactivate and activate AutoTrade checkbox
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
 
 ## License
 
