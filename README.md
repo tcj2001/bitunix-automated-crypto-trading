@@ -49,71 +49,59 @@ The platform can be configured through the `config.py` file or environment varia
   - `loss_amount`: Maximum loss amount
   - `option_moving_average`: Moving average period (1h, 1d, 15m, 5m, 1m)
   - `AutoTrade checkbox`: set the trading parameters and initate the auto trade process
+  - `bars`: Number of bars to use for study and charting
 
-- Automated Trading Algorithm is customizable:
-  - It allow you to select the moving average period (1h, 1d, 15m, 5m, 1m)
-  - It allow to select how many auto trades you want to open at a time
-  - CalculateStudy Function inside TickerManager.py (Interval class)
-    - You can setup current_signal (BUY,SELL,HOLD) and signal_strength (numeric value) based on your strategy
-    - current_signal can be setup based on Moving Average, MACD, Bollinger Band, RSI or close proximity to high or low of the candle
-    - signal_strength can be setup based on number of consecutive green or red candles or any other strategy
-  - AutoTradeProcess function inside BitunixSignal.py, you can setup your opening and closing trading strategy
-    - User interface will list the stocks in the signal window with BUY or SELL signal based on the descending value of signal_strength
-    - you have the option to manually initiate a trade or let the auto trade process to initiate the trade on top row in the signal window
-    - You can manually close the trade on the current positions window or let the auto trade process to close the trade based on following conditions:
-      - If the current open position reversed direction, it will close the trade
-      - If the trade is in profit and greater than the profit_amount , it will close the trade
-      - If the trade is in profit and greater than the profit_amount , it will close the trade
-      - If the trade is in loss and greater than the loss_amount , it will close the trade
-      - If the orderis open for more than 1 minute, it will close the open orders
-      - It will close long or short postions:
-        - If the trade is long and the fast moving average is above the medium moving average, it will close the trade
-        - If the trade is short and the fast moving average is below the medium moving average, it will close the trade
-        - If the trade is long and the MACD_line < Signal_line, it will close the trade
-        - If the trade is short and the MACD_line > Signal_line, it will close the trade
-        - If the trade is long and the RSI > 90, it will close the trade
-        - If the trade is short and the RSI < 10, it will close the trade
-        - if the trade is long and current close is less bollinger band middle line , it will close the trade
-        - if the trade is short and the current close is above bollinger band middle line , it will close the trade
+- `Technical Indicators Parameters`:
+    - `ma_fast`: Fast moving average period
+    - `ma_medium`: Medium moving average period
+    - `ma_slow`: Slow moving average period
+    - `rsi_fast`: Fast RSI period
+    - `rsi_slow`: Slow RSI period
+    - `bbm_period`: Bollinger Band middle period
+    - `bbm_std`: Bollinger Band standard deviation
+    - `macd_period`: MACD period
+    - `macd_short`: MACD short period
+    - `macd_long`: MACD long period
+  
+  - `Study Parameters`:
+    - `ema_study`: Enable EMA study
+    - `macd_study`: Enable MACD study
+    - `bbm_study`: Enable Bollinger Band study
+    - `rsi_study`: Enable RSI study
+    - `candle_trend_study`: Enable candle trend study
+  
+  - `Check on Opening a Position`:
+    - `ema_check_on_open`: Check EMA on open
+    - `macd_check_on_open`: Check MACD on open
+    - `bbm_check_on_open`: Check Bollinger Band on open
+    - `rsi_check_on_open`: Check RSI on open
+    - `candle_trend_check_on_open`: Check candle trend on open
+  
+  - `Check on Close a Position`:
+    - `ema_check_on_close`: Check EMA on close
+    - `macd_check_on_close`: Check MACD on close
+    - `bbm_check_on_close`: Check Bollinger Band on close
+    - `rsi_check_on_close`: Check RSI on close
+    - `candle_trend_check_on_close`: Check candle trend on close
+  
+  - `intervals`:
+    - `screen_refresh_interval`: Screen refresh interval
+    - `signal_check_interval`: Signal check interval
+    - `portfolio_api_interval`: Portfolio API interval
+    - `pending_positions_api_interval`: Pending positions API interval
+    - `pending_orders_api_interval`: Pending orders API interval
+    - `trade_history_api_interval`: Trade history API interval
+    - `position_history_api_interval`: Position history API interval
+    - `ticker_data_api_interval`: Ticker data API interval
+    - `public_websocket_restart_interval`: Public WebSocket restart interval
 
+  - Currently no using public websocket for depth and ticker data
+    - `use_public_websocket`=False
 
-## Instructions
+- Logging Parameters:
+  -   `verbose_logging`=False
 
-- Installation
-  - This uses TA-LIb
-    - sudo apt-get update
-    - sudo apt-get install build-essential libssl-dev libffi-dev python3.9-dev
-    - For windows install using precompiled wheel using
-      - pip install https://github.com/cgohlke/talib-build/releases/download/v0.6.3/ta_lib-0.6.3-cp313-cp313-win_amd64.whl
-    - For linux download
-      - wget https://github.com/ta-lib/ta-lib/releases/download/v0.6.4/ta-lib_0.6.4_amd64.deb
-      - sudo dpkg -i ta-lib_0.6.4_amd64.deb
-      
-  - Change the Ver1.0 to the latest version in the script
-    - bash -c "\
-      apt-get install -y python3.9 python3.9-distutils python3-pip wget unzip dos2unix && \
-      ln -sf /usr/bin/python3.9 /usr/bin/python3 && \
-      python3 -m pip install --upgrade pip && \
-      mkdir bitunix && cd bitunix && \
-      wget https://github.com/tcj2001/bitunix-automated-crypto-trading/archive/refs/tags/Ver1.0.tar.gz -O bitunix.tar.gz && \
-      mkdir code && \
-      tar --strip-components=1 -xvzf bitunix.tar.gz -C code && \
-      cd code && \
-      pip3 install -r requirements.txt && \
-      cp sampleenv.txt .env"
-
-
-  - The package will be installed in the bitunix/code directory
-
-  - make sure to update the .env file with your keys
-    api_key=your_api_key
-    secret_key=your_secret_key
-    SECRET=your_jwt_secret
-    password=your_password
-    host=0.0.0.0 (for server) or 127.0.0.1 (for local)
-
-  - cd bitunix/code
-  - python3 bitunix.py 
+## User Interface
 
 - Access the web interface:
    - Open your browser and navigate to `http://localhost:8000` or `http://your_server_ip:8000`
@@ -127,13 +115,95 @@ The platform can be configured through the `config.py` file or environment varia
    - Position history
    - Manual trading using buy, sell, add, reduce buttons
 
-- Autorading using the AutoTrade checkbox
+- Autotrade using the AutoTrade checkbox
     - you can change
       - Moving Average period
       - Max auto trades
       - Take Profit amount
       - Accept Loss amount
+    - You can control the study like Moving Average, MACD, Bollinger Band, RSI or close proximity to high or low of the candle using the env file
+    - You can control the trading strategy using the CalculateStudy function in TickerManager.py and AutoTradeProcess function in BitunixSignal.py
     - Changes are activated by unchecking and checking the AutoTrade checkbox
+
+## Auto Trading
+
+- Automated Trading Algorithm is customizable:
+  - It allow you to select the moving average period (1h, 1d, 15m, 5m, 1m)
+  - It allow to select how many auto trades you want to open at a time
+  - CalculateStudy Function inside TickerManager.py (Interval class)
+    - You can setup current_signal (BUY,SELL,HOLD) and signal_strength (numeric value) based on your strategy
+    - current_signal can be setup based on Moving Average, MACD, Bollinger Band, RSI or close proximity to high or low of the candle
+    - signal_strength can be setup based on number of consecutive green or red candles or any other strategy
+  - AutoTradeProcess function inside BitunixSignal.py, you can setup your opening and closing trading strategy
+  - User interface will list the stocks in the signal window with BUY or SELL signal based on the descending value of signal_strength
+  - All study can be controlled thru environment variables
+  - Auto trade process open the trade based on following conditions:
+    - If the current candle is bullish 
+      and moving average is above the medium moving average
+      and MACD_line > Signal_line
+      and RSI is above the long RSI
+      and current close is above bollinger band middle line
+      it will open long position
+    - If the current candle is bearish
+      and moving average is below the medium moving average
+      and MACD_line < Signal_line
+      and RSI is below the long RSI
+      and current close is belowe bollinger band middle line
+      it will open short position
+  - Auto trade process closes the trade based on following conditions:
+    - If the current candle is bearish, it will close the trade
+    - If the trade is in profit and greater than the profit_amount , it will close the trade
+    - If the trade is in profit and greater than the profit_amount , it will close the trade
+    - If the trade is in loss and greater than the loss_amount , it will close the trade
+    - If the order is open for more than 1 minute, it will close the open orders
+    - It will close long or short postions:
+      - If the trade is long and the fast moving average is above the medium moving average, it will close the trade
+      - If the trade is short and the fast moving average is below the medium moving average, it will close the trade
+      - If the trade is long and the MACD_line < Signal_line, it will close the trade
+      - If the trade is short and the MACD_line > Signal_line, it will close the trade
+      - If the trade is long and the short RSI < long RSI, it will close the trade
+      - If the trade is short and the short RSI > long RSI, it will close the trade
+      - if the trade is long and current close is less bollinger band middle line , it will close the trade
+      - if the trade is short and the current close is above bollinger band middle line , it will close the trade
+
+
+## Installation
+
+- This uses TA-LIb
+  - sudo apt-get update
+  - sudo apt-get install build-essential libssl-dev libffi-dev python3.9-dev
+  - For windows install using precompiled wheel using
+    - pip install https://github.com/cgohlke/talib-build/releases/download/v0.6.3/ta_lib-0.6.3-cp313-cp313-win_amd64.whl
+  - For linux download
+    - wget https://github.com/ta-lib/ta-lib/releases/download/v0.6.4/ta-lib_0.6.4_amd64.deb
+    - sudo dpkg -i ta-lib_0.6.4_amd64.deb
+    
+- Change the Ver1.0 to the latest version in the script
+  - bash -c "\
+    apt-get install -y python3.9 python3.9-distutils python3-pip wget unzip dos2unix && \
+    ln -sf /usr/bin/python3.9 /usr/bin/python3 && \
+    python3 -m pip install --upgrade pip && \
+    mkdir bitunix && cd bitunix && \
+    wget https://github.com/tcj2001/bitunix-automated-crypto-trading/archive/refs/tags/Ver1.0.tar.gz -O bitunix.tar.gz && \
+    mkdir code && \
+    tar --strip-components=1 -xvzf bitunix.tar.gz -C code && \
+    cd code && \
+    pip3 install -r requirements.txt && \
+    cp sampleenv.txt .env"
+
+
+- The package will be installed in the bitunix/code directory
+
+- make sure to update the .env file with your keys
+  api_key=your_api_key
+  secret_key=your_secret_key
+  SECRET=your_jwt_secret
+  password=your_password
+  host=0.0.0.0 (for server) or 127.0.0.1 (for local)
+
+- cd bitunix/code
+- python3 bitunix.py 
+
  
 ## License
 
