@@ -7,11 +7,6 @@ python-multipart
 # Template Engine
 jinja2
 
-# Data Processing
-numpy<=1.22.0   # pandas-ta requires numpy<=1.22.0
-pandas<=2.2.3   # pandas-ta requires pandas<=2.2.3
-pandas-ta
-
 # Environment Variables
 python-dotenv
 pydantic
@@ -31,3 +26,8 @@ cryptography
 # Utilities
 colorama
 
+
+# Data Processing
+# TA-LIB needs to b manually installed as shown in the readme
+pandas
+numpy

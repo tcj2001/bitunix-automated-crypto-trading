@@ -75,8 +75,8 @@ class Settings(BaseSettings):
     # Validation for secrets
     @validator('api_key', 'secret_key', 'SECRET', 'password')
     def validate_secrets(cls, v):
-        if isinstance(v, str):
-            if v.startswith('your_') or v == 'default':
+        if isinstance(v, SecretStr):
+            if v.get_secret_value().startswith('your_') or v == 'default':
                 raise ValueError('Please set proper values for secrets')
             if len(v) < 16:  # Minimum length requirement
                 raise ValueError('Secret too short - minimum 16 characters')

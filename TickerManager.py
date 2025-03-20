@@ -2,7 +2,7 @@ import pandas as pd
 #pd.set_option('future.no_silent_downcasting', True)
 import numpy as np
 import asyncio
-import pandas_ta as ta
+import talib
 import traceback
 from config import Settings
 from logger import Logger
@@ -62,10 +62,10 @@ class Interval:
 
                 # Calculate the RSI
                 if self.settings.rsi_study:
-                    df['rsi_fast'] = ta.rsi(df['close'],length=self.settings.rsi_fast)
+                    df['rsi_fast'] = talib.RSI(df['close'],timeperiod=self.settings.rsi_fast)
                     df.fillna({'rsi_fast':0}, inplace=True)
                     
-                    df['rsi_slow'] = ta.rsi(df['close'],length=self.settings.rsi_slow)
+                    df['rsi_slow'] = talib.RSI(df['close'],timeperiod=self.settings.rsi_slow)
                     df.fillna({'rsi_slow':0}, inplace=True)
                 
                     df['rsi_slope'] = df['rsi_fast'].diff()
@@ -83,15 +83,15 @@ class Interval:
 
                 # Calculate the Moving Averages
                 if self.settings.ema_study:
-                    df['ma_fast'] = df['close'].ewm(span=self.settings.ma_fast, adjust=False).mean()
+                    df['ma_fast'] = talib.EMA(df['close'], timeperiod=self.settings.ma_fast)
                     df['ma_fast'] = df['ma_fast'].bfill()
                     df.fillna({'ma_fast':0}, inplace=True)
 
-                    df['ma_slow'] = df['close'].ewm(span=self.settings.ma_slow, adjust=False).mean()
+                    df['ma_slow'] = talib.EMA(df['close'], timeperiod=self.settings.ma_slow)
                     df['ma_slow'] = df['ma_slow'].bfill()
                     df.fillna({'ma_slow':0}, inplace=True)
                 
-                    df['ma_medium'] = df['close'].ewm(span=self.settings.ma_medium, adjust=False).mean()
+                    df['ma_medium'] = talib.EMA(df['close'], timeperiod=self.settings.ma_medium)
                     df['ma_medium'] = df['ma_medium'].bfill()
                     df.fillna({'ma_medium':0}, inplace=True)
 
@@ -112,74 +112,46 @@ class Interval:
                     df['BBL'] = 0.0
                     df['BBM'] = 0.0
                     df['BBU'] = 0.0
-                    df['BBB'] = 0.0
-                    df['BBP'] = 0.0
-                    bbands = ta.bbands(df['close'], length=self.settings.bbm_period, std=self.settings.bbm_std)
-                    if bbands is not None:
-                        bbands.rename(columns={f'BBL_{self.settings.bbm_period}_{self.settings.bbm_std}': 'BBL'}, inplace=True)
-                        bbands.fillna({'BBL':0}, inplace=True)
-                        bbands.rename(columns={f'BBM_{self.settings.bbm_period}_{self.settings.bbm_std}': 'BBM'}, inplace=True)
-                        bbands.fillna({'BBM':0}, inplace=True)
-                        bbands.rename(columns={f'BBU_{self.settings.bbm_period}_{self.settings.bbm_std}': 'BBU'}, inplace=True)
-                        bbands.fillna({'BBU':0}, inplace=True)
-                        bbands.rename(columns={f'BBB_{self.settings.bbm_period}_{self.settings.bbm_std}': 'BBB'}, inplace=True)
-                        bbands.fillna({'BBB':0}, inplace=True)
-                        bbands.rename(columns={f'BBP_{self.settings.bbm_period}_{self.settings.bbm_std}': 'BBP'}, inplace=True)
-                        bbands.fillna({'BBP':0}, inplace=True)
-                        # Add Bollinger Bands to the DataFrame
-                        df['BBL'] = bbands['BBL']
-                        df['BBM'] = bbands['BBM']
-                        df['BBU'] = bbands['BBU']
-                        df['BBB'] = bbands['BBB']
-                        df['BBP'] = bbands['BBP']
-                        df.fillna({'BBL':0}, inplace=True)
-                        df.fillna({'BBM':0}, inplace=True)
-                        df.fillna({'BBU':0}, inplace=True)
-                        df.fillna({'BBB':0}, inplace=True)
-                        df.fillna({'BBP':0}, inplace=True)
+                    df['BBU'], df['BBM'], df['BBL'] = talib.BBANDS(df['close'], timeperiod=self.settings.bbm_period, nbdevup=self.settings.bbm_std, nbdevdn=self.settings.bbm_std, )
+                    df.fillna({'BBL':0}, inplace=True)
+                    df.fillna({'BBM':0}, inplace=True)
+                    df.fillna({'BBU':0}, inplace=True)
 
-                        df['BBM_slope'] = df['BBM'].diff()
-                        df['BBM_angle'] = np.degrees(np.arctan(df['BBM_slope']))                                        
-                        df.fillna({'BBM_slope':0}, inplace=True)
-                        df.fillna({'BBM_angle':0}, inplace=True)                                    
+                    df['BBM_slope'] = df['BBM'].diff()
+                    df['BBM_angle'] = np.degrees(np.arctan(df['BBM_slope']))                                        
+                    df.fillna({'BBM_slope':0}, inplace=True)
+                    df.fillna({'BBM_angle':0}, inplace=True)                                    
 
-                        #open and close criteria
-                        if df['close'].iloc[-1] > df['BBM'].iloc[-1] and df['close'].iloc[-2] > df['BBM'].iloc[-2]:
-                            self.bbm_signal = "BUY"
-                        elif df['close'].iloc[-1] < df['BBM'].iloc[-1] and df['close'].iloc[-2] < df['BBM'].iloc[-2]:
-                            self.bbm_signal = "SELL"
-                        else:
-                            self.bbm_signal = "HOLD"
+                    #open and close criteria
+                    if df['close'].iloc[-1] > df['BBM'].iloc[-1] and df['close'].iloc[-2] > df['BBM'].iloc[-2]:
+                        self.bbm_signal = "BUY"
+                    elif df['close'].iloc[-1] < df['BBM'].iloc[-1] and df['close'].iloc[-2] < df['BBM'].iloc[-2]:
+                        self.bbm_signal = "SELL"
+                    else:
+                        self.bbm_signal = "HOLD"
 
                 # Calculate the MACD Line
                 if self.settings.macd_study:
                     df['MACD_Line'] = 0.0
                     df['MACD_Signal'] = 0.0
                     df['MACD_Histogram'] = 0.0
-                    macd = ta.macd(df['close'], fast=self.settings.macd_short, slow=self.settings.macd_long, signal=self.settings.macd_period)
-                    if macd is not None:
-                        macd.rename(columns={f'MACD_{self.settings.macd_short}_{self.settings.macd_long}_{self.settings.macd_period}': 'MACD_Line'}, inplace=True)
-                        macd.rename(columns={f'MACDs_{self.settings.macd_short}_{self.settings.macd_long}_{self.settings.macd_period}': 'MACD_Signal'}, inplace=True)
-                        macd.rename(columns={f'MACDh_{self.settings.macd_short}_{self.settings.macd_long}_{self.settings.macd_period}': 'MACD_Histogram'}, inplace=True)
-                        df['MACD_Line'] = macd['MACD_Line']
-                        df['MACD_Signal'] = macd['MACD_Signal']
-                        df['MACD_Histogram'] = macd['MACD_Histogram']
-                        df.fillna({'MACD_Line':0}, inplace=True)
-                        df.fillna({'MACD_Signal':0}, inplace=True)
-                        df.fillna({'MACD_Histogram':0}, inplace=True)
-                                
-                        df['MACD_slope'] = df['MACD_Signal'].diff()
-                        df['MACD_angle'] = np.degrees(np.arctan(df['MACD_slope']))                                        
-                        df.fillna({'MACD_slope':0}, inplace=True)
-                        df.fillna({'MACD_angle':0}, inplace=True)                                    
+                    df['MACD_Line'], df['MACD_Signal'], df['MACD_Histogram'] = talib.MACD(df['close'], fastperiod=self.settings.macd_short, slowperiod=self.settings.macd_long, signalperiod=self.settings.macd_period)
+                    df.fillna({'MACD_Line':0}, inplace=True)
+                    df.fillna({'MACD_Signal':0}, inplace=True)
+                    df.fillna({'MACD_Histogram':0}, inplace=True)
+                            
+                    df['MACD_slope'] = df['MACD_Signal'].diff()
+                    df['MACD_angle'] = np.degrees(np.arctan(df['MACD_slope']))                                        
+                    df.fillna({'MACD_slope':0}, inplace=True)
+                    df.fillna({'MACD_angle':0}, inplace=True)                                    
                         
-                        #open and close criteria
-                        if df['MACD_Line'].iloc[-1] > df['MACD_Signal'].iloc[-1]: 
-                            self.macd_signal = "BUY"
-                        elif df['MACD_Line'].iloc[-1] < df['MACD_Signal'].iloc[-1]:
-                            self.macd_signal = "SELL"
-                        else:
-                            self.macd_signal = "HOLD"
+                    #open and close criteria
+                    if df['MACD_Line'].iloc[-1] > df['MACD_Signal'].iloc[-1]: 
+                        self.macd_signal = "BUY"
+                    elif df['MACD_Line'].iloc[-1] < df['MACD_Signal'].iloc[-1]:
+                        self.macd_signal = "SELL"
+                    else:
+                        self.macd_signal = "HOLD"
 
                 #replace infinity   
                 df.replace([np.inf, -np.inf], 0, inplace=True)
@@ -205,7 +177,7 @@ class Interval:
                 logger.info(f"Function: calculate_study, {e}, {e.args}, {type(e).__name__}")
                 logger.info(traceback.logger.info_exc())
             retval =  df.to_dict('records')
-            del df, bbands 
+            del df
             gc.collect()            
             return retval
     
