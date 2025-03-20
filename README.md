@@ -127,14 +127,13 @@ The platform can be configured through the `config.py` file or environment varia
    - Position history
    - Manual trading using buy, sell, add, reduce buttons
 
-   - Autorading using the AutoTrade checkbox
+- Autorading using the AutoTrade checkbox
     - you can change
       - Moving Average period
       - Max auto trades
       - Take Profit amount
       - Accept Loss amount
-   
-   - Changes are activated by unchecking and checking the AutoTrade checkbox
+    - Changes are activated by unchecking and checking the AutoTrade checkbox
  
 ## License
 
