@@ -513,7 +513,7 @@ class BitunixSignal:
             self.tradeHistoryData = await self.bitunixApi.GetTradeHistoryData()
             if self.tradeHistoryData and 'tradeList' in self.tradeHistoryData:
                 self.tradesdf = pd.DataFrame(self.tradeHistoryData['tradeList'], columns=["symbol", "ctime", "qty", "side", "price","realizedPNL","reduceOnly"])
-                self.tradesdf['ctime'] = pd.to_datetime(self.tradesdf['ctime'].astype(float), unit='ms').dt.tz_localize('UTC').dt.tz_convert(cst).dt.strftime('%Y-%m-%d %H:%M:%S')
+                self.tradesdf['rtime'] = pd.to_datetime(self.tradesdf['ctime'].astype(float), unit='ms').dt.tz_localize('UTC').dt.tz_convert(cst).dt.strftime('%Y-%m-%d %H:%M:%S')
                 grouped_trades = self.tradesdf.groupby("symbol")
                 for symbol, tickerObj in self.tickerObjects.get_tickerDict().items():
                     if symbol in grouped_trades.groups:
