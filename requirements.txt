@@ -28,6 +28,6 @@ colorama
 
 
 # Data Processing
-# TA-LIB needs to b manually installed as shown in the readme
+TA-LIB
 pandas
 numpy
