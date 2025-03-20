@@ -81,6 +81,8 @@ The platform can be configured through the `config.py` file or environment varia
 
 1. Installation
   - This uses TA-LIb
+    - sudo apt-get update
+    - sudo apt-get install build-essential libssl-dev libffi-dev python3.9-dev
     - For windows install using precompiled wheel using
       - pip install https://github.com/cgohlke/talib-build/releases/download/v0.6.3/ta_lib-0.6.3-cp313-cp313-win_amd64.whl
     - For linux download
