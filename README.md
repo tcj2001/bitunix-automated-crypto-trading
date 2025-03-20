@@ -78,13 +78,14 @@ The platform can be configured through the `config.py` file or environment varia
 
 
 ## Installation
+
 This uses TA-LIb
 - For windows install using precompiled wheel using
   - pip install https://github.com/cgohlke/talib-build/releases/download/v0.6.3/ta_lib-0.6.3-cp313-cp313-win_amd64.whl
-- For linux download 
+- For linux download
   - wget https://github.com/ta-lib/ta-lib/releases/download/v0.6.4/ta-lib_0.6.4_amd64.deb
   - sudo dpkg -i ta-lib_0.6.4_amd64.deb
-
+    
 - Change the Ver1.0 to the latest version in the script
 - bash -c "\
   apt-get install -y python3.9 python3.9-distutils python3-pip wget unzip dos2unix && \
@@ -107,10 +108,8 @@ This uses TA-LIb
   password=your_password
   host=127.0.0.1
 
-
 - cd bitunix/code
 - python3 bitunix.py 
-
 
 2. Access the web interface:
    - Open your browser and navigate to `http://localhost:8000`
