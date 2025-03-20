@@ -90,17 +90,17 @@ The platform can be configured through the `config.py` file or environment varia
       - sudo dpkg -i ta-lib_0.6.4_amd64.deb
       
   - Change the Ver1.0 to the latest version in the script
-  - bash -c "\
-    apt-get install -y python3.9 python3.9-distutils python3-pip wget unzip dos2unix && \
-    ln -sf /usr/bin/python3.9 /usr/bin/python3 && \
-    python3 -m pip install --upgrade pip && \
-    mkdir bitunix && cd bitunix && \
-    wget https://github.com/tcj2001/bitunix-automated-crypto-trading/archive/refs/tags/Ver1.0.tar.gz -O bitunix.tar.gz && \
-    mkdir code && \
-    tar --strip-components=1 -xvzf bitunix.tar.gz -C code && \
-    cd code && \
-    pip3 install -r requirements.txt && \
-    cp sampleenv.txt .env"
+    - bash -c "\
+      apt-get install -y python3.9 python3.9-distutils python3-pip wget unzip dos2unix && \
+      ln -sf /usr/bin/python3.9 /usr/bin/python3 && \
+      python3 -m pip install --upgrade pip && \
+      mkdir bitunix && cd bitunix && \
+      wget https://github.com/tcj2001/bitunix-automated-crypto-trading/archive/refs/tags/Ver1.0.tar.gz -O bitunix.tar.gz && \
+      mkdir code && \
+      tar --strip-components=1 -xvzf bitunix.tar.gz -C code && \
+      cd code && \
+      pip3 install -r requirements.txt && \
+      cp sampleenv.txt .env"
 
 
   - The package will be installed in the bitunix/code directory
@@ -125,9 +125,17 @@ The platform can be configured through the `config.py` file or environment varia
    - Active orders
    - Trading signals
    - Position history
+   - Manual trading using buy, sell, add, reduce buttons
 
-   To change any parameter in the screen you need to deactivate and activate AutoTrade checkbox
-
+   - Autorading using the AutoTrade checkbox
+    - you can change
+      - Moving Average period
+      - Max auto trades
+      - Take Profit amount
+      - Accept Loss amount
+   
+   - Changes are activated by unchecking and checking the AutoTrade checkbox
+ 
 ## License
 
 https://opensource.org/licenses/MIT
