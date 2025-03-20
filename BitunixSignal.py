@@ -300,7 +300,7 @@ class BitunixSignal:
             self.tickerObjects.form_candle(self.tuples_list)
 
         self.lastTickerDataTime = time.time()
-        if self.settings.verbose_logging:
+        if not self.settings.verbose_logging:
             logger.info(f"GetTickerData: elapsed time {time.time()-start}")
     
     
@@ -644,7 +644,7 @@ class BitunixSignal:
                                 qty = str(max(balance * 0.01 / price * int(self.settings.leverage),mtv))
 
                                 self.notifications.add_notification(
-                                    f'{colors.YELLOW} Opening {"long" if side=="BUY" else "short"} position for {row.symbol} with {qty} qty @ {price}, ({datajs["code"]} {datajs["msg"]})'
+                                    f'{colors.YELLOW} Opening {"long" if side=="BUY" else "short"} position for {row.symbol} with {qty} qty @ {price})'
                                 )
                                 datajs = await self.bitunixApi.PlaceOrder(row.symbol, qty, price, side)
                                 count=count+1
@@ -664,7 +664,7 @@ class BitunixSignal:
             for index, row in df.iterrows():
                 if current_time - int(row.ctime) > 60000:
                     self.notifications.add_notification(
-                        f'{colors.LBLUE} Canceling order {row.orderId}, {row.symbol} {row.qty} created at {row.rtime} ({datajs["code"]} {datajs["msg"]})'
+                        f'{colors.LBLUE} Canceling order {row.orderId}, {row.symbol} {row.qty} created at {row.rtime} '
                     )
                     datajs = await self.bitunixApi.CancelOrder(row.symbol, row.orderId)
                 await asyncio.sleep(0)
@@ -697,7 +697,7 @@ class BitunixSignal:
                                 price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
 
                                 self.notifications.add_notification(
-                                    f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to stop loss for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                                    f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to stop loss for {row.symbol} with {row.qty} qty @ {price})'
                                 )
                                 datajs = await self.bitunixApi.PlaceOrder(
                                     positionId=row.positionId,
@@ -714,7 +714,7 @@ class BitunixSignal:
                                 price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
 
                                 self.notifications.add_notification(
-                                    f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position  due to take profit for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                                    f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position  due to take profit for {row.symbol} with {row.qty} qty @ {price})'
                                 )
                                 datajs = await self.bitunixApi.PlaceOrder(
                                     positionId=row.positionId,
@@ -733,7 +733,7 @@ class BitunixSignal:
                                     price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
 
                                     self.notifications.add_notification(
-                                        f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to bearish candle reversal for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                                        f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to bearish candle reversal for {row.symbol} with {row.qty} qty @ {price})'
                                     )
                                     datajs = await self.bitunixApi.PlaceOrder(
                                         positionId=row.positionId,
@@ -750,7 +750,7 @@ class BitunixSignal:
                                     price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
 
                                     self.notifications.add_notification(
-                                        f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to bullish candle reversal for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                                        f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to bullish candle reversal for {row.symbol} with {row.qty} qty @ {price})'
                                     )
                                     datajs = await self.bitunixApi.PlaceOrder(
                                         positionId=row.positionId,
@@ -769,7 +769,7 @@ class BitunixSignal:
                                     price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
 
                                     self.notifications.add_notification(
-                                        f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to MA {period} crossover for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                                        f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to MA {period} crossover for {row.symbol} with {row.qty} qty @ {price})'
                                     )
                                     datajs = await self.bitunixApi.PlaceOrder(
                                         positionId=row.positionId,
@@ -785,7 +785,7 @@ class BitunixSignal:
                                     last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                     price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
                                     self.notifications.add_notification(
-                                        f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to MA {period} crossover for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                                        f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to MA {period} crossover for {row.symbol} with {row.qty} qty @ {price})'
                                     )
                                     datajs = await self.bitunixApi.PlaceOrder(
                                         positionId=row.positionId,
@@ -803,7 +803,7 @@ class BitunixSignal:
                                     last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                     price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
                                     self.notifications.add_notification(
-                                        f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to MACD {period} crossover for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                                        f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to MACD {period} crossover for {row.symbol} with {row.qty} qty @ {price})'
                                     )
                                     datajs = await self.bitunixApi.PlaceOrder(
                                         positionId=row.positionId,
@@ -819,7 +819,7 @@ class BitunixSignal:
                                     last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                     price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
                                     self.notifications.add_notification(
-                                        f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to MACD {period} crossover for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                                        f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to MACD {period} crossover for {row.symbol} with {row.qty} qty @ {price})'
                                     )
                                     datajs = await self.bitunixApi.PlaceOrder(
                                         positionId=row.positionId,
@@ -837,7 +837,7 @@ class BitunixSignal:
                                     last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                     price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
                                     self.notifications.add_notification(
-                                        f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to BBM {period} crossover for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                                        f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to BBM {period} crossover for {row.symbol} with {row.qty} qty @ {price})'
                                     )
                                     datajs = await self.bitunixApi.PlaceOrder(
                                         positionId=row.positionId,
@@ -853,7 +853,7 @@ class BitunixSignal:
                                     last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                     price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
                                     self.notifications.add_notification(
-                                        f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to BBM {period} crossover for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                                        f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to BBM {period} crossover for {row.symbol} with {row.qty} qty @ {price})'
                                     )
                                     datajs = await self.bitunixApi.PlaceOrder(
                                         positionId=row.positionId,
@@ -871,7 +871,7 @@ class BitunixSignal:
                                     last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                     price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
                                     self.notifications.add_notification(
-                                        f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to RSI {period} crossover for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                                        f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to RSI {period} crossover for {row.symbol} with {row.qty} qty @ {price})'
                                     )
                                     datajs = await self.bitunixApi.PlaceOrder(
                                         positionId=row.positionId,
@@ -887,7 +887,7 @@ class BitunixSignal:
                                     last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                     price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
                                     self.notifications.add_notification(
-                                        f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to RSI {period} crossover for {row.symbol} with {row.qty} qty @ {price}, {datajs["msg"]})'
+                                        f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to RSI {period} crossover for {row.symbol} with {row.qty} qty @ {price})'
                                     )
                                     datajs = await self.bitunixApi.PlaceOrder(
                                         positionId=row.positionId,
