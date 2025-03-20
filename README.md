@@ -79,7 +79,7 @@ The platform can be configured through the `config.py` file or environment varia
 
 ## Instructions
 
-1. Installation
+- Installation
   - This uses TA-LIb
     - sudo apt-get update
     - sudo apt-get install build-essential libssl-dev libffi-dev python3.9-dev
@@ -110,16 +110,16 @@ The platform can be configured through the `config.py` file or environment varia
     secret_key=your_secret_key
     SECRET=your_jwt_secret
     password=your_password
-    host=127.0.0.1
+    host=0.0.0.0 (for server) or 127.0.0.1 (for local)
 
   - cd bitunix/code
   - python3 bitunix.py 
 
-2. Access the web interface:
-   - Open your browser and navigate to `http://localhost:8000`
+- Access the web interface:
+   - Open your browser and navigate to `http://localhost:8000` or `http://your_server_ip:8000`
    - Log in with your credentials (currenly user is admin and password is your_password in env file)
 
-3. Monitor your positions and trades:
+- Monitor your positions and trades:
    - Real-time portfolio value
    - Open positions
    - Active orders
