@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     macd_period: int = Field(default=9, ge=1)
     macd_short: int = Field(default=12, ge=1)
     macd_long: int = Field(default=26, ge=1)
+    adx_period: int = Field(default=14, ge=1)
 
     # Technical Indicators
     ema_study: bool = Field(default=True)
@@ -41,6 +42,7 @@ class Settings(BaseSettings):
     bbm_study: bool = Field(default=True)
     rsi_study: bool = Field(default=True)
     candle_trend_study: bool = Field(default=True)
+    adx_study: bool = Field(default=True)
 
     ema_check_on_open: bool = Field(default=True)
     ema_check_on_close: bool = Field(default=False)
@@ -53,6 +55,8 @@ class Settings(BaseSettings):
     candle_trend_check_on_open: bool = Field(default=True)
     candle_trend_check_on_close: bool = Field(default=False)
     close_on_reverse: bool = Field(default=False)
+    adx_check_on_open: bool = Field(default=True)
+    adx_check_on_close: bool = Field(default=False)
 
     # Time Intervals
     screen_refresh_interval: int = Field(default=1, ge=1)

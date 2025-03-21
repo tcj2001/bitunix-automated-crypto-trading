@@ -26,12 +26,14 @@ bbm_std=2
 macd_period=9
 macd_short=12
 macd_long=26
+adx_period=14
 
 ema_study=True
 macd_study=True
 bbm_study=True
 rsi_study=True
 candle_trend_study=True
+adx_study=True
 
 ema_check_on_open=True
 ema_check_on_close=False
@@ -44,6 +46,8 @@ rsi_check_on_close=False
 candle_trend_check_on_open=True
 candle_trend_check_on_close=False
 close_on_reverse=False
+adx_check_on_open=True
+adx_check_on_close=False
 
 screen_refresh_interval=1
 signal_check_interval=15

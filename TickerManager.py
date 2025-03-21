@@ -24,6 +24,7 @@ class Interval:
         self.bbm_signal="HOLD"
         self.rsi_signal="HOLD"
         self.candle_trend="HOLD"
+        self.adx_signal="WEAK"
         
         self.signal_strength=0
 
@@ -153,6 +154,16 @@ class Interval:
                     else:
                         self.macd_signal = "HOLD"
 
+                # Calculate the ADX
+                if self.settings.adx_study:
+                    df['ADX'] = talib.ADX(df['high'], df['low'], df['close'], timeperiod=self.settings.adx_period)
+                    df.fillna({'ADX':0}, inplace=True)
+                    if df['ADX'].iloc[-1] > 25:
+                        self.adx_signal = "STRONG"
+                    else:
+                        self.adx_signal = "WEAK"  
+                        
+                    
                 #replace infinity   
                 df.replace([np.inf, -np.inf], 0, inplace=True)
                 
@@ -161,13 +172,15 @@ class Interval:
                     (not self.settings.macd_check_on_open or self.macd_signal == "BUY") and \
                     (not self.settings.bbm_check_on_open or self.bbm_signal == "BUY") and \
                     (not self.settings.rsi_check_on_open or self.rsi_signal == "BUY") and \
+                    (not self.settings.adx_check_on_open or self.adx_signal == "STRONG") and \
                     (not self.settings.candle_trend_check_on_open or self.candle_trend == "BULLISH"):
                         self.current_signal = "BUY"
                 elif (not self.settings.ema_check_on_open or self.ema_signal == "SELL") and \
-                        (not self.settings.macd_check_on_open or self.macd_signal == "SELL") and \
-                        (not self.settings.bbm_check_on_open or self.bbm_signal == "SELL") and \
-                        (not self.settings.rsi_check_on_open or self.rsi_signal == "SELL") and \
-                        (not self.settings.candle_trend_check_on_open or self.candle_trend == "BEARISH"):
+                     (not self.settings.macd_check_on_open or self.macd_signal == "SELL") and \
+                     (not self.settings.bbm_check_on_open or self.bbm_signal == "SELL") and \
+                     (not self.settings.rsi_check_on_open or self.rsi_signal == "SELL") and \
+                     (not self.settings.adx_check_on_open or self.adx_signal == "STRONG") and \
+                     (not self.settings.candle_trend_check_on_open or self.candle_trend == "BEARISH"):
                         self.current_signal = "SELL"
                 else:
                         self.current_signal = "HOLD"
@@ -427,6 +440,7 @@ class Tickers:
                         args[0].get_interval_ticks(intervalId).bbm_signal = interval.bbm_signal                        
                         args[0].get_interval_ticks(intervalId).rsi_signal = interval.rsi_signal
                         args[0].get_interval_ticks(intervalId).candle_trend = interval.candle_trend
+                        args[0].get_interval_ticks(intervalId).adx_signal = interval.adx_signal
                         args[0].get_interval_ticks(intervalId).signal_strength = interval.signal_strength 
                         args[0]._last = result[0]
                         args[0].lastcolor = result[1]
@@ -461,7 +475,8 @@ class Tickers:
                                 f"{period}_macd":intervalObj.macd_signal,
                                 f"{period}_bbm":intervalObj.bbm_signal,
                                 f"{period}_rsi":intervalObj.rsi_signal,
-                                f"{period}_candle_trend":intervalObj.candle_trend,                                        
+                                f"{period}_adx":intervalObj.adx_signal,                                       
+                                f"{period}_candle_trend":intervalObj.candle_trend, 
                                 'bid' : bid,
                                 'bidcolor' : bidcolor,
                                 'last' : last,
@@ -481,7 +496,7 @@ class Tickers:
                     'lastcolor': "", 'bidcolor': "", 'askcolor': "", 'bid': 0.0, 'ask': 0.0, 'last': 0.0,
                     f"{period}_cb":0, f"{period}_barcolor": "", f"{period}_trend": "",
                     f"{period}_open": 0.0, f"{period}_close": 0.0, f"{period}_high": 0.0, f"{period}_low": 0.0,
-                    f"{period}_ema": "", f"{period}_macd": "", f"{period}_bbm": "", f"{period}_rsi": "", f"{period}_candle_trend": ""
+                    f"{period}_ema": "", f"{period}_macd": "", f"{period}_bbm": "", f"{period}_rsi": "", f"{period}_candle_trend": "", f"{period}_adx": ""
                 }
                 df.fillna(fill_values, inplace=True)
                 df.set_index("symbol", inplace=True, drop=False) 
