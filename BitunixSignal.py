@@ -901,6 +901,40 @@ class BitunixSignal:
                                     )
                                     continue
 
+                            # Close on weak trend after open
+                            if self.settings.adx_check_on_close:
+                                if row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_adx'] == "WEAK":
+                                    last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
+                                    price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
+                                    self.notifications.add_notification(
+                                        f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to WEAK ADX for {row.symbol} with {row.qty} qty @ {price})'
+                                    )
+                                    datajs = await self.bitunixApi.PlaceOrder(
+                                        positionId=row.positionId,
+                                        ticker=row.symbol,
+                                        qty=row.qty,
+                                        price=price,
+                                        side=row.side,
+                                        tradeSide="CLOSE"
+                                    )
+                                    continue
+
+                                if row.side == 'SELL' and self.signaldf_full.at[row.symbol, f'{period}_adx'] == "WEAK":
+                                    last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
+                                    price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
+                                    self.notifications.add_notification(
+                                        f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to WEAK ADX for {row.symbol} with {row.qty} qty @ {price})'
+                                    )
+                                    datajs = await self.bitunixApi.PlaceOrder(
+                                        positionId=row.positionId,
+                                        ticker=row.symbol,
+                                        qty=row.qty,
+                                        price=price,
+                                        side=row.side,
+                                        tradeSide="CLOSE"
+                                    )
+                                    continue
+
                     await asyncio.sleep(0)
             
                 self.lastAutoTradeTime = time.time()

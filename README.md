@@ -179,6 +179,7 @@ The platform can be configured through the `config.py` file or environment varia
       - If the trade is short and the short RSI > long RSI, it will close the trade
       - if the trade is long and current close is less bollinger band middle line , it will close the trade
       - if the trade is short and the current close is above bollinger band middle line , it will close the trade
+      - if the trade is long or short and the ADX is below 25 (WEAK), it will close the trade
 
 
 ## Installation
