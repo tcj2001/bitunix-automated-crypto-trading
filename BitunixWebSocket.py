@@ -86,7 +86,6 @@ class BitunixPublicWebSocketClient:
             self.running = False                        
         except websockets.exceptions.ConnectionClosedError as e:
             logger.info(f"{self.url} {self.type}  Websocket: Connection closed: {e}")
-            self.running = False                        
         except Exception as e:
             logger.info(f"{self.url} {self.type}  Websocket: Unexpected error: {e}")
             pass
@@ -201,7 +200,6 @@ class BitunixPrivateWebSocketClient:
             self.running = False                        
         except websockets.exceptions.ConnectionClosedError as e:
             logger.info(f"{self.url} Websocket: Connection closed: {e}")
-            self.running = False                        
         except Exception as e:
             logger.info(f"{self.url} Websocket: Unexpected error: {e}")
             pass
