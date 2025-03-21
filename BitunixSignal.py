@@ -728,42 +728,6 @@ class BitunixSignal:
                                 )
                                 continue
 
-                            # candle reversed
-                            if self.settings.close_on_reverse and self.settings.candle_trend_check_on_close:
-                                if row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_barcolor'] == self.red and self.signaldf_full.at[row.symbol, f'{period}_candle_trend'] == "BEARISH":
-                                    last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
-                                    price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
-
-                                    self.notifications.add_notification(
-                                        f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to bearish candle reversal for {row.symbol} with {row.qty} qty @ {price})'
-                                    )
-                                    datajs = await self.bitunixApi.PlaceOrder(
-                                        positionId=row.positionId,
-                                        ticker=row.symbol,
-                                        qty=row.qty,
-                                        price=price,
-                                        side=row.side,
-                                        tradeSide="CLOSE"
-                                    )
-                                    continue
-
-                                if row.side == 'SELL' and self.signaldf_full.at[row.symbol, f'{period}_barcolor'] == self.green  and self.signaldf_full.at[row.symbol, f'{period}_candle_trend'] == "BULLISH":
-                                    last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
-                                    price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
-
-                                    self.notifications.add_notification(
-                                        f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to bullish candle reversal for {row.symbol} with {row.qty} qty @ {price})'
-                                    )
-                                    datajs = await self.bitunixApi.PlaceOrder(
-                                        positionId=row.positionId,
-                                        ticker=row.symbol,
-                                        qty=row.qty,
-                                        price=price,
-                                        side=row.side,
-                                        tradeSide="CLOSE"
-                                    )
-                                    continue
-
                             # Moving average comparison between fast and medium
                             if self.settings.ema_check_on_close: 
                                 if row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_ema'] == "SELL":
@@ -924,6 +888,42 @@ class BitunixSignal:
                                     price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
                                     self.notifications.add_notification(
                                         f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to WEAK ADX for {row.symbol} with {row.qty} qty @ {price})'
+                                    )
+                                    datajs = await self.bitunixApi.PlaceOrder(
+                                        positionId=row.positionId,
+                                        ticker=row.symbol,
+                                        qty=row.qty,
+                                        price=price,
+                                        side=row.side,
+                                        tradeSide="CLOSE"
+                                    )
+                                    continue
+
+                            # candle reversed
+                            if self.settings.candle_trend_check_on_close:
+                                if row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_barcolor'] == self.red and self.signaldf_full.at[row.symbol, f'{period}_candle_trend'] == "BEARISH":
+                                    last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
+                                    price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
+
+                                    self.notifications.add_notification(
+                                        f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to bearish candle reversal for {row.symbol} with {row.qty} qty @ {price})'
+                                    )
+                                    datajs = await self.bitunixApi.PlaceOrder(
+                                        positionId=row.positionId,
+                                        ticker=row.symbol,
+                                        qty=row.qty,
+                                        price=price,
+                                        side=row.side,
+                                        tradeSide="CLOSE"
+                                    )
+                                    continue
+
+                                if row.side == 'SELL' and self.signaldf_full.at[row.symbol, f'{period}_barcolor'] == self.green  and self.signaldf_full.at[row.symbol, f'{period}_candle_trend'] == "BULLISH":
+                                    last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
+                                    price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
+
+                                    self.notifications.add_notification(
+                                        f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to bullish candle reversal for {row.symbol} with {row.qty} qty @ {price})'
                                     )
                                     datajs = await self.bitunixApi.PlaceOrder(
                                         positionId=row.positionId,
