@@ -28,6 +28,7 @@ A real-time cryptocurrency trading platform built with FastAPI and WebSocket tec
   - RSI
   - Brearish or bullish candle based on the close near high or low of the current candle
   - strength based on consecutive colored candles count
+  - ADX
   - control study using the environment variables
 - Secure authentication system
 - Configurable trading parameters
@@ -68,6 +69,7 @@ The platform can be configured through the `config.py` file or environment varia
     - `macd_period`: MACD period
     - `macd_short`: MACD short period
     - `macd_long`: MACD long period
+    - `adx_period`: ADX period
   
   - `Study Parameters`:
     - `ema_study`: Enable EMA study
@@ -75,6 +77,7 @@ The platform can be configured through the `config.py` file or environment varia
     - `bbm_study`: Enable Bollinger Band study
     - `rsi_study`: Enable RSI study
     - `candle_trend_study`: Enable candle trend study
+    - `adx_study`: Enable ADX study
   
   - `Check on Opening a Position`:
     - `ema_check_on_open`: Check EMA on open
@@ -82,6 +85,7 @@ The platform can be configured through the `config.py` file or environment varia
     - `bbm_check_on_open`: Check Bollinger Band on open
     - `rsi_check_on_open`: Check RSI on open
     - `candle_trend_check_on_open`: Check candle trend on open
+    - `adx_check_on_open`: Check ADX on open
   
   - `Check on Close a Position`:
     - `ema_check_on_close`: Check EMA on close
@@ -89,6 +93,8 @@ The platform can be configured through the `config.py` file or environment varia
     - `bbm_check_on_close`: Check Bollinger Band on close
     - `rsi_check_on_close`: Check RSI on close
     - `candle_trend_check_on_close`: Check candle trend on close
+    - `close_on_reverse`: Close on reverse
+    - `adx_check_on_close`: Check ADX on close
   
   - `intervals`:
     - `screen_refresh_interval`: Screen refresh interval
@@ -149,12 +155,14 @@ The platform can be configured through the `config.py` file or environment varia
       and MACD_line > Signal_line
       and RSI is above the long RSI
       and current close is above bollinger band middle line
+      and ADX is above 25 (STRONG)
       it will open long position
     - If the current candle is bearish
       and moving average is below the medium moving average
       and MACD_line < Signal_line
       and RSI is below the long RSI
       and current close is belowe bollinger band middle line
+      and ADX is above 25 (STRONG)
       it will open short position
   - Auto trade process closes the trade based on following conditions:
     - If the current candle is bearish, it will close the trade

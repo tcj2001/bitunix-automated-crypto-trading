@@ -423,7 +423,6 @@ class BitunixSignal:
             self.pendingPositions = await self.bitunixApi.GetPendingPositionData()
             if self.pendingPositions:
                 self.positiondf = pd.DataFrame(self.pendingPositions, columns=["positionId", "symbol", "side", "unrealizedPNL", "realizedPNL",  "qty", "ctime", "avgOpenPrice"])
-                 
                 self.positiondf['bid']=0.0
                 self.positiondf['bidcolor']=""
                 self.positiondf['last']=0.0
@@ -441,6 +440,9 @@ class BitunixSignal:
                         ask=self.positiondf['symbol'].map(lambda sym: self.tickerObjects.get(sym).get_ask()),
                         askcolor=self.positiondf['symbol'].map(lambda sym: self.tickerObjects.get(sym).askcolor)
                     )
+                    #self.positiondf['roi']= round((self.positiondf['last'].astype(float) * self.positiondf['qty'].astype(float) - \
+                    #                         self.positiondf['avgOpenPrice'].astype(float) * self.positiondf['qty'].astype(float)) / \
+                    #                         (self.positiondf['avgOpenPrice'].astype(float) * self.positiondf['qty'].astype(float) / (self.settings.leverage/100))  * 10000 , 2)   
                 except Exception as e:
                     pass
                 self.positiondf['bitunix'] = self.positiondf.apply(self.add_bitunix_button, axis=1)
@@ -551,9 +553,9 @@ class BitunixSignal:
                 columns=['symbol', f"{period}_trend", f"{period}_cb", f"{period}_barcolor", f"{period}_ema", f"{period}_macd", f"{period}_bbm", f"{period}_rsi", f"{period}_candle_trend", f"{period}_open", f"{period}_close", f"{period}_high", f"{period}_low"]
                 columns2=["qty", "side", "unrealizedPNL", "realizedPNL", "ctime", "avgOpenPrice", "bid", "bidcolor", "last", "lastcolor", "ask", "askcolor", "bitunix", "action", "add", "reduce"]
                 if set(columns).issubset(self.signaldf_full.columns) and set(columns2).issubset(self.positiondf.columns):
-                    columnOrder= ['symbol', "side", "unrealizedPNL", "realizedPNL", f"{period}_trend", f"{period}_cb", f"{period}_barcolor", f"{period}_ema", f"{period}_macd", f"{period}_bbm", f"{period}_rsi", f"{period}_candle_trend", f"{period}_open", f"{period}_close", f"{period}_high", f"{period}_low", "qty", "ctime", "avgOpenPrice", "bid", "bidcolor", "last", "lastcolor", "ask", "askcolor", "bitunix", "action", "add", "reduce"]                
+                    columnOrder= ['symbol', "side",  "unrealizedPNL", "realizedPNL", f"{period}_trend", f"{period}_cb", f"{period}_barcolor", f"{period}_ema", f"{period}_macd", f"{period}_bbm", f"{period}_rsi", f"{period}_adx", f"{period}_candle_trend", f"{period}_open", f"{period}_close", f"{period}_high", f"{period}_low", "qty", "ctime", "avgOpenPrice", "bid", "bidcolor", "last", "lastcolor", "ask", "askcolor", "bitunix", "action", "add", "reduce"]                
                     self.positiondf2 = pd.merge(self.positiondf, self.signaldf_full[["symbol", f"{period}_open", f"{period}_close", f"{period}_high", f"{period}_low", 
-                            f"{period}_ema", f"{period}_macd", f"{period}_bbm", f"{period}_rsi", f"{period}_candle_trend",
+                            f"{period}_ema", f"{period}_macd", f"{period}_bbm", f"{period}_rsi", f"{period}_adx", f"{period}_candle_trend",
                             f"{period}_trend",f"{period}_cb", f"{period}_barcolor"]], left_on="symbol", right_index=True, how="left")[columnOrder]    
                     self.positiondfStyle= self.positiondfrenderer.render_html(self.positiondf2)
             else:
@@ -567,7 +569,7 @@ class BitunixSignal:
                     # Assign to self.signaldf for HTML rendering
                     self.signaldf = self.signaldf_filtered[[
                         "symbol", f"{period}_trend",f"{period}_cb", f"{period}_barcolor",
-                        f"{period}_ema", f"{period}_macd", f"{period}_bbm", f"{period}_rsi",f"{period}_candle_trend",
+                        f"{period}_ema", f"{period}_macd", f"{period}_bbm", f"{period}_rsi",f"{period}_adx",f"{period}_candle_trend",
                         'lastcolor', 'bidcolor', 'askcolor', 'bid', 'ask', 'last',
                         f"{period}_open", f"{period}_close", f"{period}_high", f"{period}_low", 
                     ]].sort_values(by=[f'{period}_cb'], ascending=[False])
@@ -898,6 +900,7 @@ class BitunixSignal:
                                         tradeSide="CLOSE"
                                     )
                                     continue
+
                     await asyncio.sleep(0)
             
                 self.lastAutoTradeTime = time.time()
