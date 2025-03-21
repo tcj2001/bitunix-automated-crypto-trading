@@ -45,7 +45,6 @@ rsi_check_on_open=True
 rsi_check_on_close=False
 candle_trend_check_on_open=True
 candle_trend_check_on_close=False
-close_on_reverse=False
 adx_check_on_open=True
 adx_check_on_close=False
 

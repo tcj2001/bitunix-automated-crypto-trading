@@ -93,7 +93,6 @@ The platform can be configured through the `config.py` file or environment varia
     - `bbm_check_on_close`: Check Bollinger Band on close
     - `rsi_check_on_close`: Check RSI on close
     - `candle_trend_check_on_close`: Check candle trend on close
-    - `close_on_reverse`: Close on reverse
     - `adx_check_on_close`: Check ADX on close
   
   - `intervals`:

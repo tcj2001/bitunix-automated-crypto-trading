@@ -54,7 +54,6 @@ class Settings(BaseSettings):
     bbm_check_on_close: bool = Field(default=False)
     candle_trend_check_on_open: bool = Field(default=True)
     candle_trend_check_on_close: bool = Field(default=False)
-    close_on_reverse: bool = Field(default=False)
     adx_check_on_open: bool = Field(default=True)
     adx_check_on_close: bool = Field(default=False)
 
