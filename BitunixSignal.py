@@ -31,12 +31,6 @@ class BitunixSignal:
         self.api_key = self.settings.api_key.get_secret_value()
         self.secret_key = self.settings.secret_key.get_secret_value()
         
-        self.option_moving_average = self.settings.option_moving_average
-        self.profit_amount = self.settings.profit_amount
-        self.loss_amount = self.settings.loss_amount
-        self.autoTrade = self.settings.autoTrade
-        self.max_auto_trades = self.settings.max_auto_trades
-                
         #Ticker object
         self.tickerObjects = Tickers(self.settings)
         
@@ -224,7 +218,7 @@ class BitunixSignal:
 
     ###########################################################################################################
     async def DefinehtmlRenderers(self):
-        period = self.option_moving_average
+        period = self.settings.option_moving_average
         #html rendering setup
         self.portfoliodfrenderer = DataFrameHtmlRenderer()
         self.positiondfrenderer = DataFrameHtmlRenderer(hide_columns=["positionId", "lastcolor","bidcolor","askcolor",f"{period}_barcolor"], \
@@ -585,7 +579,7 @@ class BitunixSignal:
                 #if not self.settings.use_public_websocket:                    
                 #get bid las ask using api for max_auto_trades rows
                 if not self.signaldf.empty:
-                    m = min(self.signaldf.shape[0], int(self.max_auto_trades))
+                    m = min(self.signaldf.shape[0], int(self.settings.max_auto_trades))
                     if self.settings.use_public_websocket:
                         await asyncio.create_task(self.apply_last_data(','.join(self.signaldf['symbol'][:m].astype(str).tolist())))                 
                     await asyncio.gather(
@@ -606,13 +600,13 @@ class BitunixSignal:
             logger.info(f"AutoTradeProcess started")
         start=time.time()
         
-        period = self.option_moving_average
+        period = self.settings.option_moving_average
         try:
             
             #calulate current data at selected period, this create signaldf
             await self.BuySellList(period)
             
-            if not self.autoTrade:
+            if not self.settings.autoTrade:
                 return
             ##############################################################################################################################
             # open long or short postition
@@ -625,7 +619,7 @@ class BitunixSignal:
             if self.pendingOrders:
                 count=count+len(self.pendingOrders['orderList'])
 
-            if count < int(self.max_auto_trades):
+            if count < int(self.settings.max_auto_trades):
                 if not self.signaldf.empty:
                     #open position upto a max of max_auto_trades from the signal list
                     df=self.signaldf.copy(deep=False)
@@ -650,7 +644,7 @@ class BitunixSignal:
                                 )
                                 datajs = await self.bitunixApi.PlaceOrder(row.symbol, qty, price, side)
                                 count=count+1
-                        if count >= int(self.max_auto_trades):
+                        if count >= int(self.settings.max_auto_trades):
                             break
                         await asyncio.sleep(0)
                     del df
@@ -691,10 +685,10 @@ class BitunixSignal:
                         if self.pendingOrders and len(self.pendingOrders['orderList']) == 1:
                             select = False
                             
-                        if select and int(self.max_auto_trades)!=0:
+                        if select and int(self.settings.max_auto_trades)!=0:
                         
                             # check take portit or accept loss
-                            if float(self.loss_amount) > 0 and total_pnl < -float(self.loss_amount):
+                            if float(self.settings.loss_amount) > 0 and total_pnl < -float(self.settings.loss_amount):
                                 last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                 price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
 
@@ -711,7 +705,7 @@ class BitunixSignal:
                                 )
                                 continue
 
-                            if float(self.profit_amount) > 0 and total_pnl > float(self.profit_amount):
+                            if float(self.settings.profit_amount) > 0 and total_pnl > float(self.settings.profit_amount):
                                 last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                 price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
 
@@ -999,7 +993,7 @@ class BitunixSignal:
                 event = data['event']
                 orderStatus = data['orderStatus']
                 self.notifications.add_notification(
-                     f'{colors.LBLUE} {orderStatus} {"long" if side=="BUY" else "short"} order for {symbol} with {qty} qty (event: {event})'
+                     f'{colors.LBLUE} {orderStatus} {"short" if side=="Sell" else "long"} order for {symbol} with {qty} qty (event: {event})'
                 )
 
             elif channel == 'balance':
@@ -1021,7 +1015,7 @@ class BitunixSignal:
 
                 if event == "OPEN":
                     self.notifications.add_notification(
-                        f'{colors.PURPLE} Opened {"long" if side=="BUY" else "short"} position for {symbol} with {qty} qty @ {price}'
+                        f'{colors.PURPLE} Opened {side} position for {symbol} with {qty} qty @ {price}'
                     )
 
                 elif event == "CLOSE":
@@ -1033,7 +1027,7 @@ class BitunixSignal:
                         qty = float(position['maxQty'])
                         self.profit += profit
                         self.notifications.add_notification(
-                            f'{colors.GREEN if profit>0 else colors.RED} Closed {"long" if side=="BUY" else "short"} position for {symbol} with {qty} qty @ {price} and {"profit" if profit>0 else "loss"} of {profit}'
+                            f'{colors.GREEN if profit>0 else colors.RED} Closed {side} position for {symbol} with {qty} qty @ {price} and {"profit" if profit>0 else "loss"} of {profit}'
                         )
                     del datajs
                     gc.collect()

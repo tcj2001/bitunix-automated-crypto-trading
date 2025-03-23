@@ -2,6 +2,7 @@ from pydantic import Field, SecretStr, validator
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
+   
     # API Configuration
     api_key: SecretStr
     secret_key: SecretStr
@@ -84,6 +85,11 @@ class Settings(BaseSettings):
             if len(v) < 16:  # Minimum length requirement
                 raise ValueError('Secret too short - minimum 16 characters')
         return v
+
+    def reload_env(self):
+        """Reload the .env file and update the settings."""
+        updated_instance = self.__class__()  # Create a new instance with updated values
+        self.__dict__.update(updated_instance.__dict__)  # Update current instance with new values
 
     class Config:
         env_file = ".env"

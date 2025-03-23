@@ -34,6 +34,7 @@ A real-time cryptocurrency trading platform built with FastAPI and WebSocket tec
 - Configurable trading parameters
 - Real-time notifications
 - Logging system with colored output
+- Update environment variables without restarting the application
 
 
 ## Configuration
@@ -117,7 +118,9 @@ The platform can be configured through the `config.py` file or environment varia
 - Access the web interface:
    - Open your browser and navigate to `http://localhost:8000` or `http://your_server_ip:8000`
    - Log in with your credentials (currenly user is admin and password is your_password in env file)
-
+   - display charts for all timeframes (1m, 5m, 15m, 1h, 1d) on a single page with all indicators
+   - edit the .env file directly from the app
+  
 - Monitor your positions and trades:
    - Real-time portfolio value
    - Open positions
