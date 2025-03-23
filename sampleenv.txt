@@ -6,14 +6,15 @@ host="0.0.0.0"   #id you are doin devlepoment on local machine, you can use "127
 
 autoTrade=True
  
+option_moving_average="1h"
+max_auto_trades='10'
+profit_amount='0.10'
+loss_amount=5.0
+
 leverage=20
 threshold=5
 min_volume=10000000
 order_amount_percentage=0.01
-max_auto_trades=10
-profit_amount=0.1
-loss_amount=5.0
-option_moving_average="1h"
 bars=100
 
 ma_fast=12

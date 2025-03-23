@@ -3,28 +3,15 @@
     <head>
         <meta charset="UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1.0">         
         <title>DataFrame Display</title> 
-        <style> 
-            body { margin: 0; display: flex; flex-direction: column; height: 100vh; } 
-            header { background: #f8f9fa; padding: 1em; text-align: center; position: fixed; top: 0; width: 100%; z-index: 1; } 
-            footer { background: #f8f9fa; padding: 1em; text-align: center; position: fixed; bottom: 0; width: 100%; z-index: 1; } 
-            .mainbody { flex: 1; margin-top: 1px; /* Adjust this value according to the height of your header */ margin-bottom: 60px; /* Adjust this value according to the height of your footer */ overflow-y: auto; padding: 1em; }              
-            
-            .dataframe { font-family: Arial, Helvetica, sans-serif; border-collapse: collapse; width: 100%; } 
-            .dataframe td, .dataframe th { border: 1px solid #ddd; padding: 8px; } 
-            .dataframe tr:nth-child(even) { background-color: #f2f2f2; } 
-            .dataframe tr:hover { background-color: #ddd; } 
-            .dataframe th { padding-top: 12px; padding-bottom: 12px; text-align: left; background-color: #515a5a ; color: white; } 
-            .row {display: block; margin-bottom: 10px; border: 2px solid black; padding: 10px; }
-            #info { height: 40px; position: fixed; bottom:0%; width:100%; background-color: #f8f6f5; opacity: 1; }
-
-            .container {display: flex;justify-content: space-between;}
-            .left, .right {width: 45%; padding: 10px; border: 1px solid black;}
-            
-            .message {background-color: #3a4141 ; color: white; padding: 16px; font-size: 16px; border: none; cursor: pointer;}
-            .dropdown-content { display: none; position: absolute; background-color: #f9f9f9; min-width: 250px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2); z-index: 1; }
-            .dropdown-content div { color: black; padding: 12px 16px; text-decoration: none; display: block; }
-            .dropdown-content div:hover { background-color: #f1f1f1; }
-            .show { display: block; }
+        <link rel="stylesheet" href="static/styles.css">
+        <style>
+            .mainbody { 
+                flex: 1; 
+                margin-top: 1px; /* Adjust this value according to the height of your header */ 
+                margin-bottom: 60px; /* Adjust this value according to the height of your footer */ 
+                overflow-y: auto; 
+                padding: 1em; 
+            } 
         </style> 
     </head> 
     <body>
@@ -37,7 +24,7 @@
             <div class="container">
                 <div class="right">
                     <label for="optionMovingAverage">Moving Average</label>
-                    <select id="optionMovingAverage">
+                    <select disabled id="optionMovingAverage">
                         <option value="1d">Daily</option>
                         <option value="1h">Hourly</option>
                         <option value="15m">15 minutes</option>
@@ -47,19 +34,11 @@
                 </div>
                 <div class="right">
                     <label for="maxAutoTrades">MaxAutoTrades</label>
-                    <input type="text" id="maxAutoTrades">
-                </div>
-                <div class="right">
-                    <label for="profitAmount">Take Profit</label>
-                    <input type="text" id="profitAmount">
-                </div>
-                <div class="right">
-                    <label for="lossAmount">Take Loss</label>
-                    <input type="text" id="lossAmount">
+                    <input disabled type="text" id="maxAutoTrades">
                 </div>
                 <div class="right">
                     <label for="autoTrade">AutoTrade</label>
-                    <input type="checkbox" id="autoTrade" name="AutoTrade">
+                    <input disabled type="checkbox" id="autoTrade" name="AutoTrade">
                 </div>
                 <div class="right">
                     <label for="totalProfit">Total Profit</label>
@@ -74,9 +53,14 @@
                     <div id="autoTradeCycleTime">...</div>
                 </div>
                 <div class="right">
-                    <button disabled id="notused">not used</button>
+                    <button  id="config">Config</button>
                 </div>
-             </div>        
+             </div>    
+
+             <div>
+                <div id="modal-container"></div>
+             </div>
+
              <span>Positions</span>
              <div class="row">
                 <div id="positions"> 
@@ -117,13 +101,14 @@
             </div>
         </footer>
        
+        <script src="/static/script.js"></script>
         <script>
             const host = window.location.hostname;
             const websocket_m = new WebSocket(`ws://${host}:8000/wsmain`);
             websocket_m.onopen = function() {
                 document.getElementById('message').innerHTML = "main page webSocket connection opened" 
                 //Send a ping every 30 seconds
-                setInterval(() => {
+                setInterval(()=>{
                     if (websocket_m.readyState === WebSocket.OPEN) {
                         websocket_m.send("ping");
                     }
@@ -142,73 +127,49 @@
                 document.getElementById("study").innerHTML = messageElement.dataframes.study;
                 document.getElementById("positionHistory").innerHTML = messageElement.dataframes.positionHistory;
                 document.getElementById('message').innerHTML = messageElement.status_messages;
+
+                document.getElementById('optionMovingAverage').value = messageElement.optionMovingAverage;
+                document.getElementById('maxAutoTrades').value = messageElement.maxAutoTrades;
+                document.getElementById('autoTrade').checked = messageElement.autoTrade; 
+                const payload = {element_ids:['autoTrade', 'optionMovingAverage', 'maxAutoTrades']};
+                fetchStates(payload);
+
                 document.getElementById('totalProfit').innerText = messageElement.profit;
                 document.getElementById("autoTradeCycleTime").innerText = messageElement.atctime;
                 document.getElementById("tickerDataCycleTime").innerText = messageElement.tdctime;
                 const messages = messageElement.status_messages;
                 displayNotifications(messages)
-
+            
                 const currentTime = new Date();
                 const atctime1 = Math.abs(currentTime - messageElement.atctime) / (1000 * 60);
                 if (atctime1 > 5) {
                     document.getElementById("autoTradeCycleTime").style.color = "red";
-                  } else {
+                    } else {
                     document.getElementById("autoTradeCycleTime").style.color = "black";
                 }
                 const tdctime1 = Math.abs(currentTime - messageElement.tdctime) / (1000 * 60);
                 if (tdctime1 > 5) {
                     document.getElementById("tickerDataCycleTime").style.color = "red";
-                  } else {
+                    } else {
                     document.getElementById("tickerDataCycleTime").style.color = "black";
                 }
             };
-
-
+            
+            
             websocket_m.onerror = function(error) {
                 document.getElementById('message').innerHTML = "main page webSocket connection failed.";
             };
-
+            
             websocket_m.onclose = function() {
                 document.getElementById('message').innerHTML = "main page webSocket connection closed.";
             };
-        
-
+            
+            
             window.onload = async function() {
-                const payload = {element_ids:['autoTrade', 'optionMovingAverage','profitAmount' ,'lossAmount', 'maxAutoTrades']};
+                const payload = {element_ids:['autoTrade', 'optionMovingAverage', 'maxAutoTrades']};
                 await fetchStates(payload);
             };
-
-            // Batch Fetch State from Server
-            async function fetchStates(payload) {
-                // Send a POST request to /get_states with the list of element IDs
-                const response = await fetch('/get_states', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(payload), // Pass element IDs in the request body
-                });
-
-                // Parse the JSON response
-                data = await response.json();
-
-                // Iterate over the states and update the UI elements accordingly
-                for (const elementId of payload.element_ids) {
-                    const state = data.states[elementId] || "No state found";
-
-                    if (state !== "No state found") {
-                        const element = document.getElementById(elementId);
-                        if (element) {
-                            if (element.type === 'checkbox') {
-                                element.checked = (state.toString().toLowerCase() === "true");
-                            } else if (element.tagName === 'SELECT' || element.tagName === 'INPUT') {
-                                element.value = state;
-                            }
-                        }
-                    }
-                }
-            }
-
+            
             document.getElementById("autoTrade").addEventListener('change', async function() {
                 const states = {
                     autoTrade: document.getElementById('autoTrade').checked.toString(),
@@ -218,7 +179,7 @@
                     maxAutoTrades: document.getElementById('maxAutoTrades').value
                 };
                 await saveStates(states);
-
+            
                 const response = await fetch('/autotrade', {
                     method: 'POST',
                     headers: {
@@ -227,30 +188,85 @@
                     body: JSON.stringify({ 'autoTrade': autoTrade })
                 });
             });
-
-            // Batch Save State to Server
-            async function saveStates(states) {
-                let response, data;
-
-                // Send a POST request to /save_states with the states object
-                response = await fetch('/save_states', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(states), // Pass the states as a JSON object
-                });
-
-                // Parse the response
-                data = await response.json();
-
-                // Log the server's response
-                console.log(data.message); // Should print "States saved" if successful
+            
+            
+            //modal container    
+            const modalContainer = document.getElementById('modal-container');
+            
+            //open modal html
+            document.getElementById("config").addEventListener('click', () => {
+                handleConfigButton();
+            });
+            
+            // Open modal and fetch its content
+            async function handleConfigButton() {
+                try {
+                    // Fetch modal content
+                    const modalResponse = await fetch('/config');
+                    if (!modalResponse.ok) throw new Error("Failed to fetch config.html");
+                    modalContainer.innerHTML = await modalResponse.text();
+            
+                    // Show the modal
+                    const modal = document.getElementById('modal');
+                    const modalOverlay = document.getElementById('modal-overlay');
+                    modal.classList.add('modal-open');
+                    modalOverlay.classList.add('modal-open');
+            
+                    // Fetch environment variables
+                    const envResponse = await fetch('/get-env');
+                    if (!envResponse.ok) throw new Error("Failed to fetch environment variables");
+                    const envVars = await envResponse.json();
+            
+                    // Populate the table
+                    const tbody = document.querySelector('#env-table tbody');
+                    if (!tbody) throw new Error("<tbody> element not found");
+                    tbody.innerHTML = Object.entries(envVars)
+                        .map(([key, value]) =>
+                            `<tr class="env-item" data-key="${key}" data-value="${value}">
+                                <td>${key}</td>
+                                <td>${value}</td>
+                            </tr>`
+                        )
+                        .join('');
+            
+                    // Add click event listener to each environment variable
+                    document.querySelectorAll('.env-item').forEach((item) => {
+                        item.addEventListener('click', () => {
+                            const key = item.getAttribute('data-key');
+                            const value = item.getAttribute('data-value');
+                            document.getElementById('key').value = key;
+                            document.getElementById('value').value = value;
+                        });
+                    });
+            
+                    // Close modal logic
+                    const closeModalButton = document.getElementById('close-modal');
+                    closeModalButton.addEventListener('click', () => {
+                        modal.classList.remove('modal-open');
+                        modalOverlay.classList.remove('modal-open');
+                    });
+            
+                    // Handle save form submission
+                    const saveForm = document.getElementById('save-env-form');
+                    saveForm.addEventListener('submit', async (e) => {
+                        e.preventDefault();
+                        const formData = new FormData(saveForm);
+                        const saveResponse = await fetch('/save-env', {
+                            method: 'POST',
+                            body: formData,
+                        });
+                        const saveResult = await saveResponse.json();
+                        alert(saveResult.message);
+                        handleConfigButton(); // Reload modal content after saving changes
+                    });
+                } catch (error) {
+                    console.error('Error:', error);
+                }
             }
 
             async function handleBitunixButton(symbol) {
                 const response = await fetch('/handle_bitunix_click', {
-                    method: 'POST',
+                    method: 'GET',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
                     },
@@ -259,37 +275,7 @@
                 const result = await response.json();
                 openURL(result.message);
             }
-
-            //document.getElementById("reload").addEventListener('click', () => {
-            //    handleReloadButton();
-            //});
-
-            async function handleReloadButton() {
-                const response = await fetch('/reload', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: `name=${name}`
-                });
-            }
-
-            document.getElementById("notused").addEventListener('click', () => {
-                handlenotusedButton();
-            });
-
-            async function handlenotusedButton() {
-                const response = await fetch('/get_notused', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: `name=${name}`
-                });
-                const result = await response.json();
-                openURL(result.message);
-            }
-
+            
             async function handleAddButton(symbol,close) {
                 let result1 = confirm("Add "+ symbol + " @ " + close.toString());
                 if (result1) {
@@ -302,7 +288,7 @@
                     });
                 }
             }
-
+            
             async function handleReduceButton(symbol,positionId,qty,close) {
                 let result1 = confirm("Reduce "+ symbol  + " @ " + close.toString());
                 if (result1) {
@@ -315,7 +301,7 @@
                     });
                 }
             }
-
+            
             async function handleBuyButton(symbol,close) {
                 let result1 = confirm("Buy "+ symbol + " @ " + close.toString());
                 if (result1) {
@@ -328,7 +314,7 @@
                     });
                 }
             }
-
+            
             async function handleSellButton(symbol,close) {
                 let result2 = confirm("Sell "+ symbol + " @ " + close.toString());
                 if (result2) {
@@ -341,7 +327,7 @@
                     });
                 }
             }
-
+            
             async function handleCloseButton(symbol,positionId,qty,unrealizedPNL,realizedPNL) {
                 let result3 = confirm("Close Position "+ symbol + " with positionid: " + positionId );
                 if (result3) {
@@ -354,7 +340,7 @@
                     });
                 } 
             }
-
+            
             async function handleOrderCloseButton(symbol,orderId) {
                 let result3 = confirm("Close Order "+ symbol + " with orderid: " + orderId );
                 if (result3) {
@@ -367,8 +353,8 @@
                     });
                 } 
             }
-
-  
+            
+            
             async function handleRowClick(name) {
                 const response = await fetch('/handle_click', {
                     method: 'POST',
@@ -381,65 +367,7 @@
                 openURL(result.message);
             }
             
-    
-            function openURL(url) { 
-                window.location.href = url; 
-            } 
             
-            /**
-            * Attach click event to a table and handle cell clicks dynamically
-            * @param {string} tableId - The ID of the HTML table element.
-            * @param {string} targetColumnIndex - The column index to target (e.g., 0 for the first column).
-            * @param {string} endpoint - The server endpoint to fetch data from.
-            */
-            function attachTableClickHandler(tableId, targetColumnIndex, endpoint) {
-                const table = document.getElementById(tableId);
-
-                if (!table) {
-                    console.error(`Table with ID "${tableId}" not found.`);
-                    return;
-                }
-
-                table.addEventListener('click', async (event) => {
-                    const target = event.target;
-                    const columnIndex = target.cellIndex;
-
-                    // Check if clicked element is a TD and matches the target column index
-                    if (target.tagName === 'TD' && columnIndex === targetColumnIndex) {
-                        const row = target.parentNode;
-
-                        const headerCell = target
-                            .closest('table')
-                            .querySelector(`thead tr th:nth-child(${columnIndex + 1})`);
-
-                        const columnName = headerCell ? headerCell.innerText : `Column ${columnIndex + 1}`;
-                        
-                        try {
-                            const symbol = row.cells[targetColumnIndex].innerText;
-
-                            const response = await fetch(endpoint, {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/x-www-form-urlencoded',
-                                },
-                                body: `symbol=${encodeURIComponent(symbol)}`, // Sanitize input
-                            });
-
-                            if (!response.ok) {
-                                throw new Error(`HTTP error! Status: ${response.status}`);
-                            }
-
-                            const result = await response.json();
-                            openURL(result.message); // Call the custom openURL function
-                        } catch (error) {
-                            console.error(`Error fetching data for column "${columnName}":`, error);
-                            alert("An error occurred while processing your request.");
-                        }
-                    }
-                });
-            }
-
-
             document.addEventListener('DOMContentLoaded', (event) => { 
                 attachTableClickHandler('positions', 0, '/get_charts');
                 attachTableClickHandler('orders', 0, '/get_charts');
@@ -447,83 +375,7 @@
                 attachTableClickHandler('study', 0, '/get_charts');
                 attachTableClickHandler('positionHistory', 0, '/get_charts');
             });
-
-            //will not use this for now 
-            function updatePositionsTable(divid, data) {
-                const tableContainer = document.getElementById(divid);
-                const table = tableContainer.querySelector('table');
-                const rows = table.querySelectorAll('tbody tr');
-                const headers = table.querySelectorAll('thead th');
-                
-                let bidIndex, lastIndex, askIndex;
-                headers.forEach((header, index) => {
-                  if (header.textContent === 'bid') {
-                    bidIndex = index;
-                  } else if (header.textContent === 'last') {
-                    lastIndex = index;
-                  } else if (header.textContent === 'ask') {
-                    askIndex = index;
-                  }
-                });
-
-                rows.forEach(row => {
-                  const ticker = row.querySelector('td').textContent;
-                  const tickerData = data.find(item => item.ticker === ticker);
-                  if (tickerData) {
-                    const bidCell = row.children[bidIndex];
-                    bidCell.textContent = tickerData.bid;
-                    bidCell.style.backgroundColor  = tickerData.bidcolor;
-
-                    const lastCell = row.children[lastIndex];
-                    lastCell.textContent = tickerData.last;
-                    lastCell.style.backgroundColor  = tickerData.lastcolor;
-
-                    const askCell = row.children[askIndex];
-                    askCell.textContent = tickerData.ask;
-                    askCell.style.backgroundColor  = tickerData.askcolor;
-                  }
-                });
-            }
-
-            function toggleDropdown() {
-                const dropdownContent = document.getElementById("dropdown-content");
-                dropdownContent.classList.toggle("show");
             
-                // Adjust the position if the dropdown is near the bottom of the viewport
-                const rect = dropdownContent.getBoundingClientRect();
-                if (rect.bottom > window.innerHeight) {
-                    dropdownContent.style.top = `-${rect.height}px`;
-                } else {
-                    dropdownContent.style.top = '100%';
-                }
-            }
-
-            function displayNotifications(messages) {
-                const lastMessage = document.getElementById("message");
-                const dropdownContent = document.getElementById("dropdown-content");
-            
-                // Display the last message
-                lastMessage.textContent = messages[0];
-                // Display the rest of the messages in the dropdown
-                dropdownContent.innerHTML = '';
-                messages.slice(0).reverse().forEach(message => {
-                    const div = document.createElement("div");
-                    div.textContent = message;
-                    dropdownContent.appendChild(div);
-                });
-            }
-
-            //for future use
-            function addRowClickEvents() {
-                const rows = document.querySelectorAll('.dataframe tbody tr');
-                rows.forEach(row => {
-                    row.addEventListener('click', () => {
-                        const name = row.querySelector('th').innerText;
-                        handleRowClick(name);
-                    });
-                });
-            }
-
-        </script>
+        </script>               
     </body> 
 </html>

@@ -16,8 +16,6 @@ from config import Settings
 from logger import Logger
 logger = Logger(__name__).get_logger()
 
-from dotenv import load_dotenv
-
 from fastapi import FastAPI, Request, Form, WebSocket, WebSocketDisconnect, Depends
 from fastapi.responses import HTMLResponse , JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -28,19 +26,24 @@ from fastapi_login.exceptions import InvalidCredentialsException
 import gc
 from DataFrameHtmlRenderer import DataFrameHtmlRenderer
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
+from dotenv import load_dotenv, dotenv_values, set_key
+
+global settings
+
+ENV_FILE = ".env"
 load_dotenv()
 settings = Settings()
 
 class bitunix():
     def __init__(self, settings):
-        self.settings=settings
-        self.bars=self.settings.bars
-        self.screen_refresh_interval =self.settings.screen_refresh_interval
+        self.settings=settings;
+        self.screen_refresh_interval =settings.screen_refresh_interval
         
-        self.autoTrade=self.settings.autoTrade
+        self.autoTrade=settings.autoTrade
         
-        self.password=self.settings.password.get_secret_value()
+        self.password=settings.password.get_secret_value()
 
         self.threadManager = ThreadManager()
         self.notifications = NotificationManager()
@@ -68,6 +71,7 @@ class bitunix():
                 await ws.send_text(message)
      
 app = FastAPI()
+app.mount("/static", StaticFiles(directory="static"), name="static")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Adjust this for production
@@ -103,11 +107,11 @@ async def main_page(request: Request,  user=Depends(manager)):
   
 @app.on_event("startup")  
 async def startup_event():
-    await asyncio.create_task(get_server_states(bitunix, app))
+    await asyncio.create_task(get_server_states(app))
     await bitunix.start()
 
 #load inital states for html
-async def get_server_states(bitunix, app):
+async def get_server_states(app):
     app.state.element_states = {}
     app.state.element_states['autoTrade']=settings.autoTrade
     app.state.element_states['optionMovingAverage']=settings.option_moving_average
@@ -209,6 +213,9 @@ async def wsmain(websocket):
                 data = {
                     "dataframes": dataframes,
                     "profit" : bitunix.bitunixSignal.profit,
+                    "movingAverage": settings.option_moving_average,
+                    "maxAutoTrades": settings.max_auto_trades,
+                    "autoTrade": settings.autoTrade,
                     "atctime": atctime,
                     "tdctime": tdctime,
                     "status_messages": [] if len(notifications)==0 else notifications
@@ -267,7 +274,7 @@ async def wschart(websocket):
                 await asyncio.create_task(send_pong(websocket,queue))
                 
                 if ticker in bitunix.bitunixSignal.tickerObjects.symbols():
-                    bars=bitunix.bars
+                    bars=settings.bars
                     chart1m=list(bitunix.bitunixSignal.tickerObjects.get(ticker).get_interval_ticks('1m').get_data()[-bars:])
                     chart5m=list(bitunix.bitunixSignal.tickerObjects.get(ticker).get_interval_ticks('5m').get_data()[-bars:])
                     chart15m=list(bitunix.bitunixSignal.tickerObjects.get(ticker).get_interval_ticks('15m').get_data()[-bars:])
@@ -398,18 +405,41 @@ async def handle_chart_data(symbol: str = Form(...)):
 
 #when chart page detected
 @app.get("/charts", response_class=HTMLResponse) 
-async def show_detail(request: Request, symbol: str): 
+async def show_charts(request: Request, symbol: str): 
     return templates.TemplateResponse({"request": request, "data": symbol}, "charts.html")
-    
-@app.post("/get_study")
-async def trades_detected():
-    study_url = f"/study"
-    return JSONResponse(content={"message": study_url})                                      
 
-#when trades page detected
-@app.get("/study", response_class=HTMLResponse) 
-async def show_detail(request: Request): 
-    return templates.TemplateResponse({"request": request}, "study.html")
+def read_env_file():
+    env_vars = dotenv_values(ENV_FILE)
+    if 'api_key' in env_vars:
+        del env_vars['api_key']
+    if 'secret_key' in env_vars:
+        del env_vars['secret_key']
+    if 'SECRET' in env_vars:
+        del env_vars['SECRET']
+    if 'password' in env_vars:
+        del env_vars['password']
+    return env_vars
+
+@app.get("/config", response_class=HTMLResponse)
+async def config_page(request: Request):
+    return templates.TemplateResponse("config.html", {"request": request})
+
+@app.get("/get-env")
+async def get_env_variables():
+    env_vars = read_env_file()  # Load .env variables
+    return JSONResponse(content=env_vars)
+
+# Save updated environment variables
+@app.post("/save-env")
+async def save_env_variable(key: str = Form(...), value: str = Form(...)):
+    global settings
+    set_key(ENV_FILE, key, value)  # Update the .env file
+    settings.reload_env()
+    await asyncio.create_task(get_server_states(app))
+  # Reload the settings
+    return {"message": f"Updated {key} = {value} successfully"}
+
+                                   
 
 if __name__ == '__main__': 
     

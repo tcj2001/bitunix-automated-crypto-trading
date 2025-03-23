@@ -6,64 +6,16 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <link rel="stylesheet" href="static/styles.css">
     <style> 
-
-        body {
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-        }
-        header, footer {
-            background: #f8f9fa;
-            padding: 1em;
-            text-align: center;
-            position: fixed;
-            width: 100%;
-            z-index: 1;
-        }
-        header {
-            top: 0;
-        }
-        footer {            
-            bottom: 0;
-        }         
-        .mainbody {
+        .mainbody { 
             flex: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             margin-top: 80px; /* Adjust according to header height */
-        }        
-        .box {padding: 10px; margin: 10px; border: 1px solid black; width: 45%; }
-        .label { font-weight: bold;}
-        .chart-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            grid-template-rows: repeat(3, 1fr);
-            gap: 10px;
-            width: 90%;
-            height: calc(100vh - 100px); /* Adjust according to header and footer height */
-        }
-        .chart-container {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        canvas {
-            width: 100% !important;
-            height: 100% !important;
-        }
-
-        .container {display: flex;justify-content: space-between;}
-        .left, .right {width: 45%; padding: 10px; border: 1px solid black;}
-
-        .message {background-color: #3a4141 ; color: white; padding: 16px; font-size: 16px; border: none; cursor: pointer;}
-        .dropdown-content { display: none; position: absolute; background-color: #f9f9f9; min-width: 250px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2); z-index: 1; }
-        .dropdown-content div { color: black; padding: 12px 16px; text-decoration: none; display: block; }
-        .dropdown-content div:hover { background-color: #f1f1f1; }
-        .show { display: block; }        
+        } 
     </style>        
 </head>
 <body>
