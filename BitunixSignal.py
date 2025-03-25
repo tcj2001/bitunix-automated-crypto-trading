@@ -11,7 +11,6 @@ from concurrent.futures import ProcessPoolExecutor
 from BitunixWebSocket import BitunixPrivateWebSocketClient, BitunixPublicWebSocketClient
 from AsyncThreadRunner import AsyncThreadRunner
 from TickerManager import Tickers, Ticker, Interval
-from config import Settings
 from DataFrameHtmlRenderer import DataFrameHtmlRenderer
 from logger import Logger, Colors
 logger = Logger(__name__).get_logger()
@@ -22,15 +21,14 @@ from concurrent.futures import ProcessPoolExecutor
 cst = pytz.timezone('US/Central')
 
 class BitunixSignal:
-    def __init__(self, settings : Settings, threadManager, notifications, bitunixApi):
+    def __init__(self, api_key, secret_key, settings, threadManager, notifications, bitunixApi):
+        self.api_key = api_key
+        self.secret_key = secret_key
         self.settings=settings
         self.threadManager = threadManager
         self.notifications = notifications
         self.bitunixApi = bitunixApi
               
-        self.api_key = self.settings.api_key.get_secret_value()
-        self.secret_key = self.settings.secret_key.get_secret_value()
-        
         #Ticker object
         self.tickerObjects = Tickers(self.settings)
         
@@ -72,7 +70,7 @@ class BitunixSignal:
 
         #websockets
         self.bitunixPrivateWebSocketClient = BitunixPrivateWebSocketClient(self.api_key, self.secret_key)
-        if self.settings.use_public_websocket:
+        if self.settings.USE_PUBLIC_WEBSOCKET:
             self.bitunixPublicDepthWebSocketClient = BitunixPublicWebSocketClient(self.api_key, self.secret_key, "depth")
             self.bitunixPublicTickerWebSocketClient = BitunixPublicWebSocketClient(self.api_key, self.secret_key, "ticker")
 
@@ -86,8 +84,12 @@ class BitunixSignal:
         self.lastAutoTradeTime = time.time()
         self.lastTickerDataTime = time.time()
         
+    async def update_settings(self, settings):
+        self.settings = settings
+        self.tickerObjects.update_settings(settings)
+        
     async def load_tickers(self):
-        symbols = await self.bitunixApi.GetTickerList(self.settings.threshold, self.settings.min_volume)
+        symbols = await self.bitunixApi.GetTickerList(float(self.settings.THRESHOLD), float(self.settings.MIN_VOLUME))
         self.pendingPositions= await self.bitunixApi.GetPendingPositionData()
         self.pendingOrders= await self.bitunixApi.GetPendingOrderData()
         olist=[]
@@ -112,19 +114,19 @@ class BitunixSignal:
         await asyncio.create_task(self.DefinehtmlRenderers())
 
         #async thread that runs forever jobs
-        self.GetportfolioDataTask = AsyncThreadRunner(self.GetportfolioData, interval=self.settings.portfolio_api_interval)
+        self.GetportfolioDataTask = AsyncThreadRunner(self.GetportfolioData, interval=int(self.settings.PORTFOLIO_API_INTERVAL))
         self.GetportfolioDataTask.start_thread(thread_name="GetportfolioData")
 
-        self.GetPendingPositionDataTask = AsyncThreadRunner(self.GetPendingPositionData, interval=self.settings.pending_positions_api_interval)
+        self.GetPendingPositionDataTask = AsyncThreadRunner(self.GetPendingPositionData, interval=int(self.settings.PENDING_POSITIONS_API_INTERVAL))
         self.GetPendingPositionDataTask.start_thread(thread_name="GetPendingPositionData")
 
-        self.GetPendingOrderDataTask = AsyncThreadRunner(self.GetPendingOrderData, interval=self.settings.pending_orders_api_interval)
+        self.GetPendingOrderDataTask = AsyncThreadRunner(self.GetPendingOrderData, interval=int(self.settings.PENDING_ORDERS_API_INTERVAL))
         self.GetPendingOrderDataTask.start_thread(thread_name="GetPendingOrderData")
 
-        self.GetTradeHistoryDataTask = AsyncThreadRunner(self.GetTradeHistoryData, interval=self.settings.trade_history_api_interval)
+        self.GetTradeHistoryDataTask = AsyncThreadRunner(self.GetTradeHistoryData, interval=int(self.settings.TRADE_HISTORY_API_INTERVAL))
         self.GetTradeHistoryDataTask.start_thread(thread_name="GetTradeHistoryData")
        
-        self.GetPositionHistoryDataTask = AsyncThreadRunner(self.GetPositionHistoryData, interval=self.settings.position_history_api_interval)
+        self.GetPositionHistoryDataTask = AsyncThreadRunner(self.GetPositionHistoryData, interval=int(self.settings.POSITION_HISTORY_API_INTERVAL))
         self.GetPositionHistoryDataTask.start_thread(thread_name="GetPositionHistoryData")
        
         #run restartable asynch thread
@@ -136,7 +138,7 @@ class BitunixSignal:
         await self.bitunixPrivateWebSocketClient.stop_websocket()
         await self.ProcessPrivateDataTask.stop_thread()
         
-        if self.settings.use_public_websocket:
+        if self.settings.USE_PUBLIC_WEBSOCKET:
             await self.bitunixPublicDepthWebSocketClient.stop_websocket()
             await self.UpdateDepthDataTask.stop_thread()
             
@@ -162,7 +164,7 @@ class BitunixSignal:
         self.ProcessPrivateDataTask = AsyncThreadRunner(self.bitunixPrivateWebSocketClient.run_websocket, 0, self.ProcessPrivateData)
         self.ProcessPrivateDataTask.start_thread(thread_name="ProcessPrivateData")
 
-        if self.settings.use_public_websocket:
+        if self.settings.USE_PUBLIC_WEBSOCKET:
 
             self.bitunixPublicDepthWebSocketClient.tickerList = self.tickerList
             self.UpdateDepthDataTask = AsyncThreadRunner(self.bitunixPublicDepthWebSocketClient.run_websocket, 0, self.UpdateDepthData)
@@ -176,14 +178,14 @@ class BitunixSignal:
         self.LoadKlineHistoryTask = AsyncThreadRunner(self.LoadKlineHistory, interval=0) # run only once
         self.LoadKlineHistoryTask.start_thread(thread_name="LoadKlineHistory")
 
-        self.GetTickerDataTask = AsyncThreadRunner(self.GetTickerData, interval=self.settings.ticker_data_api_interval) #run every second
+        self.GetTickerDataTask = AsyncThreadRunner(self.GetTickerData, interval=int(self.settings.TICKER_DATA_API_INTERVAL))
         self.GetTickerDataTask.start_thread(thread_name="GetTickerData")
 
-        self.AutoTradeProcessTask = AsyncThreadRunner(self.AutoTradeProcess, interval=self.settings.signal_check_interval)
+        self.AutoTradeProcessTask = AsyncThreadRunner(self.AutoTradeProcess, interval=int(self.settings.SIGNAL_CHECK_INTERVAL))
         self.AutoTradeProcessTask.start_thread(thread_name="AutoTradeProcess")
 
         #start the loop to restart public websocket
-        #if self.settings.use_public_websocket:
+        #if self.settings.USE_PUBLIC_WEBSOCKET:
         #    self.restartPublicWebsocketTask = AsyncThreadRunner(self.restartPublicWebsocket, interval=0)
         #    self.restartPublicWebsocketTask.start_thread(thread_name="restartPublicWebsocket")
 
@@ -192,19 +194,19 @@ class BitunixSignal:
     #not used now
     async def restartPublicWebsocket(self): 
         while True:
-            await asyncio.sleep(self.settings.public_websocket_restart_interval)
+            await asyncio.sleep(int(self.settings.PUBLIC_WEBSOCKET_RESTART_INTERVAL))
             
-            if self.settings.verbose_logging:
+            if self.settings.VERBOSE_LOGGING:
                 self.notifications.add_notification('Restarting public websocket')
                 logger.info(f"Restarting public websocket")
             
-            if self.settings.use_public_websocket:
+            if self.settings.USE_PUBLIC_WEBSOCKET:
                 await self.UpdateDepthDataTask.stop_thread()
                 await self.UpdateTickerDataTask.stop_thread() 
             
             await asyncio.sleep(30)
 
-            if self.settings.use_public_websocket:
+            if self.settings.USE_PUBLIC_WEBSOCKET:
                 self.bitunixPublicDepthWebSocketClient.tickerList = self.tickerList
                 self.UpdateDepthDataTask = AsyncThreadRunner(self.bitunixPublicDepthWebSocketClient.run_websocket, 0, self.UpdateDepthData)
                 self.UpdateDepthDataTask.start_thread(thread_name="UpdateDepthData")
@@ -213,12 +215,12 @@ class BitunixSignal:
                 self.UpdateTickerDataTask = AsyncThreadRunner(self.bitunixPublicTickerWebSocketClient.run_websocket, 0, self.UpdateTickerData)
                 self.UpdateTickerDataTask.start_thread(thread_name="UpdateTickerData")
 
-            if self.settings.verbose_logging:
+            if self.settings.VERBOSE_LOGGING:
                 self.notifications.add_notification('Restared public websocket')
 
     ###########################################################################################################
     async def DefinehtmlRenderers(self):
-        period = self.settings.option_moving_average
+        period = self.settings.OPTION_MOVING_AVERAGE
         #html rendering setup
         self.portfoliodfrenderer = DataFrameHtmlRenderer()
         self.positiondfrenderer = DataFrameHtmlRenderer(hide_columns=["positionId", "lastcolor","bidcolor","askcolor",f"{period}_barcolor"], \
@@ -260,10 +262,10 @@ class BitunixSignal:
         intervals = self.tickerObjects.get_intervalIds()
         for ticker in self.tickerList:
             for intervalId in intervals:
-                data = await self.bitunixApi.GetKlineHistory(ticker, intervalId, self.settings.bars)
+                data = await self.bitunixApi.GetKlineHistory(ticker, intervalId, self.settings.BARS)
                 if data is not None:
-                   self.tickerObjects.load_kline_history(ticker, intervalId, self.settings.bars, data)
-        if self.settings.verbose_logging:
+                   self.tickerObjects.load_kline_history(ticker, intervalId, self.settings.BARS, data)
+        if self.settings.VERBOSE_LOGGING:
             logger.info(f"kline_history: elapsed time {time.time()-start}")
         self.notifications.add_notification("Kline history loaded")
 
@@ -294,7 +296,7 @@ class BitunixSignal:
             self.tickerObjects.form_candle(self.tuples_list)
 
         self.lastTickerDataTime = time.time()
-        if self.settings.verbose_logging:
+        if self.settings.VERBOSE_LOGGING:
             logger.info(f"GetTickerData: elapsed time {time.time()-start}")
     
     
@@ -322,7 +324,7 @@ class BitunixSignal:
             gc.collect()
         except Exception as e:
             logger.info(f"Function: UpdateTickerData, {e}, {e.args}, {type(e).__name__}")
-        if self.settings.verbose_logging:
+        if self.settings.VERBOSE_LOGGING:
             logger.info(f"Function: UpdateTickerData, time:{ts}, symbol:{symbol}, highest:{highest}, lowest:{lowest}, volume:{volume}, volumeInCurrency:{volumeInCurrency}")
 
     #websocket data    
@@ -346,7 +348,7 @@ class BitunixSignal:
             gc.collect()    
         except Exception as e:
             logger.info(f"Function: UpdateDepthData, {e}, {e.args}, {type(e).__name__}")
-        if self.settings.verbose_logging:
+        if self.settings.VERBOSE_LOGGING:
             logger.info(f"Function: UpdateDepthData, time:{ts}, symbol:{symbol}, bid:{bid}, ask:{ask}")
 
     # this is called to update last price, as the websocket is lagging
@@ -372,7 +374,7 @@ class BitunixSignal:
             gc.collect()
         except Exception as e:
             logger.info(e)
-        if self.settings.verbose_logging:
+        if self.settings.VERBOSE_LOGGING:
             logger.info(f"apply_last_data: elapsed time {time.time()-start}")
         
     # this is called to update bid and ask, 
@@ -408,7 +410,7 @@ class BitunixSignal:
             
         except Exception as e:
             logger.info(f"Function: GetportfolioData, {e}, {e.args}, {type(e).__name__}")
-        if self.settings.verbose_logging:
+        if self.settings.VERBOSE_LOGGING:
             logger.info(f"GetportfolioData: elapsed time {time.time()-start}")
                 
     async def GetPendingPositionData(self):
@@ -436,7 +438,7 @@ class BitunixSignal:
                     )
                     #self.positiondf['roi']= round((self.positiondf['last'].astype(float) * self.positiondf['qty'].astype(float) - \
                     #                         self.positiondf['avgOpenPrice'].astype(float) * self.positiondf['qty'].astype(float)) / \
-                    #                         (self.positiondf['avgOpenPrice'].astype(float) * self.positiondf['qty'].astype(float) / (self.settings.leverage/100))  * 10000 , 2)   
+                    #                         (self.positiondf['avgOpenPrice'].astype(float) * self.positiondf['qty'].astype(float) / (self.settings.LEVERAGE/100))  * 10000 , 2)   
                 except Exception as e:
                     pass
                 self.positiondf['bitunix'] = self.positiondf.apply(self.add_bitunix_button, axis=1)
@@ -451,10 +453,10 @@ class BitunixSignal:
                 self.positiondf = pd.DataFrame()
             #self.positiondfStyle= self.positiondfrenderer.render_html(self.positiondf)    
 
-            #if not self.settings.use_public_websocket:                    
+            #if not self.settings.USE_PUBLIC_WEBSOCKET:                    
             #get bid las ask using api for the symbols in pending psotion
             if not self.positiondf.empty:
-                if self.settings.use_public_websocket:
+                if self.settings.USE_PUBLIC_WEBSOCKET:
                     await asyncio.create_task(self.apply_last_data(','.join(self.positiondf['symbol'].astype(str).tolist())))                                                
                 await asyncio.gather(
                     *[
@@ -466,7 +468,7 @@ class BitunixSignal:
 
         except Exception as e:
             logger.info(f"Function: GetPendingPositionData, {e}, {e.args}, {type(e).__name__}")
-        if self.settings.verbose_logging:
+        if self.settings.VERBOSE_LOGGING:
             logger.info(f"GetPendingPositionData: elapsed time {time.time()-start}")
 
     async def GetPendingOrderData(self):
@@ -484,7 +486,7 @@ class BitunixSignal:
             
         except Exception as e:
             logger.info(f"Function: GetPendingOrderData, {e}, {e.args}, {type(e).__name__}")
-        if self.settings.verbose_logging:
+        if self.settings.VERBOSE_LOGGING:
             logger.info(f"GetPendingOrderData: elapsed time {time.time()-start}")
 
     async def GetPositionHistoryData(self):
@@ -500,7 +502,7 @@ class BitunixSignal:
             
         except Exception as e:
             logger.info(f"Function: GetPositionHistoryData, {e}, {e.args}, {type(e).__name__}")
-        if self.settings.verbose_logging:
+        if self.settings.VERBOSE_LOGGING:
             logger.info(f"GetPositionHistoryData: elapsed time {time.time()-start}")
 
     async def GetTradeHistoryData(self):
@@ -517,7 +519,7 @@ class BitunixSignal:
                         tickerObj.trades = grouped_trades.get_group(symbol).to_dict("records")                
         except Exception as e:
             logger.info(f"Function: GetTradeHistoryData, {e}, {e.args}, {type(e).__name__}")
-        if self.settings.verbose_logging:
+        if self.settings.VERBOSE_LOGGING:
             logger.info(f"GetTradeHistoryData: elapsed time {time.time()-start}")
 
         
@@ -576,11 +578,11 @@ class BitunixSignal:
                     self.signaldf = pd.DataFrame()
                 self.signaldfStyle= self.signaldfrenderer.render_html(self.signaldf)
 
-                #if not self.settings.use_public_websocket:                    
+                #if not self.settings.USE_PUBLIC_WEBSOCKET:                    
                 #get bid las ask using api for max_auto_trades rows
                 if not self.signaldf.empty:
-                    m = min(self.signaldf.shape[0], int(self.settings.max_auto_trades))
-                    if self.settings.use_public_websocket:
+                    m = min(self.signaldf.shape[0], int(self.settings.MAX_AUTO_TRADES))
+                    if self.settings.USE_PUBLIC_WEBSOCKET:
                         await asyncio.create_task(self.apply_last_data(','.join(self.signaldf['symbol'][:m].astype(str).tolist())))                 
                     await asyncio.gather(
                         *[
@@ -596,17 +598,17 @@ class BitunixSignal:
         gc.collect()
 
     async def AutoTradeProcess(self):
-        if self.settings.verbose_logging:
+        if self.settings.VERBOSE_LOGGING:
             logger.info(f"AutoTradeProcess started")
         start=time.time()
         
-        period = self.settings.option_moving_average
+        period = self.settings.OPTION_MOVING_AVERAGE
         try:
             
             #calulate current data at selected period, this create signaldf
             await self.BuySellList(period)
             
-            if not self.settings.autoTrade:
+            if not self.settings.AUTOTRADE:
                 return
             ##############################################################################################################################
             # open long or short postition
@@ -619,7 +621,7 @@ class BitunixSignal:
             if self.pendingOrders:
                 count=count+len(self.pendingOrders['orderList'])
 
-            if count < int(self.settings.max_auto_trades):
+            if count < int(self.settings.MAX_AUTO_TRADES):
                 if not self.signaldf.empty:
                     #open position upto a max of max_auto_trades from the signal list
                     df=self.signaldf.copy(deep=False)
@@ -637,14 +639,14 @@ class BitunixSignal:
                                 last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                 price = (bid if side == "BUY" else ask if side == "SELL" else last) if bid<=last<=ask else last
                                 balance = float(self.portfoliodf["available"].iloc[0]) + float(self.portfoliodf["crossUnrealizedPNL"].iloc[0])
-                                qty = str(max(balance * 0.01 / price * int(self.settings.leverage),mtv))
+                                qty = str(max(balance * 0.01 / price * int(self.settings.LEVERAGE),mtv))
 
                                 self.notifications.add_notification(
                                     f'{colors.YELLOW} Opening {"long" if side=="BUY" else "short"} position for {row.symbol} with {qty} qty @ {price})'
                                 )
                                 datajs = await self.bitunixApi.PlaceOrder(row.symbol, qty, price, side)
                                 count=count+1
-                        if count >= int(self.settings.max_auto_trades):
+                        if count >= int(self.settings.MAX_AUTO_TRADES):
                             break
                         await asyncio.sleep(0)
                     del df
@@ -685,10 +687,10 @@ class BitunixSignal:
                         if self.pendingOrders and len(self.pendingOrders['orderList']) == 1:
                             select = False
                             
-                        if select and int(self.settings.max_auto_trades)!=0:
+                        if select and int(self.settings.MAX_AUTO_TRADES)!=0:
                         
                             # check take portit or accept loss
-                            if float(self.settings.loss_amount) > 0 and total_pnl < -float(self.settings.loss_amount):
+                            if float(self.settings.LOSS_AMOUNT) > 0 and total_pnl < -float(self.settings.LOSS_AMOUNT):
                                 last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                 price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
 
@@ -705,7 +707,7 @@ class BitunixSignal:
                                 )
                                 continue
 
-                            if float(self.settings.profit_amount) > 0 and total_pnl > float(self.settings.profit_amount):
+                            if float(self.settings.PROFIT_AMOUNT) > 0 and total_pnl > float(self.settings.PROFIT_AMOUNT):
                                 last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                 price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
 
@@ -723,7 +725,7 @@ class BitunixSignal:
                                 continue
 
                             # Moving average comparison between fast and medium
-                            if self.settings.ema_check_on_close: 
+                            if self.settings.EMA_CHECK_ON_CLOSE: 
                                 if row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_ema'] == "SELL":
                                     last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                     price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
@@ -758,7 +760,7 @@ class BitunixSignal:
                                     continue
 
                             # MACD comparison between MACD and Signal
-                            if self.settings.macd_check_on_close:
+                            if self.settings.MACD_CHECK_ON_CLOSE:
                                 if row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_macd'] == "SELL":
                                     last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                     price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
@@ -792,7 +794,7 @@ class BitunixSignal:
                                     continue
 
                             # Bollinger Band comparison between open and BBM
-                            if self.settings.bbm_check_on_close:
+                            if self.settings.BBM_CHECK_ON_CLOSE:
                                 if row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_bbm'] == "SELL":
                                     last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                     price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
@@ -809,7 +811,7 @@ class BitunixSignal:
                                     )
                                     continue
 
-                                if self.settings.check_bbm and row.side == 'SELL' and self.signaldf_full.at[row.symbol, f'{period}_bbm'] == "BUY":
+                                if self.settings.CHECK_BBM and row.side == 'SELL' and self.signaldf_full.at[row.symbol, f'{period}_bbm'] == "BUY":
                                     last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                     price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
                                     self.notifications.add_notification(
@@ -826,7 +828,7 @@ class BitunixSignal:
                                     continue
                             
                             # RSI comparison
-                            if self.settings.rsi_check_on_close:
+                            if self.settings.RSI_CHECK_ON_CLOSE:
                                 if row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_rsi'] == "SELL":
                                     last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                     price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
@@ -860,7 +862,7 @@ class BitunixSignal:
                                     continue
 
                             # Close on weak trend after open
-                            if self.settings.adx_check_on_close:
+                            if self.settings.ADX_CHECK_ON_CLOSE:
                                 if row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_adx'] == "WEAK":
                                     last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                     price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
@@ -894,7 +896,7 @@ class BitunixSignal:
                                     continue
 
                             # candle reversed
-                            if self.settings.candle_trend_check_on_close:
+                            if self.settings.CANDLE_TREND_CHECK_ON_CLOSE:
                                 if row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_barcolor'] == self.red and self.signaldf_full.at[row.symbol, f'{period}_candle_trend'] == "BEARISH":
                                     last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                     price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
@@ -938,7 +940,7 @@ class BitunixSignal:
             logger.info(f"Function: {function_name}, {e}, {e.args}, {type(e).__name__}")
             logger.info(traceback.print_exc())
                 
-        if self.settings.verbose_logging:
+        if self.settings.VERBOSE_LOGGING:
             logger.info(f"AutoTradeProcess: elapsed time {time.time()-start}")
 
         del df
