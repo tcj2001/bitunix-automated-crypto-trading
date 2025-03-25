@@ -5,13 +5,12 @@ import numpy as np
 import pandas as pd
 import json
 import time
-from datetime import datetime, timezone, timedelta
+from datetime import datetime
 import pytz
 from ThreadManager import ThreadManager
 from BitunixApi import BitunixApi
 from BitunixSignal import BitunixSignal
 from NotificationManager import NotificationManager
-from config import Settings
 
 from logger import Logger
 logger = Logger(__name__).get_logger()
@@ -23,35 +22,46 @@ from fastapi.templating import Jinja2Templates
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi_login import LoginManager
 from fastapi_login.exceptions import InvalidCredentialsException
-import gc
 from DataFrameHtmlRenderer import DataFrameHtmlRenderer
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from dotenv import load_dotenv, dotenv_values, set_key
-
-global settings
+from config import Settings
+from pydantic import ValidationError
 
 ENV_FILE = ".env"
-load_dotenv()
+CONFIG_FILE = "config.txt"
+
+#load environment variables
+load_dotenv(ENV_FILE)
+API_KEY = os.getenv('API_KEY')
+SECRET_KEY = os.getenv('SECRET_KEY')
+SECRET = os.getenv('SECRET')
+PASSWORD = os.getenv('PASSWORD')
+HOST = os.getenv('HOST')
+
+#load config variables using setting class in config.py validating using pydantic
 settings = Settings()
 
 class bitunix():
-    def __init__(self, settings):
-        self.settings=settings;
-        self.screen_refresh_interval =settings.screen_refresh_interval
+    def __init__(self, password, api_key, secret_key, settings):
+        self.screen_refresh_interval =settings.SCREEN_REFRESH_INTERVAL
         
-        self.autoTrade=settings.autoTrade
+        self.autoTrade=settings.AUTOTRADE
         
-        self.password=settings.password.get_secret_value()
-
         self.threadManager = ThreadManager()
         self.notifications = NotificationManager()
-        self.bitunixApi = BitunixApi(self.settings)
-        self.bitunixSignal = BitunixSignal(self.settings, self.threadManager, self.notifications, self.bitunixApi)
+        self.bitunixApi = BitunixApi(api_key, secret_key, settings)
+        self.bitunixSignal = BitunixSignal(api_key, secret_key, settings, self.threadManager, self.notifications, self.bitunixApi)
         
         self.websocket_connections = set()
-        self.DB = {"admin": {"password": self.password}}
+        self.DB = {"admin": {"password": password}}
+        
+    async def update_settings(self, settings):
+        self.settings = settings
+        await self.bitunixSignal.update_settings(settings)
+        await self.bitunixApi.update_settings(settings)
 
     async def start(self): 
         await asyncio.create_task(self.bitunixSignal.load_tickers())
@@ -81,8 +91,8 @@ app.add_middleware(
 )
 templates = Jinja2Templates(directory="templates")
 SECRET=os.getenv('SECRET')
-manager = LoginManager(SECRET, token_url="/auth/login", use_cookie=True)
-manager.cookie_name = "auth_token"
+login_manager = LoginManager(SECRET, token_url="/auth/login", use_cookie=True)
+login_manager.cookie_name = "auth_token"
 
 
 @app.post("/auth/login")
@@ -94,30 +104,28 @@ async def login(data: OAuth2PasswordRequestForm = Depends()):
     user = load_user(username, some_callable_object)
     if not user or password != user["password"]:
         raise InvalidCredentialsException
-    access_token = manager.create_access_token(data={"sub": username})
+    access_token = login_manager.create_access_token(data={"sub": username})
     response = RedirectResponse(url="/main", status_code=302)
-    manager.set_cookie(response, access_token)
+    login_manager.set_cookie(response, access_token)
     logger.info(f"/auth/login: elapsed time {time.time()-start}")
     return response
 
 @app.get("/main", response_class=HTMLResponse)
-async def main_page(request: Request,  user=Depends(manager)):
+async def main_page(request: Request,  user=Depends(login_manager)):
     return templates.TemplateResponse({"request": request, "user": user}, "main.html")
 
   
 @app.on_event("startup")  
 async def startup_event():
-    await asyncio.create_task(get_server_states(app))
+    await asyncio.create_task(get_server_states(app, settings))
     await bitunix.start()
 
 #load inital states for html
-async def get_server_states(app):
+async def get_server_states(app, settings):
     app.state.element_states = {}
-    app.state.element_states['autoTrade']=settings.autoTrade
-    app.state.element_states['optionMovingAverage']=settings.option_moving_average
-    app.state.element_states['profitAmount']=settings.profit_amount
-    app.state.element_states['lossAmount']=settings.loss_amount
-    app.state.element_states['maxAutoTrades']=settings.max_auto_trades
+    app.state.element_states['autoTrade']=settings.AUTOTRADE
+    app.state.element_states['optionMovingAverage']=settings.OPTION_MOVING_AVERAGE
+    app.state.element_states['maxAutoTrades']=settings.MAX_AUTO_TRADES
 
 @app.post("/reload")
 async def refresh_detected():
@@ -138,30 +146,30 @@ async def get_states(payload: dict):
 @app.post("/autotrade")
 async def handle_autotrade():
     await asyncio.create_task(set_server_states())
-    return {"status":bitunix.bitunixSignal.autoTrade}
+    return {"status":settings.AUTOTRADE}
 
 async def set_server_states():
-    bitunix.bitunixSignal.autoTrade = True if app.state.element_states['autoTrade']=='true' else False
+    settings.AUTOTRADE = True if app.state.element_states['autoTrade']=='true' else False
 
-    if bitunix.bitunixSignal.autoTrade:
-        bitunix.bitunixSignal.option_moving_average = app.state.element_states['optionMovingAverage']
-        bitunix.bitunixSignal.notifications.add_notification(f"optionMovingAverage: {bitunix.bitunixSignal.option_moving_average}")  
+    if settings.AUTOTRADE:
+        settings.OPTION_MOVING_AVERAGE = app.state.element_states['optionMovingAverage']
+        settings.notifications.add_notification(f"optionMovingAverage: {settings.OPTION_MOVING_AVERAGE}")  
 
-        bitunix.bitunixSignal.profit_amount = app.state.element_states['profitAmount']
-        bitunix.bitunixSignal.notifications.add_notification(f"profitAmount: {bitunix.bitunixSignal.profit_amount}")  
+        settings.PROFIT_AMOUNT = app.state.element_states['profitAmount']
+        settings.notifications.add_notification(f"profitAmount: {settings.PROFIT_AMOUNT}")  
 
-        bitunix.bitunixSignal.loss_amount = app.state.element_states['lossAmount']
-        bitunix.bitunixSignal.notifications.add_notification(f"lossAmount: {bitunix.bitunixSignal.loss_amount}")  
+        settings.LOSS_AMOUNT = app.state.element_states['lossAmount']
+        settings.notifications.add_notification(f"lossAmount: {settings.LOSS_AMOUNT}")  
 
-        bitunix.bitunixSignal.max_auto_trades = app.state.element_states['maxAutoTrades']
-        bitunix.bitunixSignal.notifications.add_notification(f"maxAutoTrades: {bitunix.bitunixSignal.max_auto_trades}")  
+        settings.MAX_AUTO_TRADES = app.state.element_states['maxAutoTrades']
+        settings.notifications.add_notification(f"maxAutoTrades: {settings.MAX_AUTO_TRADES}")
 
-    bitunix.bitunixSignal.notifications.add_notification(" AutoTrade activated" if bitunix.bitunixSignal.autoTrade else "AutoTrade de-activated")  
+    settings.notifications.add_notification(" AutoTrade activated" if settings.AUTOTRADE else "AutoTrade de-activated")  
 
 def some_callable_object():
     logger.info("called")
 
-@manager.user_loader(some_callable=some_callable_object)
+@login_manager.user_loader(some_callable=some_callable_object)
 def load_user(username, some_callable=some_callable_object):
     user = bitunix.DB.get(username)
     return user
@@ -213,9 +221,6 @@ async def wsmain(websocket):
                 data = {
                     "dataframes": dataframes,
                     "profit" : bitunix.bitunixSignal.profit,
-                    "movingAverage": settings.option_moving_average,
-                    "maxAutoTrades": settings.max_auto_trades,
-                    "autoTrade": settings.autoTrade,
                     "atctime": atctime,
                     "tdctime": tdctime,
                     "status_messages": [] if len(notifications)==0 else notifications
@@ -233,7 +238,7 @@ async def wsmain(websocket):
 
             elapsed_time = time.time() - stime
             
-            if settings.verbose_logging:
+            if settings.VERBOSE_LOGGING:
                 logger.info(f"wsmain: elapsed time {elapsed_time}")
             time_to_wait = max(0.01, bitunix.screen_refresh_interval - elapsed_time)
             
@@ -308,7 +313,7 @@ async def wschart(websocket):
 
             
             elapsed_time = time.time() - stime
-            if settings.verbose_logging:
+            if settings.VERBOSE_LOGGING:
                 logger.info(f"wschart: elapsed time {elapsed_time}")
             time_to_wait = max(0.01, bitunix.screen_refresh_interval - elapsed_time)
             await asyncio.sleep(time_to_wait)
@@ -345,7 +350,7 @@ async def send_message(msg: str):
 
 
 @app.get("/private")
-async def get_private_endpoint(user=Depends(manager)):
+async def get_private_endpoint(user=Depends(login_manager)):
     return "You are an authenticated user"
    
 @app.post("/handle_bitunix_click") 
@@ -368,7 +373,7 @@ async def handle_click(symbol: str = Form(...), positionId: str = Form(...), qty
 @app.post("/handle_buy_click") 
 async def handle_click(symbol: str = Form(...), close: str = Form(...)):
     balance = bitunix.bitunixSignal.get_portfolio_tradable_balance()
-    qty= str(balance * float(bitunix.bitunixSignal.orderAmountPercentage) / float(close) * int(bitunix.bitunixSignal.leverage))
+    qty= str(balance * float(settings.ORDER_AMOUNT_PERCENTAGE) / float(close) * int(settings.LEVERAGE))
     datajs = await bitunix.bitunixApi.PlaceOrder(symbol,qty,close,'BUY')
     bitunix.bitunixSignal.notifications.add_notification(f'Buying {qty} {symbol} @ {close} ({datajs["code"]} {datajs["msg"]})')
 
@@ -377,14 +382,14 @@ async def handle_click(symbol: str = Form(...), close: str = Form(...)):
     row = bitunix.bitunixSignal.positiondf.loc[bitunix.bitunixSignal.positiondf['symbol'] == symbol]
     if not row.empty:
         balance = float(bitunix.bitunixSignal.portfoliodf["available"])+float(bitunix.bitunixSignal.portfoliodf["crossUnrealizedPNL"])
-        qty= str(balance * float(bitunix.bitunixSignal.orderAmountPercentage) / float(close) * int(bitunix.bitunixSignal.leverage))
+        qty= str(balance * float(settings.ORDER_AMOUNT_PERCENTAGE) / float(close) * int(settings.LEVERAGE))
         datajs = await bitunix.bitunixApi.PlaceOrder(symbol,qty,close,row['side'].values[0])
         bitunix.bitunixSignal.notifications.add_notification(f'adding {row["side"].values[0]} {qty} {symbol} @ {close} ({datajs["code"]} {datajs["msg"]})')
 
 @app.post("/handle_sell_click") 
 async def handle_click(symbol: str = Form(...), close: str = Form(...)):
     balance = bitunix.bitunixSignal.get_portfolio_tradable_balance()
-    qty= str(balance * float(bitunix.bitunixSignal.orderAmountPercentage) / float(close) * int(bitunix.bitunixSignal.leverage))
+    qty= str(balance * float(settings.ORDER_AMOUNT_PERCENTAGE) / float(close) * int(settings.LEVERAGE))
     datajs = await bitunix.bitunixApi.PlaceOrder(symbol,qty,close,'SELL')
     bitunix.bitunixSignal.notifications.add_notification(f'Selling {qty} {symbol} @ {close} ({datajs["code"]} {datajs["msg"]})')
 
@@ -408,96 +413,111 @@ async def handle_chart_data(symbol: str = Form(...)):
 async def show_charts(request: Request, symbol: str): 
     return templates.TemplateResponse({"request": request, "data": symbol}, "charts.html")
 
-def read_env_file():
-    env_vars = dotenv_values(ENV_FILE)
-    if 'api_key' in env_vars:
-        del env_vars['api_key']
-    if 'secret_key' in env_vars:
-        del env_vars['secret_key']
-    if 'SECRET' in env_vars:
-        del env_vars['SECRET']
-    if 'password' in env_vars:
-        del env_vars['password']
-    return env_vars
-
 @app.get("/config", response_class=HTMLResponse)
 async def config_page(request: Request):
     return templates.TemplateResponse("config.html", {"request": request})
 
-@app.get("/get-env")
+@app.get("/get-config")
 async def get_env_variables():
-    env_vars = read_env_file()  # Load .env variables
-    return JSONResponse(content=env_vars)
+    config = read_config(CONFIG_FILE)  # Load .env variables
+    return JSONResponse(content=config)
 
 # Save updated environment variables
-@app.post("/save-env")
+@app.post("/save-config")
 async def save_env_variable(key: str = Form(...), value: str = Form(...)):
-    global settings
-    set_key(ENV_FILE, key, value)  # Update the .env file
-    settings.reload_env()
-    await asyncio.create_task(get_server_states(app))
-  # Reload the settings
-    return {"message": f"Updated {key} = {value} successfully"}
+    # Read the existing configuration
+    config = read_config(CONFIG_FILE)
+    # Temporarily update the config dictionary for validation
+    config[key] = value
+    try:
+        # Test the new configuration using the Settings class
+        temp_settings = Settings(**config)
+        # Write the valid configuration back to the file
+        write_config(CONFIG_FILE, config)
+        settings = temp_settings
+        await bitunix.update_settings(settings)
+        await asyncio.create_task(get_server_states(app, settings))
+        return {"message": f"Updated {key} = {value} successfully"}
+    except ValidationError as e:
+        return {"error": "Validation failed", "details": e.errors()}
 
-                                   
 
+def read_config(file_path):
+    """Read the config file into a dictionary."""
+    config = {}
+    if os.path.exists(file_path):
+        with open(file_path, "r") as file:
+            for line in file:
+                if "=" in line:
+                    key, value = line.strip().split("=", 1)
+                    config[key] = value
+    return config
+
+def write_config(file_path, config):
+    """Write the dictionary back to the config file."""
+    with open(file_path, "w") as file:
+        for key, value in config.items():
+            file.write(f"{key}={value}\n")
+
+
+def log_settings():
+    #load env variable from .env
+    logger.info(f"autoTrade: {settings.AUTOTRADE}")
+    logger.info(f"leverage: {settings.LEVERAGE}")
+    logger.info(f"threshold: {settings.THRESHOLD}")
+    logger.info(f"min_volume: {settings.MIN_VOLUME}")
+    logger.info(f"order_amount_percentage: {settings.ORDER_AMOUNT_PERCENTAGE}")
+    logger.info(f"max_auto_trades: {settings.MAX_AUTO_TRADES}")
+    logger.info(f"profit_amount: {settings.PROFIT_AMOUNT}")
+    logger.info(f"loss_amount: {settings.LOSS_AMOUNT}")
+    logger.info(f"option_moving_average: {settings.OPTION_MOVING_AVERAGE}")
+    logger.info(f"bars: {settings.BARS}")
+    logger.info(f"ma_fast: {settings.MA_FAST}")
+    logger.info(f"ma_medium: {settings.MA_MEDIUM}")
+    logger.info(f"ma_slow: {settings.MA_SLOW}")
+    logger.info(f"ema_study: {settings.EMA_STUDY}")
+    logger.info(f"macd_study: {settings.MACD_STUDY}")
+    logger.info(f"bbm_study: {settings.BBM_STUDY}")
+    logger.info(f"rsi_study: {settings.RSI_STUDY}")
+    logger.info(f"adx_study: {settings.ADX_STUDY}")
+    logger.info(f"candle_trend_study: {settings.CANDLE_TREND_STUDY}")
+    logger.info(f"ema_check_on_open: {settings.EMA_CHECK_ON_OPEN}")
+    logger.info(f"ema_check_on_close: {settings.EMA_CHECK_ON_CLOSE}")
+    logger.info(f"macd_check_on_open: {settings.MACD_CHECK_ON_OPEN}")
+    logger.info(f"macd_check_on_close: {settings.MACD_CHECK_ON_CLOSE}")
+    logger.info(f"bbm_check_on_open: {settings.BBM_CHECK_ON_OPEN}")
+    logger.info(f"bbm_check_on_close: {settings.BBM_CHECK_ON_CLOSE}")
+    logger.info(f"rsi_check_on_open: {settings.RSI_CHECK_ON_OPEN}")
+    logger.info(f"rsi_check_on_close: {settings.RSI_CHECK_ON_CLOSE}")
+    logger.info(f"candle_trend_check_on_open: {settings.CANDLE_TREND_CHECK_ON_OPEN}")
+    logger.info(f"candle_trend_check_on_close: {settings.CANDLE_TREND_CHECK_ON_CLOSE}")
+    logger.info(f"adx_check_on_open: {settings.ADX_CHECK_ON_OPEN}")
+    logger.info(f"adx_check_on_close: {settings.ADX_CHECK_ON_CLOSE}")
+    logger.info(f"screen_refresh_interval: {settings.SCREEN_REFRESH_INTERVAL}")
+    logger.info(f"signal_check_interval: {settings.SIGNAL_CHECK_INTERVAL}")
+    logger.info(f"portfolio_api_interval: {settings.PORTFOLIO_API_INTERVAL}")
+    logger.info(f"pending_positions_api_interval: {settings.PENDING_POSITIONS_API_INTERVAL}")
+    logger.info(f"pending_orders_api_interval: {settings.PENDING_ORDERS_API_INTERVAL}")
+    logger.info(f"trade_history_api_interval: {settings.TRADE_HISTORY_API_INTERVAL}")
+    logger.info(f"position_history_api_interval: {settings.POSITION_HISTORY_API_INTERVAL}")
+    logger.info(f"ticker_data_api_interval: {settings.TICKER_DATA_API_INTERVAL}")
+    logger.info(f"public_websocket_restart_interval: {settings.PUBLIC_WEBSOCKET_RESTART_INTERVAL}")
+    logger.info(f"use_public_websocket: {settings.USE_PUBLIC_WEBSOCKET}")
+    logger.info(f"VERBOSE_LOGGING: {settings.VERBOSE_LOGGING}")
+    logger.info(f"benchmark: {settings.BENCHMARK}")         
+    
 if __name__ == '__main__': 
     
-    bitunix = bitunix(settings)
-
-    #load env variable from .env
-    logger.info(f"autoTrade: {settings.autoTrade}")
-    logger.info(f"leverage: {settings.leverage}")
-    logger.info(f"threshold: {settings.threshold}")
-    logger.info(f"min_volume: {settings.min_volume}")
-    logger.info(f"order_amount_percentage: {settings.order_amount_percentage}")
-    logger.info(f"max_auto_trades: {settings.max_auto_trades}")
-    logger.info(f"profit_amount: {settings.profit_amount}")
-    logger.info(f"loss_amount: {settings.loss_amount}")
-    logger.info(f"option_moving_average: {settings.option_moving_average}")
-    logger.info(f"bars: {settings.bars}")
-    logger.info(f"ma_fast: {settings.ma_fast}")
-    logger.info(f"ma_medium: {settings.ma_medium}")
-    logger.info(f"ma_slow: {settings.ma_slow}")
-    logger.info(f"ema_study: {settings.ema_study}")
-    logger.info(f"macd_study: {settings.macd_study}")
-    logger.info(f"bbm_study: {settings.bbm_study}")
-    logger.info(f"rsi_study: {settings.rsi_study}")
-    logger.info(f"adx_study: {settings.adx_study}")
-    logger.info(f"candle_trend_study: {settings.candle_trend_study}")
-    logger.info(f"ema_check_on_open: {settings.ema_check_on_open}")
-    logger.info(f"ema_check_on_close: {settings.ema_check_on_close}")
-    logger.info(f"macd_check_on_open: {settings.macd_check_on_open}")
-    logger.info(f"macd_check_on_close: {settings.macd_check_on_close}")
-    logger.info(f"bbm_check_on_open: {settings.bbm_check_on_open}")
-    logger.info(f"bbm_check_on_close: {settings.bbm_check_on_close}")
-    logger.info(f"rsi_check_on_open: {settings.rsi_check_on_open}")
-    logger.info(f"rsi_check_on_close: {settings.rsi_check_on_close}")
-    logger.info(f"candle_trend_check_on_open: {settings.candle_trend_check_on_open}")
-    logger.info(f"candle_trend_check_on_close: {settings.candle_trend_check_on_close}")
-    logger.info(f"adx_check_on_open: {settings.adx_check_on_open}")
-    logger.info(f"adx_check_on_close: {settings.adx_check_on_close}")
-    logger.info(f"screen_refresh_interval: {settings.screen_refresh_interval}")
-    logger.info(f"signal_check_interval: {settings.signal_check_interval}")
-    logger.info(f"portfolio_api_interval: {settings.portfolio_api_interval}")
-    logger.info(f"pending_positions_api_interval: {settings.pending_positions_api_interval}")
-    logger.info(f"pending_orders_api_interval: {settings.pending_orders_api_interval}")
-    logger.info(f"trade_history_api_interval: {settings.trade_history_api_interval}")
-    logger.info(f"position_history_api_interval: {settings.position_history_api_interval}")
-    logger.info(f"ticker_data_api_interval: {settings.ticker_data_api_interval}")
-    logger.info(f"public_websocket_restart_interval: {settings.public_websocket_restart_interval}")
-    logger.info(f"use_public_websocket: {settings.use_public_websocket}")
-    logger.info(f"verbose_logging: {settings.verbose_logging}")
-    logger.info(f"benchmark: {settings.benchmark}")
-
-
+    bitunix = bitunix(PASSWORD, API_KEY, SECRET_KEY, settings)
+    
+    log_settings()
+    
     import uvicorn
-    host = os.getenv("host")
-    if settings.verbose_logging:
+    if settings.VERBOSE_LOGGING:
         llevel = "debug"
     else:
         llevel = "error"  
-    config1 = uvicorn.Config(app, host=host, port=8000, log_level=llevel, reload=False)
+    config1 = uvicorn.Config(app, host=HOST, port=8000, log_level=llevel, reload=False)
     server = uvicorn.Server(config1)
     server.run()
 

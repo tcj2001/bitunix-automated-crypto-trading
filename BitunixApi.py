@@ -8,16 +8,15 @@ import requests
 from urllib.parse import urlencode
 from typing import Dict, Any
 import traceback
-from config import Settings
 from logger import Logger
 logger = Logger(__name__).get_logger()
 
 
 class BitunixApi:
     
-    def __init__(self, settings : Settings):
-        self.api_key = settings.api_key.get_secret_value()
-        self.secret_key = settings.secret_key.get_secret_value()
+    def __init__(self, api_key, secret_key, settings):
+        self.api_key = api_key
+        self.secret_key = secret_key
         
         self.session = requests.Session()
         self.session.headers.update({
@@ -37,7 +36,10 @@ class BitunixApi:
         self.cancelOrder_Url="https://fapi.bitunix.com/api/v1/futures/trade/cancel_orders"
         self.Trade_history_Url="https://fapi.bitunix.com/api/v1/futures/trade/get_history_trades"
         self.position_history_Url="https://fapi.bitunix.com/api/v1/futures/position/get_history_positions"
-        
+ 
+    async def update_settings(self, settings):
+        self.settings = settings
+       
     async def create_timestamp(self):
         return str(int(time.time()*1000))
 

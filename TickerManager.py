@@ -4,14 +4,13 @@ import numpy as np
 import asyncio
 import talib
 import traceback
-from config import Settings
 from logger import Logger
 logger = Logger(__name__).get_logger()
 import gc
 from concurrent.futures import ProcessPoolExecutor
 
 class Interval:
-    def __init__(self, symbol, intervalId, delta, data, settings : Settings):
+    def __init__(self, symbol, intervalId, delta, data, settings):
         self.symbol = symbol
         self.intervalId = intervalId
         self.delta = delta
@@ -27,6 +26,9 @@ class Interval:
         self.adx_signal="WEAK"
         
         self.signal_strength=0
+        
+    def update_settings(self, settings):
+        self.settings=settings
 
     def get_data(self):
         return self._data
@@ -36,7 +38,7 @@ class Interval:
             
     def calculate_study(self, new_value):
         df = pd.DataFrame(new_value)
-        if not df.empty and df.shape[0] >= self.settings.bars:
+        if not df.empty and df.shape[0] >= int(self.settings.BARS):
                         
             try:
                 #consecutive same color candle 
@@ -47,7 +49,7 @@ class Interval:
                 self.signal_strength = df['Consecutive'].iloc[-1]
 
                 # Calculate the close proximity
-                if self.settings.candle_trend_study:                
+                if self.settings.CANDLE_TREND_STUDY:                
                     df['range'] = df['high'] - df['low']
                     df['candle_trend'] = ((df['close'] - df['low'])/df['range'])*100
                     df.fillna({'candle_trend':0}, inplace=True)
@@ -62,11 +64,11 @@ class Interval:
                         self.candle_trend = 'HOLD'      
 
                 # Calculate the RSI
-                if self.settings.rsi_study:
-                    df['rsi_fast'] = talib.RSI(df['close'],timeperiod=self.settings.rsi_fast)
+                if self.settings.RSI_STUDY:
+                    df['rsi_fast'] = talib.RSI(df['close'],timeperiod=self.settings.RSI_FAST)
                     df.fillna({'rsi_fast':0}, inplace=True)
                     
-                    df['rsi_slow'] = talib.RSI(df['close'],timeperiod=self.settings.rsi_slow)
+                    df['rsi_slow'] = talib.RSI(df['close'],timeperiod=self.settings.RSI_SLOW)
                     df.fillna({'rsi_slow':0}, inplace=True)
                 
                     df['rsi_slope'] = df['rsi_fast'].diff()
@@ -83,16 +85,16 @@ class Interval:
                         self.rsi_signal = "HOLD"
 
                 # Calculate the Moving Averages
-                if self.settings.ema_study:
-                    df['ma_fast'] = talib.EMA(df['close'], timeperiod=self.settings.ma_fast)
+                if self.settings.EMA_STUDY:
+                    df['ma_fast'] = talib.EMA(df['close'], timeperiod=self.settings.MA_FAST)
                     df['ma_fast'] = df['ma_fast'].bfill()
                     df.fillna({'ma_fast':0}, inplace=True)
 
-                    df['ma_slow'] = talib.EMA(df['close'], timeperiod=self.settings.ma_slow)
+                    df['ma_slow'] = talib.EMA(df['close'], timeperiod=self.settings.MA_SLOW)
                     df['ma_slow'] = df['ma_slow'].bfill()
                     df.fillna({'ma_slow':0}, inplace=True)
                 
-                    df['ma_medium'] = talib.EMA(df['close'], timeperiod=self.settings.ma_medium)
+                    df['ma_medium'] = talib.EMA(df['close'], timeperiod=self.settings.MA_MEDIUM)
                     df['ma_medium'] = df['ma_medium'].bfill()
                     df.fillna({'ma_medium':0}, inplace=True)
 
@@ -109,11 +111,11 @@ class Interval:
                         self.ema_signal = "HOLD"
 
                 # Calculate Bollinger Bands  
-                if self.settings.bbm_study:
+                if self.settings.BBM_STUDY:
                     df['BBL'] = 0.0
                     df['BBM'] = 0.0
                     df['BBU'] = 0.0
-                    df['BBU'], df['BBM'], df['BBL'] = talib.BBANDS(df['close'], timeperiod=self.settings.bbm_period, nbdevup=self.settings.bbm_std, nbdevdn=self.settings.bbm_std, )
+                    df['BBU'], df['BBM'], df['BBL'] = talib.BBANDS(df['close'], timeperiod=self.settings.BBM_PERIOD, nbdevup=self.settings.BBM_STD, nbdevdn=self.settings.BBM_STD, )
                     df.fillna({'BBL':0}, inplace=True)
                     df.fillna({'BBM':0}, inplace=True)
                     df.fillna({'BBU':0}, inplace=True)
@@ -132,11 +134,11 @@ class Interval:
                         self.bbm_signal = "HOLD"
 
                 # Calculate the MACD Line
-                if self.settings.macd_study:
+                if self.settings.MACD_STUDY:
                     df['MACD_Line'] = 0.0
                     df['MACD_Signal'] = 0.0
                     df['MACD_Histogram'] = 0.0
-                    df['MACD_Line'], df['MACD_Signal'], df['MACD_Histogram'] = talib.MACD(df['close'], fastperiod=self.settings.macd_short, slowperiod=self.settings.macd_long, signalperiod=self.settings.macd_period)
+                    df['MACD_Line'], df['MACD_Signal'], df['MACD_Histogram'] = talib.MACD(df['close'], fastperiod=self.settings.MACD_SHORT, slowperiod=self.settings.MACD_LONG, signalperiod=self.settings.MACD_PERIOD)
                     df.fillna({'MACD_Line':0}, inplace=True)
                     df.fillna({'MACD_Signal':0}, inplace=True)
                     df.fillna({'MACD_Histogram':0}, inplace=True)
@@ -155,8 +157,8 @@ class Interval:
                         self.macd_signal = "HOLD"
 
                 # Calculate the ADX
-                if self.settings.adx_study:
-                    df['ADX'] = talib.ADX(df['high'], df['low'], df['close'], timeperiod=self.settings.adx_period)
+                if self.settings.ADX_STUDY:
+                    df['ADX'] = talib.ADX(df['high'], df['low'], df['close'], timeperiod=self.settings.ADX_PERIOD)
                     df.fillna({'ADX':0}, inplace=True)
                     if df['ADX'].iloc[-1] > 25:
                         self.adx_signal = "STRONG"
@@ -168,19 +170,19 @@ class Interval:
                 df.replace([np.inf, -np.inf], 0, inplace=True)
                 
                 #open and close criteria
-                if  (not self.settings.ema_check_on_open or self.ema_signal == "BUY") and \
-                    (not self.settings.macd_check_on_open or self.macd_signal == "BUY") and \
-                    (not self.settings.bbm_check_on_open or self.bbm_signal == "BUY") and \
-                    (not self.settings.rsi_check_on_open or self.rsi_signal == "BUY") and \
-                    (not self.settings.adx_check_on_open or self.adx_signal == "STRONG") and \
-                    (not self.settings.candle_trend_check_on_open or self.candle_trend == "BULLISH"):
+                if  (not self.settings.EMA_CHECK_ON_OPEN or self.ema_signal == "BUY") and \
+                    (not self.settings.MACD_CHECK_ON_OPEN or self.macd_signal == "BUY") and \
+                    (not self.settings.BBM_CHECK_ON_OPEN or self.bbm_signal == "BUY") and \
+                    (not self.settings.RSI_CHECK_ON_OPEN or self.rsi_signal == "BUY") and \
+                    (not self.settings.ADX_CHECK_ON_OPEN or self.adx_signal == "STRONG") and \
+                    (not self.settings.CANDLE_TREND_CHECK_ON_OPEN or self.candle_trend == "BULLISH"):
                         self.current_signal = "BUY"
-                elif (not self.settings.ema_check_on_open or self.ema_signal == "SELL") and \
-                     (not self.settings.macd_check_on_open or self.macd_signal == "SELL") and \
-                     (not self.settings.bbm_check_on_open or self.bbm_signal == "SELL") and \
-                     (not self.settings.rsi_check_on_open or self.rsi_signal == "SELL") and \
-                     (not self.settings.adx_check_on_open or self.adx_signal == "STRONG") and \
-                     (not self.settings.candle_trend_check_on_open or self.candle_trend == "BEARISH"):
+                elif (not self.settings.EMA_CHECK_ON_OPEN or self.ema_signal == "SELL") and \
+                     (not self.settings.MACD_CHECK_ON_OPEN or self.macd_signal == "SELL") and \
+                     (not self.settings.BBM_CHECK_ON_OPEN or self.bbm_signal == "SELL") and \
+                     (not self.settings.RSI_CHECK_ON_OPEN or self.rsi_signal == "SELL") and \
+                     (not self.settings.ADX_CHECK_ON_OPEN or self.adx_signal == "STRONG") and \
+                     (not self.settings.CANDLE_TREND_CHECK_ON_OPEN or self.candle_trend == "BEARISH"):
                         self.current_signal = "SELL"
                 else:
                         self.current_signal = "HOLD"
@@ -196,11 +198,10 @@ class Interval:
     
 class Ticker:
     
-    def __init__(self, symbol, intervalIds, settings : Settings):
+    def __init__(self, symbol, intervalIds, settings):
         self.symbol=symbol
         self.settings=settings
         
-        self.settings.bars=self.settings.bars
         self._ts=0
         self._bid = 0.0
         self.bidcolor = ""
@@ -222,6 +223,11 @@ class Ticker:
 
         self.green="#A5DFDF"
         self.red="#FFB1C1"
+        
+    def update_settings(self, settings):
+        self.settings=settings
+        for intervalId in self.intervalIds:
+            self._intervals[intervalId].update_settings(settings)
 
     def get_bid(self):
         return self._bid
@@ -318,7 +324,7 @@ class Ticker:
             if len(ticks_interval)==0 or self._ts - ticks_interval[-1]['time'] >= intervalObj.delta:
                 ticks_interval.append(new_item)
                 current_bar = ticks_interval[-1]
-                if len(ticks_interval) > self.settings.bars:
+                if len(ticks_interval) > int(self.settings.BARS):
                     ticks_interval.pop(0)
                 #print(f'{self.symbol} {self._last}, {self._ts} {intervalId} {ticks_interval[-1]['time']} n' )
             else:
@@ -337,9 +343,8 @@ class Ticker:
 
               
 class Tickers:
-    def __init__(self, settings : Settings):
+    def __init__(self, settings):
         self.settings=settings
-        self.settings.bars = settings.bars
         
         self._tickerObjects={}
         
@@ -350,6 +355,11 @@ class Tickers:
         self.signaldf_filtered = pd.DataFrame()
         
         self.intervalIds=['1m','5m','15m','1h','1d']
+        
+    def update_settings(self, settings):
+        self.settings=settings
+        for symbol in self._tickerObjects:
+            self._tickerObjects[symbol].update_settings(settings)        
         
     def add(self, symbol):
         ticker = Ticker(symbol, self.intervalIds, self.settings)
@@ -463,7 +473,7 @@ class Tickers:
                     ticks = intervalObj.get_data()
                     if not ticks:
                         continue
-                    if len(ticks)>=self.settings.bars:
+                    if len(ticks)>=int(self.settings.BARS):
                         lastcandle = intervalObj.get_data()[-1]
                         if len(lastcandle) >= 20:
                             new_row = {

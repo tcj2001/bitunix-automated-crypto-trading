@@ -6,7 +6,6 @@ import asyncio
 import random
 import string
 from typing import Callable
-from config import Settings
 import threading
 from logger import Logger
 logger = Logger(__name__).get_logger()

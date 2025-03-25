@@ -1,97 +1,76 @@
 from pydantic import Field, SecretStr, validator
 from pydantic_settings import BaseSettings
+import os
 
 class Settings(BaseSettings):
-   
-    # API Configuration
-    api_key: SecretStr
-    secret_key: SecretStr
-    SECRET: SecretStr
-    password: SecretStr  
-    host: str = Field(default="127.0.0.1")
-
-    #start autotrading on start
-    autoTrade: bool = Field(default=False)
+    # Start autotrading on start
+    AUTOTRADE: bool = Field(default=False)
 
     # Trading Parameters
-    leverage: int = Field(default=20, ge=1, le=100)
-    threshold: float = Field(default=5.0, ge=0.0)
-    min_volume: int = Field(default=10000000, ge=0)
-    order_amount_percentage: float = Field(default=0.01, ge=0.0, le=1.0)
-    max_auto_trades: int = Field(default=10, ge=0)
-    profit_amount: float = Field(default=0.25, ge=0.0)
-    loss_amount: float = Field(default=5.0, ge=0.0)
-    option_moving_average: str = Field(default="1h")
-    bars: int = Field(default=100, ge=1)
+    LEVERAGE: int = Field(default=20, ge=1, le=100)
+    THRESHOLD: float = Field(default=5.0, ge=0.0)
+    MIN_VOLUME: int = Field(default=10_000_000, ge=0)
+    ORDER_AMOUNT_PERCENTAGE: float = Field(default=0.01, ge=0.0, le=1.0)
+    MAX_AUTO_TRADES: int = Field(default=10, ge=0)
+    PROFIT_AMOUNT: float = Field(default=0.25, ge=0.0)
+    LOSS_AMOUNT: float = Field(default=5.0, ge=0.0)
+    OPTION_MOVING_AVERAGE: str = Field(default="1h")
+    BARS: int = Field(default=100, ge=1)
 
-    # Technical Indicators Parameters    
-    ma_fast: int = Field(default=12, ge=1)
-    ma_medium: int = Field(default=26, ge=1) 
-    ma_slow: int = Field(default=50, ge=1)
-    rsi_fast: int = Field(default=6, ge=1)
-    rsi_slow: int = Field(default=24, ge=1)
-    bbm_period: int = Field(default=20, ge=1)
-    bbm_std: int = Field(default=2, ge=1)
-    macd_period: int = Field(default=9, ge=1)
-    macd_short: int = Field(default=12, ge=1)
-    macd_long: int = Field(default=26, ge=1)
-    adx_period: int = Field(default=14, ge=1)
+    # Technical Indicators Parameters
+    MA_FAST: int = Field(default=12, ge=1)
+    MA_MEDIUM: int = Field(default=26, ge=1)
+    MA_SLOW: int = Field(default=50, ge=1)
+    RSI_FAST: int = Field(default=6, ge=1)
+    RSI_SLOW: int = Field(default=24, ge=1)
+    BBM_PERIOD: int = Field(default=20, ge=1)
+    BBM_STD: int = Field(default=2, ge=1)
+    MACD_PERIOD: int = Field(default=9, ge=1)
+    MACD_SHORT: int = Field(default=12, ge=1)
+    MACD_LONG: int = Field(default=26, ge=1)
+    ADX_PERIOD: int = Field(default=14, ge=1)
 
     # Technical Indicators
-    ema_study: bool = Field(default=True)
-    macd_study: bool = Field(default=True)
-    bbm_study: bool = Field(default=True)
-    rsi_study: bool = Field(default=True)
-    candle_trend_study: bool = Field(default=True)
-    adx_study: bool = Field(default=True)
+    EMA_STUDY: bool = Field(default=True)
+    MACD_STUDY: bool = Field(default=True)
+    BBM_STUDY: bool = Field(default=True)
+    RSI_STUDY: bool = Field(default=True)
+    CANDLE_TREND_STUDY: bool = Field(default=True)
+    ADX_STUDY: bool = Field(default=True)
 
-    ema_check_on_open: bool = Field(default=True)
-    ema_check_on_close: bool = Field(default=False)
-    macd_check_on_open: bool = Field(default=True)
-    macd_check_on_close: bool = Field(default=False)
-    rsi_check_on_open: bool = Field(default=True)
-    rsi_check_on_close: bool = Field(default=False)
-    bbm_check_on_open: bool = Field(default=True)
-    bbm_check_on_close: bool = Field(default=False)
-    candle_trend_check_on_open: bool = Field(default=True)
-    candle_trend_check_on_close: bool = Field(default=False)
-    adx_check_on_open: bool = Field(default=True)
-    adx_check_on_close: bool = Field(default=False)
+    EMA_CHECK_ON_OPEN: bool = Field(default=True)
+    EMA_CHECK_ON_CLOSE: bool = Field(default=False)
+    MACD_CHECK_ON_OPEN: bool = Field(default=True)
+    MACD_CHECK_ON_CLOSE: bool = Field(default=False)
+    RSI_CHECK_ON_OPEN: bool = Field(default=True)
+    RSI_CHECK_ON_CLOSE: bool = Field(default=False)
+    BBM_CHECK_ON_OPEN: bool = Field(default=True)
+    BBM_CHECK_ON_CLOSE: bool = Field(default=False)
+    CANDLE_TREND_CHECK_ON_OPEN: bool = Field(default=True)
+    CANDLE_TREND_CHECK_ON_CLOSE: bool = Field(default=False)
+    ADX_CHECK_ON_OPEN: bool = Field(default=True)
+    ADX_CHECK_ON_CLOSE: bool = Field(default=False)
 
     # Time Intervals
-    screen_refresh_interval: int = Field(default=1, ge=1)
-    signal_check_interval: int = Field(default=15, ge=1)
-    portfolio_api_interval: int = Field(default=3, ge=1)
-    pending_positions_api_interval: int = Field(default=3, ge=1)
-    pending_orders_api_interval: int = Field(default=3, ge=1)
-    trade_history_api_interval: int = Field(default=3, ge=1)
-    position_history_api_interval: int = Field(default=3, ge=1)
-    ticker_data_api_interval: int = Field(default=30, ge=1)
-    public_websocket_restart_interval: int = Field(default=10800, ge=1)
-        
-    # use websocket or use api
-    use_public_websocket: bool = Field(default=False)  #if there is lagging issue then use api
-    # logger
-    verbose_logging: bool = Field(default=False)
-    #benchmark
-    benchmark: bool = Field(default=False)
+    SCREEN_REFRESH_INTERVAL: int = Field(default=1, ge=1)
+    SIGNAL_CHECK_INTERVAL: int = Field(default=15, ge=1)
+    PORTFOLIO_API_INTERVAL: int = Field(default=3, ge=1)
+    PENDING_POSITIONS_API_INTERVAL: int = Field(default=3, ge=1)
+    PENDING_ORDERS_API_INTERVAL: int = Field(default=3, ge=1)
+    TRADE_HISTORY_API_INTERVAL: int = Field(default=3, ge=1)
+    POSITION_HISTORY_API_INTERVAL: int = Field(default=3, ge=1)
+    TICKER_DATA_API_INTERVAL: int = Field(default=30, ge=1)
+    PUBLIC_WEBSOCKET_RESTART_INTERVAL: int = Field(default=10_800, ge=1)
 
-    # Validation for secrets
-    @validator('api_key', 'secret_key', 'SECRET', 'password')
-    def validate_secrets(cls, v):
-        if isinstance(v, SecretStr):
-            if v.get_secret_value().startswith('your_') or v == 'default':
-                raise ValueError('Please set proper values for secrets')
-            if len(v) < 16:  # Minimum length requirement
-                raise ValueError('Secret too short - minimum 16 characters')
-        return v
+    # Use websocket or API
+    USE_PUBLIC_WEBSOCKET: bool = Field(default=False)  # If there is lagging issue then use API
 
-    def reload_env(self):
-        """Reload the .env file and update the settings."""
-        updated_instance = self.__class__()  # Create a new instance with updated values
-        self.__dict__.update(updated_instance.__dict__)  # Update current instance with new values
+    # Logger
+    VERBOSE_LOGGING: bool = Field(default=False)
+
+    # Benchmark
+    BENCHMARK: bool = Field(default=False)
 
     class Config:
-        env_file = ".env"
-        env_file_encoding = 'utf-8'
-        case_sensitive = True
+        # Specify the file name for loading environment variables
+        env_file = "config.txt"

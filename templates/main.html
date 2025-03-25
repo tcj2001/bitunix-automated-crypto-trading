@@ -119,6 +119,7 @@
                 if (event.data === "pong") {
                     return;
                 }               
+
                 const messageElement = JSON.parse(event.data);
                 document.getElementById("portfolio").innerHTML = messageElement.dataframes.portfolio;
                 document.getElementById("positions").innerHTML = messageElement.dataframes.positions;
@@ -128,12 +129,6 @@
                 document.getElementById("positionHistory").innerHTML = messageElement.dataframes.positionHistory;
                 document.getElementById('message').innerHTML = messageElement.status_messages;
 
-                document.getElementById('optionMovingAverage').value = messageElement.optionMovingAverage;
-                document.getElementById('maxAutoTrades').value = messageElement.maxAutoTrades;
-                document.getElementById('autoTrade').checked = messageElement.autoTrade; 
-                const payload = {element_ids:['autoTrade', 'optionMovingAverage', 'maxAutoTrades']};
-                fetchStates(payload);
-
                 document.getElementById('totalProfit').innerText = messageElement.profit;
                 document.getElementById("autoTradeCycleTime").innerText = messageElement.atctime;
                 document.getElementById("tickerDataCycleTime").innerText = messageElement.tdctime;
@@ -141,17 +136,23 @@
                 displayNotifications(messages)
             
                 const currentTime = new Date();
-                const atctime1 = Math.abs(currentTime - messageElement.atctime) / (1000 * 60);
-                if (atctime1 > 5) {
-                    document.getElementById("autoTradeCycleTime").style.color = "red";
+                if (messageElement.atctime) {
+                    const atctime = new Date(messageElement.atctime);
+                    const atctime1 = Math.abs(currentTime - atctime) / (1000 * 60);
+                    if (atctime1 > 5) {
+                        document.getElementById("autoTradeCycleTime").style.color = "red";
                     } else {
-                    document.getElementById("autoTradeCycleTime").style.color = "black";
+                        document.getElementById("autoTradeCycleTime").style.color = "black";
+                    }
                 }
-                const tdctime1 = Math.abs(currentTime - messageElement.tdctime) / (1000 * 60);
-                if (tdctime1 > 5) {
-                    document.getElementById("tickerDataCycleTime").style.color = "red";
+                if (messageElement.tdctime) {
+                    const tdctime = new Date(messageElement.tdctime);                    
+                    const tdctime1 = Math.abs(currentTime - tdctime) / (1000 * 60);
+                    if (tdctime1 > 5) {
+                        document.getElementById("tickerDataCycleTime").style.color = "red";
                     } else {
-                    document.getElementById("tickerDataCycleTime").style.color = "black";
+                        document.getElementById("tickerDataCycleTime").style.color = "black";
+                    }
                 }
             };
             
@@ -213,16 +214,16 @@
                     modalOverlay.classList.add('modal-open');
             
                     // Fetch environment variables
-                    const envResponse = await fetch('/get-env');
-                    if (!envResponse.ok) throw new Error("Failed to fetch environment variables");
-                    const envVars = await envResponse.json();
+                    const configResponse = await fetch('/get-config');
+                    if (!configResponse.ok) throw new Error("Failed to fetch config variables");
+                    const configVars = await configResponse.json();
             
                     // Populate the table
-                    const tbody = document.querySelector('#env-table tbody');
+                    const tbody = document.querySelector('#config-table tbody');
                     if (!tbody) throw new Error("<tbody> element not found");
-                    tbody.innerHTML = Object.entries(envVars)
+                    tbody.innerHTML = Object.entries(configVars)
                         .map(([key, value]) =>
-                            `<tr class="env-item" data-key="${key}" data-value="${value}">
+                            `<tr class="config-item" data-key="${key}" data-value="${value}">
                                 <td>${key}</td>
                                 <td>${value}</td>
                             </tr>`
@@ -230,7 +231,7 @@
                         .join('');
             
                     // Add click event listener to each environment variable
-                    document.querySelectorAll('.env-item').forEach((item) => {
+                    document.querySelectorAll('.config-item').forEach((item) => {
                         item.addEventListener('click', () => {
                             const key = item.getAttribute('data-key');
                             const value = item.getAttribute('data-value');
@@ -247,16 +248,21 @@
                     });
             
                     // Handle save form submission
-                    const saveForm = document.getElementById('save-env-form');
+                    const saveForm = document.getElementById('save-config-form');
                     saveForm.addEventListener('submit', async (e) => {
                         e.preventDefault();
                         const formData = new FormData(saveForm);
-                        const saveResponse = await fetch('/save-env', {
+                        const saveResponse = await fetch('/save-config', {
                             method: 'POST',
                             body: formData,
                         });
                         const saveResult = await saveResponse.json();
                         alert(saveResult.message);
+
+                        //update variable on the screen
+                        const payload = {element_ids:['autoTrade', 'optionMovingAverage', 'maxAutoTrades']};
+                        fetchStates(payload);
+        
                         handleConfigButton(); // Reload modal content after saving changes
                     });
                 } catch (error) {
