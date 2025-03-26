@@ -94,7 +94,8 @@
         </div>
         <footer>
             <div class="dropdown">
-                <div id="message" class="message" onclick="toggleDropdown()"></div>
+                <!-- <div id="message" class="message" onclick="toggleDropdown()"></div> -->
+                <div id="message" class="message"></div>
                 <div id="dropdown-content" class="dropdown-content">
                     <!-- Additional messages will be inserted here -->
                 </div>
@@ -191,10 +192,10 @@
             });
             
             
-            //modal container    
+            //modal 
             const modalContainer = document.getElementById('modal-container');
-            
-            //open modal html
+    
+            //open modal config html
             document.getElementById("config").addEventListener('click', () => {
                 handleConfigButton();
             });
@@ -265,6 +266,50 @@
         
                         handleConfigButton(); // Reload modal content after saving changes
                     });
+                } catch (error) {
+                    console.error('Error:', error);
+                }
+            }
+
+            //open modal log html
+            document.getElementById("message").addEventListener('click', () => {
+                handleMessageArea();
+            });
+            
+            // Open modal and fetch its content
+            async function handleMessageArea() {
+                try {
+                    // Fetch modal content
+                    const modalResponse = await fetch('/logs');
+                    if (!modalResponse.ok) throw new Error("Failed to fetch log.html");
+                    modalContainer.innerHTML = await modalResponse.text();
+            
+                    // Show the modal
+                    const modal = document.getElementById('modal');
+                    const modalOverlay = document.getElementById('modal-overlay');
+                    modal.classList.add('modal-open');
+                    modalOverlay.classList.add('modal-open');
+                    logContainer.innerText = '';  
+            
+                    // Open WebSocket connection
+                    const websocket_l = new WebSocket(`ws://${host}:8000/wslogs`);
+
+                    websocket_l.onmessage = (event) => {
+                        logContainer.innerText += event.data + '\n';  // Append new log
+                        logContainer.scrollTop = logContainer.scrollHeight;  // Auto-scroll
+                    };
+
+                    websocket_l.onclose = () => {
+                        console.log("log WebSocket connection closed.");
+                    };
+
+                    // Close modal logic
+                    const closeModalButton = document.getElementById('close-modal');
+                    closeModalButton.addEventListener('click', () => {
+                        modal.classList.remove('modal-open');
+                        modalOverlay.classList.remove('modal-open');
+                    });
+            
                 } catch (error) {
                     console.error('Error:', error);
                 }

@@ -16,7 +16,7 @@ from logger import Logger
 logger = Logger(__name__).get_logger()
 
 from fastapi import FastAPI, Request, Form, WebSocket, WebSocketDisconnect, Depends
-from fastapi.responses import HTMLResponse , JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse , JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 
 from fastapi.security import OAuth2PasswordRequestForm
@@ -32,6 +32,7 @@ from pydantic import ValidationError
 
 ENV_FILE = ".env"
 CONFIG_FILE = "config.txt"
+LOG_FILE = "app.log"
 
 #load environment variables
 load_dotenv(ENV_FILE)
@@ -143,11 +144,6 @@ async def get_states(payload: dict):
     states = {element_id: app.state.element_states.get(element_id, "No state found") for element_id in element_ids}
     return {"states": states}
 
-@app.post("/autotrade")
-async def handle_autotrade():
-    await asyncio.create_task(set_server_states())
-    return {"status":settings.AUTOTRADE}
-
 async def set_server_states():
     settings.AUTOTRADE = True if app.state.element_states['autoTrade']=='true' else False
 
@@ -168,6 +164,12 @@ async def set_server_states():
 
 def some_callable_object():
     logger.info("called")
+
+@app.post("/autotrade")
+async def handle_autotrade():
+    await asyncio.create_task(set_server_states())
+    return {"status":settings.AUTOTRADE}
+
 
 @login_manager.user_loader(some_callable=some_callable_object)
 def load_user(username, some_callable=some_callable_object):
@@ -279,7 +281,7 @@ async def wschart(websocket):
                 await asyncio.create_task(send_pong(websocket,queue))
                 
                 if ticker in bitunix.bitunixSignal.tickerObjects.symbols():
-                    bars=settings.bars
+                    bars=settings.BARS
                     chart1m=list(bitunix.bitunixSignal.tickerObjects.get(ticker).get_interval_ticks('1m').get_data()[-bars:])
                     chart5m=list(bitunix.bitunixSignal.tickerObjects.get(ticker).get_interval_ticks('5m').get_data()[-bars:])
                     chart15m=list(bitunix.bitunixSignal.tickerObjects.get(ticker).get_interval_ticks('15m').get_data()[-bars:])
@@ -441,7 +443,6 @@ async def save_env_variable(key: str = Form(...), value: str = Form(...)):
     except ValidationError as e:
         return {"error": "Validation failed", "details": e.errors()}
 
-
 def read_config(file_path):
     """Read the config file into a dictionary."""
     config = {}
@@ -459,6 +460,34 @@ def write_config(file_path, config):
         for key, value in config.items():
             file.write(f"{key}={value}\n")
 
+@app.get("/logs", response_class=HTMLResponse)
+async def config_page(request: Request):
+    return templates.TemplateResponse("logs.html", {"request": request})
+
+@app.websocket("/wslogs")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()  # Accept the WebSocket connection
+    await stream_log_file(websocket)
+
+async def stream_log_file(websocket: WebSocket):
+    try:
+        with open(LOG_FILE, "r") as log_file:
+            # Read all lines into memory
+            lines = log_file.readlines()
+            # Determine starting point: offset_from_end
+            start_index = max(len(lines) - 100, 0)
+            for line in lines[start_index:]:  # Yield existing lines from offset
+                await websocket.send_text(line) 
+            # Stream new lines added to the file
+            log_file.seek(0, 2)  # Go to the end of the file
+            while True:
+                line = log_file.readline()
+                if not line:
+                    await asyncio.sleep(0.1)  # Wait briefly if no new line is added
+                    continue
+                await websocket.send_text(line) 
+    except WebSocketDisconnect:
+        print("log Client disconnected. Stopping the log stream.")
 
 def log_settings():
     #load env variable from .env
