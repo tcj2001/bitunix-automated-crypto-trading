@@ -19,6 +19,7 @@ A real-time cryptocurrency trading platform built with FastAPI and WebSocket tec
     - position history
     - clicking on the ticker symbol will open the chart page
     - maintians a list of notification which can be access by clicking on the notification
+    - Config button allows to edit the confix.txt file directly from the app
   - Candlestick charts for all timeframes (1m, 5m, 15m, 1h, 1d) on a single page with all indicators
     - Chart is activated when you click on the ticker symbol
 - Technical analysis including:
@@ -38,80 +39,79 @@ A real-time cryptocurrency trading platform built with FastAPI and WebSocket tec
 
 
 ## Configuration
+.env file
+- `API_KEY`: Bitunix API key
+- `SECRET_KEY`: Bitunix secret key
+- `SECRET`: JWT secret for authentication, some string like "7c4c22ef6ad145f922c72f5a18047b6bf6eff983381c975c"
+- `PASSWORD`: Password for the web interface
+- `HOST`: Host IP address (e.g., 0.0.0.0 for server, 127.0.0.1 for local)
 
-The platform can be configured through the `config.py` file or environment variables. Key configuration parameters include:
-
-- API Keys
-  - `api_key`: Bitunix API key
-  - `secret_key`: Bitunix secret key
-  - `SECRET`: JWT secret for authentication, some string like "7c4c22ef6ad145f922c72f5a18047b6bf6eff983381c975c"
-  - `password`: Password for the web interface
-
+The platform can be configured through the `config.py` file or `config.txt`. Key configuration parameters include:
 - Trading Parameters:
-  - `leverage`: Trading leverage (1-100)
-  - `threshold`: Ticker selection based close near high or low of the day
-  - `min_volume`: Ticker selection based on Minimum trading volume
-  - `order_amount_percentage`: Order size as percentage of portfolio
-  - `max_auto_trades`: Maximum number of automated trades
-  - `profit_amount`: Target profit amount
-  - `loss_amount`: Maximum loss amount
-  - `option_moving_average`: Moving average period (1h, 1d, 15m, 5m, 1m)
-  - `AutoTrade checkbox`: set the trading parameters and initate the auto trade process
-  - `bars`: Number of bars to use for study and charting
-
-- `Technical Indicators Parameters`:
-    - `ma_fast`: Fast moving average period
-    - `ma_medium`: Medium moving average period
-    - `ma_slow`: Slow moving average period
-    - `rsi_fast`: Fast RSI period
-    - `rsi_slow`: Slow RSI period
-    - `bbm_period`: Bollinger Band middle period
-    - `bbm_std`: Bollinger Band standard deviation
-    - `macd_period`: MACD period
-    - `macd_short`: MACD short period
-    - `macd_long`: MACD long period
-    - `adx_period`: ADX period
-  
+  - `AUTOTRADE` : True or False
+  - `LEVERAGE`: Trading leverage (1-100)
+  - `THRESHOLD`: Ticker selection based close near high or low of the day
+  - `MIN_VOLUME`: Ticker selection based on Minimum trading volume
+  - `ORDER_AMOUNT_PERCENTAGE`: Order size as percentage of portfolio
+  - `MAX_AUTO_TRADES`: Maximum number of automated trades
+  - `PROFIT_AMOUNT`: Target profit amount
+  - `LOSS_AMOUNT`: Maximum loss amount
+  - `OPTION_MOVING_AVERAGE`: Moving average period (1h, 1d, 15m, 5m, 1m)
+  - `BARS`: Number of bars to use for study and charting
+    
+  - `Technical Indicators Parameters`:
+    - `MA_FAST`: Fast moving average period
+    - `MA_MEDIUM`: Medium moving average period
+    - `MA_SLOW`: Slow moving average period
+    - `RSI_FAST`: Fast RSI period
+    - `RSI_SLOW`: Slow RSI period
+    - `BBM_PERIOD`: Bollinger Band middle period
+    - `BBM_STD`: Bollinger Band standard deviation
+    - `MACD_PERIOD`: MACD period
+    - `MACD_SHORT`: MACD short period
+    - `MACD_LONG`: MACD long period
+    - `ADX_PERIOD`: ADX period
+    
   - `Study Parameters`:
-    - `ema_study`: Enable EMA study
-    - `macd_study`: Enable MACD study
-    - `bbm_study`: Enable Bollinger Band study
-    - `rsi_study`: Enable RSI study
-    - `candle_trend_study`: Enable candle trend study
-    - `adx_study`: Enable ADX study
+    - `EMA_STUDY`: Enable EMA study
+    - `MACD_STUDY`: Enable MACD study
+    - `BBM_STUDY`: Enable Bollinger Band study
+    - `RSI_STUDY`: Enable RSI study
+    - `CANDLE_TREND_STUDY`: Enable candle trend study
+    - `ADX_STUDY`: Enable ADX study
   
   - `Check on Opening a Position`:
-    - `ema_check_on_open`: Check EMA on open
-    - `macd_check_on_open`: Check MACD on open
-    - `bbm_check_on_open`: Check Bollinger Band on open
-    - `rsi_check_on_open`: Check RSI on open
-    - `candle_trend_check_on_open`: Check candle trend on open
-    - `adx_check_on_open`: Check ADX on open
+    - `EMA_CHECK_ON_OPEN`: Check EMA on open
+    - `MACD_CHECK_ON_OPEN`: Check MACD on open
+    - `BBM_CHECK_ON_OPEN`: Check Bollinger Band on open
+    - `RSI_CHECK_ON_OPEN`: Check RSI on open
+    - `CANDLE_TREND_CHECK_ON_OPEN`: Check candle trend on open
+    - `ADX_CHECK_ON_OPEN`: Check ADX on open
   
   - `Check on Close a Position`:
-    - `ema_check_on_close`: Check EMA on close
-    - `macd_check_on_close`: Check MACD on close
-    - `bbm_check_on_close`: Check Bollinger Band on close
-    - `rsi_check_on_close`: Check RSI on close
-    - `candle_trend_check_on_close`: Check candle trend on close
-    - `adx_check_on_close`: Check ADX on close
-  
+    - `EMA_CHECK_ON_CLOSE`: Check EMA on close
+    - `MACD_CHECK_ON_CLOSE`: Check MACD on close
+    - `BBM_CHECK_ON_CLOSE`: Check Bollinger Band on close
+    - `RSI_CHECK_ON_CLOSE`: Check RSI on close
+    - `CANDLE_TREND_CHECK_ON_CLOSE`: Check candle trend on close
+    - `ADX_CHECK_ON_CLOSE`: Check ADX on close
+    
   - `intervals`:
-    - `screen_refresh_interval`: Screen refresh interval
-    - `signal_check_interval`: Signal check interval
-    - `portfolio_api_interval`: Portfolio API interval
-    - `pending_positions_api_interval`: Pending positions API interval
-    - `pending_orders_api_interval`: Pending orders API interval
-    - `trade_history_api_interval`: Trade history API interval
-    - `position_history_api_interval`: Position history API interval
-    - `ticker_data_api_interval`: Ticker data API interval
-    - `public_websocket_restart_interval`: Public WebSocket restart interval
-
+    - `SCREEN_REFRESH_INTERVAL`: Screen refresh interval
+    - `SIGNAL_CHECK_INTERVAL`: Signal check interval
+    - `PORTFOLIO_API_INTERVAL`: Portfolio API interval
+    - `PENDING_POSITIONS_API_INTERVAL`: Pending positions API interval
+    - `PENDING_ORDERS_API_INTERVAL`: Pending orders API interval
+    - `TRADE_HISTORY_API_INTERVAL`: Trade history API interval
+    - `POSITION_HISTORY_API_INTERVAL`: Position history API interval
+    - `TICKER_DATA_API_INTERVAL`: Ticker data API interval
+    - `PUBLIC_WEBSOCKET_RESTART_INTERVAL`: Public WebSocket restart interval
+    
   - Currently not using public websocket for depth and ticker data as the data is lagging or missing sometime
-    - `use_public_websocket`=False
+    - `USE_PUBLIC_WEBSOCKET`: True or False
 
 - Logging Parameters:
-  -   `verbose_logging`=False
+  -   `VERBOSE_LOGGING`: True or False
 
 ## User Interface
 
@@ -119,7 +119,7 @@ The platform can be configured through the `config.py` file or environment varia
    - Open your browser and navigate to `http://localhost:8000` or `http://your_server_ip:8000`
    - Log in with your credentials (currenly user is admin and password is your_password in env file)
    - display charts for all timeframes (1m, 5m, 15m, 1h, 1d) on a single page with all indicators
-   - edit the .env file directly from the app
+   - edit the config file directly from the app
   
 - Monitor your positions and trades:
    - Real-time portfolio value
@@ -187,18 +187,23 @@ The platform can be configured through the `config.py` file or environment varia
 ## Installation
 
 - This uses TA-LIb
-  - sudo apt-get update
-  - sudo apt-get install build-essential libssl-dev libffi-dev python3.9-dev
   - For windows install using precompiled wheel using
     - pip install https://github.com/cgohlke/talib-build/releases/download/v0.6.3/ta_lib-0.6.3-cp313-cp313-win_amd64.whl
-  - For linux download
+  - For linux download (ubuntu 22.04)
+    - sudo apt-get update
+    - sudo apt-get install build-essential libssl-dev libffi-dev
     - wget https://github.com/ta-lib/ta-lib/releases/download/v0.6.4/ta-lib_0.6.4_amd64.deb
     - sudo dpkg -i ta-lib_0.6.4_amd64.deb
     
-- Change the Ver1.0 to the latest version in the script
+- Window install should easy (not my choice)
+  - wget https://github.com/tcj2001/bitunix-automated-crypto-trading/archive/refs/tags/Ver1.0.zip
+  - and install the package using the requirements.txt file
+
+- Linux install (ubuntu 22.04)
+  - Change the Ver1.0 to the latest version in the script
+  - sudo su -
   - bash -c "\
-    apt-get install -y python3.9 python3.9-distutils python3-pip wget unzip dos2unix && \
-    ln -sf /usr/bin/python3.9 /usr/bin/python3 && \
+    apt-get install -y python3-pip wget unzip dos2unix && \
     python3 -m pip install --upgrade pip && \
     mkdir bitunix && cd bitunix && \
     wget https://github.com/tcj2001/bitunix-automated-crypto-trading/archive/refs/tags/Ver1.0.tar.gz -O bitunix.tar.gz && \
