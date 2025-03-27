@@ -3,7 +3,12 @@
     <head>
         <meta charset="UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1.0">         
         <title>DataFrame Display</title> 
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>        
         <link rel="stylesheet" href="static/styles.css">
+        <link rel="stylesheet" href="static/modal.css">
+        <link rel="stylesheet" href="static/chart.css">
         <style>
             .mainbody { 
                 flex: 1; 
@@ -57,9 +62,7 @@
                 </div>
              </div>    
 
-             <div>
-                <div id="modal-container"></div>
-             </div>
+             <div id="modal-container-wrapper"></div>
 
              <span>Positions</span>
              <div class="row">
@@ -102,8 +105,15 @@
             </div>
         </footer>
        
+        <script src="/static/modal.js"></script>
         <script src="/static/script.js"></script>
+        <script src="/static/chart.js"></script>
         <script>
+
+            ///////////////////////////////////////////////////////////////////////////////////////////
+            //display the main screen with portfoio, positions, order, signals, positionhistory
+            ///////////////////////////////////////////////////////////////////////////////////////////
+
             const host = window.location.hostname;
             const websocket_m = new WebSocket(`ws://${host}:8000/wsmain`);
             websocket_m.onopen = function() {
@@ -191,133 +201,22 @@
                 });
             });
             
-            
-            //modal 
-            const modalContainer = document.getElementById('modal-container');
-    
-            //open modal config html
-            document.getElementById("config").addEventListener('click', () => {
-                handleConfigButton();
-            });
-            
-            // Open modal and fetch its content
-            async function handleConfigButton() {
-                try {
-                    // Fetch modal content
-                    const modalResponse = await fetch('/config');
-                    if (!modalResponse.ok) throw new Error("Failed to fetch config.html");
-                    modalContainer.innerHTML = await modalResponse.text();
-            
-                    // Show the modal
-                    const modal = document.getElementById('modal');
-                    const modalOverlay = document.getElementById('modal-overlay');
-                    modal.classList.add('modal-open');
-                    modalOverlay.classList.add('modal-open');
-            
-                    // Fetch environment variables
-                    const configResponse = await fetch('/get-config');
-                    if (!configResponse.ok) throw new Error("Failed to fetch config variables");
-                    const configVars = await configResponse.json();
-            
-                    // Populate the table
-                    const tbody = document.querySelector('#config-table tbody');
-                    if (!tbody) throw new Error("<tbody> element not found");
-                    tbody.innerHTML = Object.entries(configVars)
-                        .map(([key, value]) =>
-                            `<tr class="config-item" data-key="${key}" data-value="${value}">
-                                <td>${key}</td>
-                                <td>${value}</td>
-                            </tr>`
-                        )
-                        .join('');
-            
-                    // Add click event listener to each environment variable
-                    document.querySelectorAll('.config-item').forEach((item) => {
-                        item.addEventListener('click', () => {
-                            const key = item.getAttribute('data-key');
-                            const value = item.getAttribute('data-value');
-                            document.getElementById('key').value = key;
-                            document.getElementById('value').value = value;
-                        });
-                    });
-            
-                    // Close modal logic
-                    const closeModalButton = document.getElementById('close-modal');
-                    closeModalButton.addEventListener('click', () => {
-                        modal.classList.remove('modal-open');
-                        modalOverlay.classList.remove('modal-open');
-                    });
-            
-                    // Handle save form submission
-                    const saveForm = document.getElementById('save-config-form');
-                    saveForm.addEventListener('submit', async (e) => {
-                        e.preventDefault();
-                        const formData = new FormData(saveForm);
-                        const saveResponse = await fetch('/save-config', {
-                            method: 'POST',
-                            body: formData,
-                        });
-                        const saveResult = await saveResponse.json();
-                        alert(saveResult.message);
 
-                        //update variable on the screen
-                        const payload = {element_ids:['autoTrade', 'optionMovingAverage', 'maxAutoTrades']};
-                        fetchStates(payload);
-        
-                        handleConfigButton(); // Reload modal content after saving changes
-                    });
-                } catch (error) {
-                    console.error('Error:', error);
-                }
-            }
-
-            //open modal log html
-            document.getElementById("message").addEventListener('click', () => {
-                handleMessageArea();
-            });
-            
-            // Open modal and fetch its content
-            async function handleMessageArea() {
-                try {
-                    // Fetch modal content
-                    const modalResponse = await fetch('/logs');
-                    if (!modalResponse.ok) throw new Error("Failed to fetch log.html");
-                    modalContainer.innerHTML = await modalResponse.text();
-            
-                    // Show the modal
-                    const modal = document.getElementById('modal');
-                    const modalOverlay = document.getElementById('modal-overlay');
-                    modal.classList.add('modal-open');
-                    modalOverlay.classList.add('modal-open');
-                    logContainer.innerText = '';  
-            
-                    // Open WebSocket connection
-                    const websocket_l = new WebSocket(`ws://${host}:8000/wslogs`);
-
-                    websocket_l.onmessage = (event) => {
-                        logContainer.innerText += event.data + '\n';  // Append new log
-                        logContainer.scrollTop = logContainer.scrollHeight;  // Auto-scroll
-                    };
-
-                    websocket_l.onclose = () => {
-                        console.log("log WebSocket connection closed.");
-                    };
-
-                    // Close modal logic
-                    const closeModalButton = document.getElementById('close-modal');
-                    closeModalButton.addEventListener('click', () => {
-                        modal.classList.remove('modal-open');
-                        modalOverlay.classList.remove('modal-open');
-                    });
-            
-                } catch (error) {
-                    console.error('Error:', error);
-                }
+            async function handleChartsButton(symbol) {
+                const response = await fetch('/handle_charts_click', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `symbol=${encodeURIComponent(symbol)}`
+                });
+                const result = await response.json();
+                openURL(result.message);
             }
 
             async function handleBitunixButton(symbol) {
                 const response = await fetch('/handle_bitunix_click', {
-                    method: 'GET',
+                    method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
                     },
@@ -419,14 +318,215 @@
             }
             
             
-            document.addEventListener('DOMContentLoaded', (event) => { 
-                attachTableClickHandler('positions', 0, '/get_charts');
-                attachTableClickHandler('orders', 0, '/get_charts');
-                attachTableClickHandler('signals', 0, '/get_charts');
-                attachTableClickHandler('study', 0, '/get_charts');
-                attachTableClickHandler('positionHistory', 0, '/get_charts');
+            ///////////////////////////////////////////////////////////////////////////////////////////
+            //display config modal window
+            ///////////////////////////////////////////////////////////////////////////////////////////
+            //open modal config html
+            document.getElementById("config").addEventListener('click', () => {
+                handleConfigButton();
             });
             
+            // Open modal and fetch its content
+            async function handleConfigButton() {
+                try{
+                    // Fetch modal content
+                    const modalContainerWrapper = document.getElementById('modal-container-wrapper');                    const modalResponse = await fetch('/config');
+                    const modalConfigResponse = await fetch('/config');
+                    if (!modalConfigResponse.ok) throw new Error("Failed to fetch config.html");
+                    modalContainerWrapper.innerHTML = await modalConfigResponse.text();
+
+                    // Fetch environment variables
+                    const configResponse = await fetch('/get-config');
+                    if (!configResponse.ok) throw new Error("Failed to fetch config variables");
+                    const configVars = await configResponse.json();                
+                
+                    // initialize modal
+                    configModal = initializeModal('modal-container', 'modal-overlay', 'modal', {
+                        top: '5%',
+                        left: '10%',
+                        width: '90%',
+                        height: '75%',
+                        allowMove: false,
+                        allowResize: false,
+                        onClose: () => {}
+                    });
+
+                    //open config modal
+                    configModal.open()
+
+                    // Populate the table
+                    const tbody = document.querySelector('#config-table tbody');
+                    if (!tbody) throw new Error("<tbody> element not found");
+                    tbody.innerHTML = Object.entries(configVars)
+                        .map(([key, value]) =>
+                            `<tr class="config-item" data-key="${key}" data-value="${value}">
+                                <td>${key}</td>
+                                <td>${value}</td>
+                            </tr>`
+                        )
+                        .join('');
+            
+                    // Add click event listener to each environment variable
+                    document.querySelectorAll('.config-item').forEach((item) => {
+                        item.addEventListener('click', () => {
+                            const key = item.getAttribute('data-key');
+                            const value = item.getAttribute('data-value');
+                            document.getElementById('key').value = key;
+                            document.getElementById('value').value = value;
+                        });
+                    });
+            
+                    // Handle save form submission
+                    const saveForm = document.getElementById('save-config-form');
+                    saveForm.addEventListener('submit', async (e) => {
+                        e.preventDefault();
+                        const formData = new FormData(saveForm);
+                        const saveResponse = await fetch('/save-config', {
+                            method: 'POST',
+                            body: formData,
+                        });
+                        const saveResult = await saveResponse.json();
+                        alert(saveResult.message);
+
+                        //update variable on the screen
+                        const payload = {element_ids:['autoTrade', 'optionMovingAverage', 'maxAutoTrades']};
+                        fetchStates(payload);
+
+                        handleConfigButton(); // Reload modal content after saving changes
+                    });                    
+
+                } catch (error) {
+                    console.error('Error:', error);
+                }
+            }
+
+            ///////////////////////////////////////////////////////////////////////////////////////////
+            //display logs modal window
+            ///////////////////////////////////////////////////////////////////////////////////////////
+            document.getElementById("message").addEventListener('click', () => {
+                handleMessageArea();
+            });
+            
+            // Open modal and fetch its content
+            async function handleMessageArea() {
+                try {
+                    // Fetch modal content
+                    const modalContainerWrapper = document.getElementById('modal-container-wrapper');                    const modalResponse = await fetch('/config');
+                    const modalLogsResponse = await fetch('/logs');
+                    if (!modalLogsResponse.ok) throw new Error("Failed to fetch log.html");
+                    modalContainerWrapper.innerHTML = await modalLogsResponse.text();
+            
+                    // initialize modal
+                    configModal = initializeModal('modal-container', 'modal-overlay', 'modal', {
+                        top: '5%',
+                        left: '10%',
+                        width: '90%',
+                        height: '75%',
+                        allowMove: false,
+                        allowResize: false,
+                        onClose: () => {
+                            websocket_l.close();
+                        }
+                    });
+
+                    //open config modal
+                    configModal.open()
+
+                    const logContainer = document.getElementById('log-container');
+                    logContainer.innerText = '';  
+                    
+                    // Open WebSocket connection
+                    const websocket_l = new WebSocket(`ws://${host}:8000/wslogs`);
+
+                    websocket_l.onopen = () => {
+                        console.log("log WebSocket connection opened.");
+                    };
+
+                    websocket_l.onmessage = (event) => {
+                        logContainer.innerText += event.data + '\n';  // Append new log
+                        logContainer.scrollTop = logContainer.scrollHeight;  // Auto-scroll
+                    };
+
+                    websocket_l.onclose = () => {
+                        console.log("log WebSocket connection closed.");
+                    };
+
+
+                } catch (error) {
+                    console.error('Error:', error);
+                }
+            }
+
+            ///////////////////////////////////////////////////////////////////////////////////////////
+            //display chart modal window
+            ///////////////////////////////////////////////////////////////////////////////////////////
+
+            document.addEventListener('DOMContentLoaded', (event) => { 
+                attachTableClickHandlerFunction('positions', 0, handleChart);
+                attachTableClickHandlerFunction('orders', 0, handleChart);
+                attachTableClickHandlerFunction('signals', 0, handleChart);
+                attachTableClickHandlerFunction('study', 0, handleChart);
+                attachTableClickHandlerFunction('positionHistory', 0, handleChart);
+            });
+
+            // Open modal and fetch its content
+            async function handleChart(symbol){
+                try {
+                    // Fetch modal content
+                    const modalContainerWrapper = document.getElementById('modal-container-wrapper');                    const modalResponse = await fetch('/config');
+                    const modalChartResponse = await fetch(`/chart?symbol=${encodeURIComponent(symbol)}`);
+                    if (!modalChartResponse.ok) throw new Error("Failed to fetch chart.html");
+                    modalContainerWrapper.innerHTML = await modalChartResponse.text();
+            
+                    // initialize modal
+                    configModal = initializeModal('modal-container', 'modal-overlay', 'modal', {
+                        top: '5%',
+                        left: '10%',
+                        width: '90%',
+                        height: '75%',
+                        allowMove: false,
+                        allowResize: false,
+                        onClose: () => {
+                            websocket_c2.close();
+                            delete charts['chart'];
+                        }
+                    });
+
+                    //open config modal
+                    configModal.open()
+                    
+                    // Open WebSocket connection
+                    const websocket_c2 = new WebSocket(`ws://${host}:8000/wschart?ticker=${symbol}`);
+
+                    websocket_c2.onopen = () => {
+                        console.log("chart WebSocket connection opened.");
+                    };
+
+                    websocket_c2.onmessage = (event) => {
+                        const messageElement = JSON.parse(event.data);
+                        document.getElementById('symbol').innerHTML = messageElement.symbol;                
+                        document.getElementById('close').innerHTML = messageElement.close;   
+
+                        const data = messageElement.chart;
+                        const buysell = messageElement.buysell;
+                        const period = messageElement.period;
+                        if (period === '1m' || period === '5m' || period === '15m') {
+                            createOrUpdateChart('chart', data, buysell, 'minute'); 
+                        } else if (period === '1h') {
+                            createOrUpdateChart('chart', data, buysell, 'hour'); 
+                        } else if (period === '1d') {
+                            createOrUpdateChart('chart', data, buysell, 'day'); 
+                        }
+                    };
+
+                    websocket_c2.onclose = () => {
+                        console.log("chart WebSocket connection closed.");
+                    };
+
+                } catch (error) {
+                    console.error('Error:', error);
+                }
+            }
         </script>               
     </body> 
 </html>

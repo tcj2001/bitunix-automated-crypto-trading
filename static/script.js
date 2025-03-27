@@ -75,6 +75,39 @@ function attachTableClickHandler(tableId, targetColumnIndex, endpoint) {
     });
 }
 
+// Attach click event to a table and handle cell clicks dynamically
+function attachTableClickHandlerFunction(tableId, targetColumnIndex, func) {
+    const table = document.getElementById(tableId);
+
+    if (!table) {
+        console.error(`Table with ID "${tableId}" not found.`);
+        return;
+    }
+
+    table.addEventListener('click', async (event) => {
+        const target = event.target;
+        const columnIndex = target.cellIndex;
+
+        // Check if clicked element is a TD and matches the target column index
+        if (target.tagName === 'TD' && columnIndex === targetColumnIndex) {
+            const row = target.parentNode;
+
+            const headerCell = target
+                .closest('table')
+                .querySelector(`thead tr th:nth-child(${columnIndex + 1})`);
+
+            const columnName = headerCell ? headerCell.innerText : `Column ${columnIndex + 1}`;
+            const symbol = row.cells[targetColumnIndex].innerText;
+
+            try {
+                func(symbol);
+            } catch (error) {
+                alert("An error occurred while processing your request.");
+            }
+        }
+    });
+}
+
 function openURL(url) { 
     window.location.href = url; 
 } 
@@ -129,3 +162,5 @@ async function fetchStates(payload) {
         }
     }
 }
+
+

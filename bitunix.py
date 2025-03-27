@@ -15,7 +15,7 @@ from NotificationManager import NotificationManager
 from logger import Logger
 logger = Logger(__name__).get_logger()
 
-from fastapi import FastAPI, Request, Form, WebSocket, WebSocketDisconnect, Depends
+from fastapi import FastAPI, Request, Form, WebSocket, WebSocketDisconnect, Depends, Query
 from fastapi.responses import HTMLResponse , JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 
@@ -111,11 +111,18 @@ async def login(data: OAuth2PasswordRequestForm = Depends()):
     logger.info(f"/auth/login: elapsed time {time.time()-start}")
     return response
 
-@app.get("/main", response_class=HTMLResponse)
-async def main_page(request: Request,  user=Depends(login_manager)):
-    return templates.TemplateResponse({"request": request, "user": user}, "main.html")
+def some_callable_object():
+    logger.info("called")
 
-  
+@login_manager.user_loader(some_callable=some_callable_object)
+def load_user(username, some_callable=some_callable_object):
+    user = bitunix.DB.get(username)
+    return user
+
+@app.get("/private")
+async def get_private_endpoint(user=Depends(login_manager)):
+    return "You are an authenticated user"
+
 @app.on_event("startup")  
 async def startup_event():
     await asyncio.create_task(get_server_states(app, settings))
@@ -162,25 +169,22 @@ async def set_server_states():
 
     settings.notifications.add_notification(" AutoTrade activated" if settings.AUTOTRADE else "AutoTrade de-activated")  
 
-def some_callable_object():
-    logger.info("called")
 
 @app.post("/autotrade")
 async def handle_autotrade():
     await asyncio.create_task(set_server_states())
     return {"status":settings.AUTOTRADE}
 
-
-@login_manager.user_loader(some_callable=some_callable_object)
-def load_user(username, some_callable=some_callable_object):
-    user = bitunix.DB.get(username)
-    return user
-
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
     return templates.TemplateResponse({"request": request}, "login.html")
 
-
+#when main page requested
+@app.get("/main", response_class=HTMLResponse)
+async def main_page(request: Request,  user=Depends(login_manager)):
+    return templates.TemplateResponse({"request": request, "user": user}, "main.html")
+ 
+#when main page opened
 @app.websocket("/wsmain")
 async def websocket_endpoint(websocket: WebSocket):
     await asyncio.create_task(wsmain(websocket))
@@ -254,8 +258,166 @@ async def wsmain(websocket):
             await queueTask
         except asyncio.CancelledError:
             pass
-       
-        
+
+async def send_pong(websocket, queue):
+    # Handle incoming ping messages
+    try:
+        message = await asyncio.wait_for(websocket.receive_text(), timeout=0.01)
+        if message == "ping":
+            await queue.put("pong")
+    except asyncio.TimeoutError:
+        pass
+
+async def send_data_queue(websocket, queue):
+    while True:
+        try:
+            data = await queue.get()
+            await websocket.send_text(data)
+        except Exception as e:
+            pass
+
+@app.get("/send-message/{msg}")
+async def send_message(msg: str):
+    await asyncio.create_task(bitunix.send_message_to_websocket(msg))
+    return {"message": f"Sent: {msg}"}        
+
+
+@app.post("/handle_bitunix_click") 
+async def handle_bitunix_click(symbol: str = Form(...)):
+    # Handle the row click event here 
+    message = f"https://www.bitunix.com/contract-trade/{symbol}" 
+    return {"message": message}                                                   
+
+@app.post("/handle_order_close_click") 
+async def handle_order_close_click(symbol: str = Form(...), orderId: str = Form(...)):
+    datajs = await bitunix.bitunixApi.CancelOrder(symbol, orderId)
+    bitunix.bitunixSignal.notifications.add_notification(f'closing pending order for {symbol} {datajs["msg"]}')
+
+@app.post("/handle_close_click") 
+async def handle_close_click(symbol: str = Form(...), positionId: str = Form(...), qty: str = Form(...), unrealizedPNL: str = Form(...), realizedPNL: str = Form(...)):
+    datajs = await bitunix.bitunixApi.FlashClose(positionId)
+    pnl=float(unrealizedPNL)+float(realizedPNL)
+    bitunix.bitunixSignal.notifications.add_notification(f'closing {qty} {symbol} with a profit/loss of {pnl} ({datajs["code"]} {datajs["msg"]}')
+
+@app.post("/handle_buy_click") 
+async def handle_buy_click(symbol: str = Form(...), close: str = Form(...)):
+    balance = bitunix.bitunixSignal.get_portfolio_tradable_balance()
+    qty= str(balance * float(settings.ORDER_AMOUNT_PERCENTAGE) / float(close) * int(settings.LEVERAGE))
+    datajs = await bitunix.bitunixApi.PlaceOrder(symbol,qty,close,'BUY')
+    bitunix.bitunixSignal.notifications.add_notification(f'Buying {qty} {symbol} @ {close} ({datajs["code"]} {datajs["msg"]})')
+
+@app.post("/handle_add_click") 
+async def handle_add_click(symbol: str = Form(...), close: str = Form(...)):
+    row = bitunix.bitunixSignal.positiondf.loc[bitunix.bitunixSignal.positiondf['symbol'] == symbol]
+    if not row.empty:
+        balance = float(bitunix.bitunixSignal.portfoliodf["available"])+float(bitunix.bitunixSignal.portfoliodf["crossUnrealizedPNL"])
+        qty= str(balance * float(settings.ORDER_AMOUNT_PERCENTAGE) / float(close) * int(settings.LEVERAGE))
+        datajs = await bitunix.bitunixApi.PlaceOrder(symbol,qty,close,row['side'].values[0])
+        bitunix.bitunixSignal.notifications.add_notification(f'adding {row["side"].values[0]} {qty} {symbol} @ {close} ({datajs["code"]} {datajs["msg"]})')
+
+@app.post("/handle_sell_click") 
+async def handle_sell_click(symbol: str = Form(...), close: str = Form(...)):
+    balance = bitunix.bitunixSignal.get_portfolio_tradable_balance()
+    qty= str(balance * float(settings.ORDER_AMOUNT_PERCENTAGE) / float(close) * int(settings.LEVERAGE))
+    datajs = await bitunix.bitunixApi.PlaceOrder(symbol,qty,close,'SELL')
+    bitunix.bitunixSignal.notifications.add_notification(f'Selling {qty} {symbol} @ {close} ({datajs["code"]} {datajs["msg"]})')
+
+@app.post("/handle_reduce_click") 
+async def handle_reduce_click(symbol: str = Form(...), positionId: str = Form(...), qty: str = Form(...),  close: str = Form(...)):
+    row = bitunix.bitunixSignal.positiondf.loc[bitunix.bitunixSignal.positiondf['symbol'] == symbol]
+    if not row.empty:
+        balance = bitunix.bitunixSignal.get_portfolio_tradable_balance()
+        qty= str(float(qty) / 2)
+        datajs = await bitunix.bitunixApi.PlaceOrder(symbol,qty,close,'BUY' if row['side'].values[0]=='SELL' else 'SELL',positionId=positionId, reduceOnly=True)
+        bitunix.bitunixSignal.notifications.add_notification(f'reducing {row["side"]} {qty} {symbol} @ {close} ({datajs["code"]} {datajs["msg"]})')
+
+@app.post("/handle_charts_click") 
+async def handle_charts_click(symbol: str = Form(...)):
+    chart_url = f"/charts?symbol={symbol}"
+    return JSONResponse(content={"message": chart_url})                                      
+
+# when charts page requested (multiple period)
+@app.get("/charts", response_class=HTMLResponse) 
+async def show_charts(request: Request, symbol: str): 
+    return templates.TemplateResponse({"request": request, "data": symbol}, "charts.html")
+
+# when charts page opened (multiple period)
+@app.websocket("/wscharts")
+async def websocket_endpoint(websocket: WebSocket):
+    await asyncio.create_task(wscharts(websocket))
+
+async def wscharts(websocket):    
+    query_params = websocket.query_params
+    ticker = query_params.get("ticker")
+    
+    try:
+        logger.info("local charts page WebSocket connection opened")
+
+        await websocket.accept()
+        bitunix.websocket_connections.add(websocket)
+
+        queue = asyncio.Queue()
+        queueTask = asyncio.create_task(send_data_queue(websocket, queue))    
+
+        while True:
+            stime=time.time()
+            try:
+
+                # Handle incoming ping messages
+                await asyncio.create_task(send_pong(websocket,queue))
+                
+                if ticker in bitunix.bitunixSignal.tickerObjects.symbols():
+                    bars=settings.BARS
+                    chart1m=list(bitunix.bitunixSignal.tickerObjects.get(ticker).get_interval_ticks('1m').get_data()[-bars:])
+                    chart5m=list(bitunix.bitunixSignal.tickerObjects.get(ticker).get_interval_ticks('5m').get_data()[-bars:])
+                    chart15m=list(bitunix.bitunixSignal.tickerObjects.get(ticker).get_interval_ticks('15m').get_data()[-bars:])
+                    chart1h=list(bitunix.bitunixSignal.tickerObjects.get(ticker).get_interval_ticks('1h').get_data()[-bars:])
+                    chart1d=list(bitunix.bitunixSignal.tickerObjects.get(ticker).get_interval_ticks('1d').get_data()[-bars:])
+                    buysell=list(bitunix.bitunixSignal.tickerObjects.get(ticker).trades)
+                    close=bitunix.bitunixSignal.tickerObjects.get(ticker).get_last()
+
+                    data = {
+                        "symbol": ticker,
+                        "close":close,
+                        "chart1m":chart1m,
+                        "chart5m":chart5m,
+                        "chart15m":chart15m,
+                        "chart1h":chart1h,
+                        "chart1d":chart1d,
+                        "buysell": buysell,
+                    }
+                
+                    await queue.put(json.dumps(data))
+
+            except WebSocketDisconnect:
+                bitunix.websocket_connections.remove(websocket)
+                logger.info("local charts page WebSocket connection closed")
+                break
+            except Exception as e:
+                logger.info(f"local charts page websocket unexpected error1: {e}")
+                break        
+
+            
+            elapsed_time = time.time() - stime
+            if settings.VERBOSE_LOGGING:
+                logger.info(f"wscharts: elapsed time {elapsed_time}")
+            time_to_wait = max(0.01, bitunix.screen_refresh_interval - elapsed_time)
+            await asyncio.sleep(time_to_wait)
+    except Exception as e:
+        logger.info(f"local charts page websocket unexpected error2: {e}")     
+    finally:
+        queueTask.cancel()
+        try:
+            await queueTask
+        except asyncio.CancelledError:
+            pass
+
+# when modal chart page requested (current period)
+@app.get("/chart", response_class=HTMLResponse) 
+async def chart_page(request: Request):
+    return templates.TemplateResponse("modal-chart.html", {"request": request})
+           
+# when chart page opened (current period)
 @app.websocket("/wschart")
 async def websocket_endpoint(websocket: WebSocket):
     await asyncio.create_task(wschart(websocket))
@@ -281,26 +443,17 @@ async def wschart(websocket):
                 await asyncio.create_task(send_pong(websocket,queue))
                 
                 if ticker in bitunix.bitunixSignal.tickerObjects.symbols():
+                    period=settings.OPTION_MOVING_AVERAGE
                     bars=settings.BARS
-                    chart1m=list(bitunix.bitunixSignal.tickerObjects.get(ticker).get_interval_ticks('1m').get_data()[-bars:])
-                    chart5m=list(bitunix.bitunixSignal.tickerObjects.get(ticker).get_interval_ticks('5m').get_data()[-bars:])
-                    chart15m=list(bitunix.bitunixSignal.tickerObjects.get(ticker).get_interval_ticks('15m').get_data()[-bars:])
-                    chart1h=list(bitunix.bitunixSignal.tickerObjects.get(ticker).get_interval_ticks('1h').get_data()[-bars:])
-                    chart1d=list(bitunix.bitunixSignal.tickerObjects.get(ticker).get_interval_ticks('1d').get_data()[-bars:])
+                    chart=list(bitunix.bitunixSignal.tickerObjects.get(ticker).get_interval_ticks(period).get_data()[-bars:])
                     buysell=list(bitunix.bitunixSignal.tickerObjects.get(ticker).trades)
                     close=bitunix.bitunixSignal.tickerObjects.get(ticker).get_last()
-                    notifications=bitunix.bitunixSignal.notifications.get_notifications()          
-
                     data = {
                         "symbol": ticker,
                         "close":close,
-                        "chart1m":chart1m,
-                        "chart5m":chart5m,
-                        "chart15m":chart15m,
-                        "chart1h":chart1h,
-                        "chart1d":chart1d,
+                        "chart":chart,
                         "buysell": buysell,
-                        "status_messages": [] if len(notifications)==0 else notifications
+                        "period": period
                     }
                 
                     await queue.put(json.dumps(data))
@@ -327,97 +480,10 @@ async def wschart(websocket):
             await queueTask
         except asyncio.CancelledError:
             pass
-            
-async def send_pong(websocket, queue):
-    # Handle incoming ping messages
-    try:
-        message = await asyncio.wait_for(websocket.receive_text(), timeout=0.01)
-        if message == "ping":
-            await queue.put("pong")
-    except asyncio.TimeoutError:
-        pass
-
-async def send_data_queue(websocket, queue):
-    while True:
-        try:
-            data = await queue.get()
-            await websocket.send_text(data)
-        except Exception as e:
-            pass
-
-@app.get("/send-message/{msg}")
-async def send_message(msg: str):
-    await asyncio.create_task(bitunix.send_message_to_websocket(msg))
-    return {"message": f"Sent: {msg}"}        
-
-
-@app.get("/private")
-async def get_private_endpoint(user=Depends(login_manager)):
-    return "You are an authenticated user"
-   
-@app.post("/handle_bitunix_click") 
-async def handle_click(symbol: str = Form(...)):
-    # Handle the row click event here 
-    message = f"https://www.bitunix.com/contract-trade/{symbol}" 
-    return {"message": message}                                                   
-
-@app.post("/handle_order_close_click") 
-async def handle_click(symbol: str = Form(...), orderId: str = Form(...)):
-    datajs = await bitunix.bitunixApi.CancelOrder(symbol, orderId)
-    bitunix.bitunixSignal.notifications.add_notification(f'closing pending order for {symbol} {datajs["msg"]}')
-
-@app.post("/handle_close_click") 
-async def handle_click(symbol: str = Form(...), positionId: str = Form(...), qty: str = Form(...), unrealizedPNL: str = Form(...), realizedPNL: str = Form(...)):
-    datajs = await bitunix.bitunixApi.FlashClose(positionId)
-    pnl=float(unrealizedPNL)+float(realizedPNL)
-    bitunix.bitunixSignal.notifications.add_notification(f'closing {qty} {symbol} with a profit/loss of {pnl} ({datajs["code"]} {datajs["msg"]}')
-
-@app.post("/handle_buy_click") 
-async def handle_click(symbol: str = Form(...), close: str = Form(...)):
-    balance = bitunix.bitunixSignal.get_portfolio_tradable_balance()
-    qty= str(balance * float(settings.ORDER_AMOUNT_PERCENTAGE) / float(close) * int(settings.LEVERAGE))
-    datajs = await bitunix.bitunixApi.PlaceOrder(symbol,qty,close,'BUY')
-    bitunix.bitunixSignal.notifications.add_notification(f'Buying {qty} {symbol} @ {close} ({datajs["code"]} {datajs["msg"]})')
-
-@app.post("/handle_add_click") 
-async def handle_click(symbol: str = Form(...), close: str = Form(...)):
-    row = bitunix.bitunixSignal.positiondf.loc[bitunix.bitunixSignal.positiondf['symbol'] == symbol]
-    if not row.empty:
-        balance = float(bitunix.bitunixSignal.portfoliodf["available"])+float(bitunix.bitunixSignal.portfoliodf["crossUnrealizedPNL"])
-        qty= str(balance * float(settings.ORDER_AMOUNT_PERCENTAGE) / float(close) * int(settings.LEVERAGE))
-        datajs = await bitunix.bitunixApi.PlaceOrder(symbol,qty,close,row['side'].values[0])
-        bitunix.bitunixSignal.notifications.add_notification(f'adding {row["side"].values[0]} {qty} {symbol} @ {close} ({datajs["code"]} {datajs["msg"]})')
-
-@app.post("/handle_sell_click") 
-async def handle_click(symbol: str = Form(...), close: str = Form(...)):
-    balance = bitunix.bitunixSignal.get_portfolio_tradable_balance()
-    qty= str(balance * float(settings.ORDER_AMOUNT_PERCENTAGE) / float(close) * int(settings.LEVERAGE))
-    datajs = await bitunix.bitunixApi.PlaceOrder(symbol,qty,close,'SELL')
-    bitunix.bitunixSignal.notifications.add_notification(f'Selling {qty} {symbol} @ {close} ({datajs["code"]} {datajs["msg"]})')
-
-@app.post("/handle_reduce_click") 
-async def handle_click(symbol: str = Form(...), positionId: str = Form(...), qty: str = Form(...),  close: str = Form(...)):
-    row = bitunix.bitunixSignal.positiondf.loc[bitunix.bitunixSignal.positiondf['symbol'] == symbol]
-    if not row.empty:
-        balance = bitunix.bitunixSignal.get_portfolio_tradable_balance()
-        qty= str(float(qty) / 2)
-        datajs = await bitunix.bitunixApi.PlaceOrder(symbol,qty,close,'BUY' if row['side'].values[0]=='SELL' else 'SELL',positionId=positionId, reduceOnly=True)
-        bitunix.bitunixSignal.notifications.add_notification(f'reducing {row["side"]} {qty} {symbol} @ {close} ({datajs["code"]} {datajs["msg"]})')
-
-#called by the click even on the symbol and then open the chart page with query parm symbol
-@app.post("/get_charts", response_class=HTMLResponse) 
-async def handle_chart_data(symbol: str = Form(...)):
-    chart_url = f"/charts?symbol={symbol}"
-    return JSONResponse(content={"message": chart_url})                                      
-
-#when chart page detected
-@app.get("/charts", response_class=HTMLResponse) 
-async def show_charts(request: Request, symbol: str): 
-    return templates.TemplateResponse({"request": request, "data": symbol}, "charts.html")
 
 @app.get("/config", response_class=HTMLResponse)
 async def config_page(request: Request):
-    return templates.TemplateResponse("config.html", {"request": request})
+    return templates.TemplateResponse("modal-config.html", {"request": request})
 
 @app.get("/get-config")
 async def get_env_variables():
@@ -461,8 +527,8 @@ def write_config(file_path, config):
             file.write(f"{key}={value}\n")
 
 @app.get("/logs", response_class=HTMLResponse)
-async def config_page(request: Request):
-    return templates.TemplateResponse("logs.html", {"request": request})
+async def log_page(request: Request):
+    return templates.TemplateResponse("modal-logs.html", {"request": request})
 
 @app.websocket("/wslogs")
 async def websocket_endpoint(websocket: WebSocket):

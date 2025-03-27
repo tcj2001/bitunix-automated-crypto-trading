@@ -1,0 +1,59 @@
+  .scrollable-view {
+    height: 80%;
+    overflow-y: auto; /* Enable vertical scrolling */
+    margin-bottom: 20px;
+  }
+  
+  .modal-overlay {
+    display: none; /* Hidden initially */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+  }
+  
+  .modal-overlay.modal-open { /* Only show overlay when modal is active */
+    display: block;
+  }
+  
+  .modal-open {
+    display: block;
+  }
+  
+  .modal-container { /* Added container for positioning */
+    position: fixed;
+    z-index: 1000;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: none; /* Allow clicks to pass through when hidden */
+  }
+  
+  .modal {
+    background-color: white;
+    padding: 20px;
+    border: 1px solid #ccc;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+    resize: none; /* Disable default resizing */
+    pointer-events: auto; /* Make modal interactable */
+  }
+  
+  .modal .resize-handle {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background-color: gray;
+    cursor: nwse-resize; /* Change cursor to indicate resizing */
+  }
+  
+  .resize-top-right { top: 0; right: 0; cursor: nesw-resize; }
+  .resize-bottom-right { bottom: 0; right: 0; cursor: nwse-resize; }
+  .resize-bottom-left { bottom: 0; left: 0; cursor: nesw-resize; }
+  .resize-top-left { top: 0; left: 0; cursor: nwse-resize; }

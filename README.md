@@ -17,11 +17,10 @@ A real-time cryptocurrency trading platform built with FastAPI and WebSocket tec
     - selected signals with strength
     - all signals with strength
     - position history
-    - clicking on the ticker symbol will open the chart page
-    - maintians a list of notification which can be access by clicking on the notification
+    - clicking on the ticker symbol will open the current selected period chart in modal window
+    - notification are written to log file and can be displayed by clicking the message bar
     - Config button allows to edit the confix.txt file directly from the app
-  - Candlestick charts for all timeframes (1m, 5m, 15m, 1h, 1d) on a single page with all indicators
-    - Chart is activated when you click on the ticker symbol
+    - Candlestick charts for all timeframes (1m, 5m, 15m, 1h, 1d) on a single page avaible when you click the charts button
 - Technical analysis including:
   - Moving Averages
   - MACD
@@ -118,9 +117,10 @@ The platform can be configured through the `config.py` file or `config.txt`. Key
 - Access the web interface:
    - Open your browser and navigate to `http://localhost:8000` or `http://your_server_ip:8000`
    - Log in with your credentials (currenly user is admin and password is your_password in env file)
-   - display charts for all timeframes (1m, 5m, 15m, 1h, 1d) on a single page with all indicators
+   - display charts for all timeframes (1m, 5m, 15m, 1h, 1d) on a single page with all indicators when you click charts button
    - edit the config file directly from the app
-  
+   - display the log messages in amodal window by clicking the message bar
+     
 - Monitor your positions and trades:
    - Real-time portfolio value
    - Open positions
