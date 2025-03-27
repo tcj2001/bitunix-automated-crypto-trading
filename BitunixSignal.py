@@ -441,6 +441,7 @@ class BitunixSignal:
                     #                         (self.positiondf['avgOpenPrice'].astype(float) * self.positiondf['qty'].astype(float) / (self.settings.LEVERAGE/100))  * 10000 , 2)   
                 except Exception as e:
                     pass
+                self.positiondf['charts'] = self.positiondf.apply(self.add_charts_button, axis=1)
                 self.positiondf['bitunix'] = self.positiondf.apply(self.add_bitunix_button, axis=1)
                 self.positiondf['action'] = self.positiondf.apply(self.add_close_button, axis=1)
                 self.positiondf['add'] = self.positiondf.apply(self.add_add_button, axis=1)
@@ -478,6 +479,7 @@ class BitunixSignal:
             if self.pendingOrders and 'orderList' in self.pendingOrders:
                 self.orderdf = pd.DataFrame(self.pendingOrders['orderList'], columns=["orderId", "symbol", "qty", "side", "price", "ctime", "status", "reduceOnly"])
                 self.orderdf['rtime']=pd.to_datetime(self.orderdf['ctime'].astype(float), unit='ms').dt.tz_localize('UTC').dt.tz_convert(cst).dt.strftime('%Y-%m-%d %H:%M:%S')
+                self.orderdf['charts'] = self.orderdf.apply(self.add_charts_button, axis=1)
                 self.orderdf['bitunix'] = self.orderdf.apply(self.add_bitunix_button, axis=1)
                 self.orderdf['action'] = self.orderdf.apply(self.add_order_close_button, axis=1)
             else:
@@ -496,6 +498,9 @@ class BitunixSignal:
             if self.positionHistoryData and 'positionList' in self.positionHistoryData:
                 self.positionHistorydf = pd.DataFrame(self.positionHistoryData['positionList'], columns=["symbol", "side","realizedPNL", "ctime", "maxQty", "closePrice","fee", "funding"])
                 self.positionHistorydf['ctime'] = pd.to_datetime(self.positionHistorydf['ctime'].astype(float), unit='ms').dt.tz_localize('UTC').dt.tz_convert(cst).dt.strftime('%Y-%m-%d %H:%M:%S')
+                self.positionHistorydf['charts'] = self.positionHistorydf.apply(self.add_charts_button, axis=1)
+                self.positionHistorydf['bitunix'] = self.positionHistorydf.apply(self.add_bitunix_button, axis=1)
+
             else:
                 self.positionHistorydf = pd.DataFrame()
             self.positionHistorydfStyle= self.positionHistorydfrenderer.render_html(self.positionHistorydf)
@@ -540,6 +545,11 @@ class BitunixSignal:
             self.tickerObjects.getCurrentData(period)
 
             self.signaldf_full = self.tickerObjects.signaldf_full
+            if self.signaldf_full.empty:
+                return
+            self.signaldf_full['charts'] = self.signaldf_full.apply(self.add_charts_button, axis=1)
+            self.signaldf_full['bitunix'] = self.signaldf_full.apply(self.add_bitunix_button, axis=1)
+            
 
             self.allsignaldfStyle= self.allsignaldfrenderer.render_html(self.signaldf_full)
             
@@ -547,9 +557,9 @@ class BitunixSignal:
 
             if not self.positiondf.empty and not self.signaldf_full.empty:
                 columns=['symbol', f"{period}_trend", f"{period}_cb", f"{period}_barcolor", f"{period}_ema", f"{period}_macd", f"{period}_bbm", f"{period}_rsi", f"{period}_candle_trend", f"{period}_open", f"{period}_close", f"{period}_high", f"{period}_low"]
-                columns2=["qty", "side", "unrealizedPNL", "realizedPNL", "ctime", "avgOpenPrice", "bid", "bidcolor", "last", "lastcolor", "ask", "askcolor", "bitunix", "action", "add", "reduce"]
+                columns2=["qty", "side", "unrealizedPNL", "realizedPNL", "ctime", "avgOpenPrice", "bid", "bidcolor", "last", "lastcolor", "ask", "askcolor", "charts", "bitunix", "action", "add", "reduce"]
                 if set(columns).issubset(self.signaldf_full.columns) and set(columns2).issubset(self.positiondf.columns):
-                    columnOrder= ['symbol', "side",  "unrealizedPNL", "realizedPNL", f"{period}_trend", f"{period}_cb", f"{period}_barcolor", f"{period}_ema", f"{period}_macd", f"{period}_bbm", f"{period}_rsi", f"{period}_adx", f"{period}_candle_trend", f"{period}_open", f"{period}_close", f"{period}_high", f"{period}_low", "qty", "ctime", "avgOpenPrice", "bid", "bidcolor", "last", "lastcolor", "ask", "askcolor", "bitunix", "action", "add", "reduce"]                
+                    columnOrder= ['symbol', "side",  "unrealizedPNL", "realizedPNL", f"{period}_trend", f"{period}_cb", f"{period}_barcolor", f"{period}_ema", f"{period}_macd", f"{period}_bbm", f"{period}_rsi", f"{period}_adx", f"{period}_candle_trend", f"{period}_open", f"{period}_close", f"{period}_high", f"{period}_low", "qty", "ctime", "avgOpenPrice", "bid", "bidcolor", "last", "lastcolor", "ask", "askcolor", "charts", "bitunix", "action", "add", "reduce"]                
                     self.positiondf2 = pd.merge(self.positiondf, self.signaldf_full[["symbol", f"{period}_open", f"{period}_close", f"{period}_high", f"{period}_low", 
                             f"{period}_ema", f"{period}_macd", f"{period}_bbm", f"{period}_rsi", f"{period}_adx", f"{period}_candle_trend",
                             f"{period}_trend",f"{period}_cb", f"{period}_barcolor"]], left_on="symbol", right_index=True, how="left")[columnOrder]    
@@ -571,6 +581,7 @@ class BitunixSignal:
                     ]].sort_values(by=[f'{period}_cb'], ascending=[False])
 
                     # Add buttons
+                    self.signaldf['charts'] = self.signaldf.apply(self.add_charts_button, axis=1)
                     self.signaldf['bitunix'] = self.signaldf.apply(self.add_bitunix_button, axis=1)
                     self.signaldf['buy'] = self.signaldf.apply(self.add_buy_button, axis=1)
                     self.signaldf['sell'] = self.signaldf.apply(self.add_sell_button, axis=1)
@@ -1041,6 +1052,9 @@ class BitunixSignal:
             
     def color_cells(val, color):
         return f'background-color: {color}' if val else ''
+
+    def add_charts_button(self, row):
+        return f'<button onclick="handleChartsButton(\'{row["symbol"]}\')">charts</button>'
 
     def add_bitunix_button(self, row):
         return f'<button onclick="handleBitunixButton(\'{row["symbol"]}\')">show</button>'
