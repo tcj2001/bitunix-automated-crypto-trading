@@ -226,6 +226,26 @@ The platform can be configured through the `config.py` file or `config.txt`. Key
 - cd bitunix/code
 - python3 bitunix.py 
 
+- This app will exit if there is any error detected on a the periodic async threads. create a systemd service to run the app in the background and restart it if it exits. The app will 
+
+  - sudo nano /etc/systemd/system/bitunix.service and enter these lines
+
+    Description=Bitunix service
+    After=network.target
+    StartLimitIntervalSec=0
+    [Service]
+    User=root
+    Restart=always
+    RestartSec=15
+    ExecStart=/usr/bin/python3 /home/tcj2001/bitunix/code/bitunix.py
+    WorkingDirectory=/home/tcj2001/bitunix/code
+
+    [Install]
+    WantedBy=multi-user.target
+
+- systemctl daemon-reload
+- systemctl enable bitunix.service
+- systemctl start bitunix.service or just reboot the server
  
 ## License
 
