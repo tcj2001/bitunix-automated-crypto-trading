@@ -1,6 +1,7 @@
 import asyncio
 import threading
 from logger import Logger
+import os
 logger = Logger(__name__).get_logger()
 
 class AsyncThreadRunner:
@@ -46,7 +47,10 @@ class AsyncThreadRunner:
                     await self.async_func(*self.args, **self.kwargs)
                 except Exception as e:
                     logger.info(f"error in periodic_run async thread {self.thread.name} {e}")
+                    os._exit(1)  # Exit the program if the thread is stopped
                 await asyncio.sleep(self.interval)
+            logger.info(f"periodic {self.thread.name} Thread stopped, exiting app.")
+            os._exit(1)  # Exit the program if the thread is stopped
         except asyncio.CancelledError:
             pass
 
