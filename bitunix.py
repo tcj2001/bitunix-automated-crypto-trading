@@ -505,8 +505,10 @@ async def save_env_variable(key: str = Form(...), value: str = Form(...)):
         settings = temp_settings
         await bitunix.update_settings(settings)
         await asyncio.create_task(get_server_states(app, settings))
+        bitunix.bitunixSignal.notifications.add_notification(f"Updated {key} = {value} successfully")
         return {"message": f"Updated {key} = {value} successfully"}
     except ValidationError as e:
+        bitunix.bitunixSignal.notifications.add_notification(f"Updated {key} = {value} validation failed {e.errors()}")
         return {"error": "Validation failed", "details": e.errors()}
 
 def read_config(file_path):
