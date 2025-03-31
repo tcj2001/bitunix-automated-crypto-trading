@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     LEVERAGE: int = Field(default=20, ge=1, le=100)
     THRESHOLD: float = Field(default=5.0, ge=0.0)
     MIN_VOLUME: int = Field(default=10_000_000, ge=0)
-    ORDER_AMOUNT_PERCENTAGE: float = Field(default=0.01, ge=0.0, le=1.0)
+    ORDER_AMOUNT_PERCENTAGE: float = Field(default=0.01, ge=0.0, le=100)
     MAX_AUTO_TRADES: int = Field(default=10, ge=0)
     PROFIT_AMOUNT: float = Field(default=0.25, ge=0.0)
     LOSS_AMOUNT: float = Field(default=5.0, ge=0.0)
