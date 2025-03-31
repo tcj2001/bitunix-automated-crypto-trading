@@ -302,7 +302,7 @@ async def handle_close_click(symbol: str = Form(...), positionId: str = Form(...
 @app.post("/handle_buy_click") 
 async def handle_buy_click(symbol: str = Form(...), close: str = Form(...)):
     balance = bitunix.bitunixSignal.get_portfolio_tradable_balance()
-    qty= str(balance * float(settings.ORDER_AMOUNT_PERCENTAGE) / float(close) * int(settings.LEVERAGE))
+    qty= str(balance * (float(settings.ORDER_AMOUNT_PERCENTAGE) / 100) / float(close) * int(settings.LEVERAGE))
     datajs = await bitunix.bitunixApi.PlaceOrder(symbol,qty,close,'BUY')
     bitunix.bitunixSignal.notifications.add_notification(f'Buying {qty} {symbol} @ {close} ({datajs["code"]} {datajs["msg"]})')
 
@@ -311,14 +311,14 @@ async def handle_add_click(symbol: str = Form(...), close: str = Form(...)):
     row = bitunix.bitunixSignal.positiondf.loc[bitunix.bitunixSignal.positiondf['symbol'] == symbol]
     if not row.empty:
         balance = float(bitunix.bitunixSignal.portfoliodf["available"])+float(bitunix.bitunixSignal.portfoliodf["crossUnrealizedPNL"])
-        qty= str(balance * float(settings.ORDER_AMOUNT_PERCENTAGE) / float(close) * int(settings.LEVERAGE))
+        qty= str(balance * (float(settings.ORDER_AMOUNT_PERCENTAGE) / 100) / float(close) * int(settings.LEVERAGE))
         datajs = await bitunix.bitunixApi.PlaceOrder(symbol,qty,close,row['side'].values[0])
         bitunix.bitunixSignal.notifications.add_notification(f'adding {row["side"].values[0]} {qty} {symbol} @ {close} ({datajs["code"]} {datajs["msg"]})')
 
 @app.post("/handle_sell_click") 
 async def handle_sell_click(symbol: str = Form(...), close: str = Form(...)):
     balance = bitunix.bitunixSignal.get_portfolio_tradable_balance()
-    qty= str(balance * float(settings.ORDER_AMOUNT_PERCENTAGE) / float(close) * int(settings.LEVERAGE))
+    qty= str(balance * (float(settings.ORDER_AMOUNT_PERCENTAGE) / 100) / float(close) * int(settings.LEVERAGE))
     datajs = await bitunix.bitunixApi.PlaceOrder(symbol,qty,close,'SELL')
     bitunix.bitunixSignal.notifications.add_notification(f'Selling {qty} {symbol} @ {close} ({datajs["code"]} {datajs["msg"]})')
 
