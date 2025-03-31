@@ -9,12 +9,12 @@ function initializeModal(containerId, overlayId, modalId, options = {}) {
     }
   
     const {
-      top = '50%',
-      left = '50%',
+      top = '10%',
+      left = '10%',
       width = '80%',
       height = '80%',
       maxWidth = '80vw',
-      maxHeight = '80vh',
+      maxHeight = '80vw',
       allowMove = true,
       allowResize = true,
       onClose = () => {}
@@ -119,11 +119,15 @@ function initializeModal(containerId, overlayId, modalId, options = {}) {
   
     const openModal = () => {
       overlay.classList.add('modal-open');
+      modalContainer.classList.add('modal-open');
+      modal.classList.add('modal-open');
       modalContainer.style.pointerEvents = 'auto';
     };
   
     const closeModal = () => {
       overlay.classList.remove('modal-open');
+      modalContainer.classList.remove('modal-open');
+      modal.classList.remove('modal-open');
       modalContainer.style.pointerEvents = 'none';
       onClose();
     };

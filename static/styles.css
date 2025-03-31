@@ -107,3 +107,12 @@ tr:hover {
     cursor: pointer;
 }
 
+@media (max-width: 768px) {
+    body, p, span, div {
+        font-size: 8px;
+        padding: 5px;
+    }
+    h1 {
+        font-size: 20px;
+    }
+}
