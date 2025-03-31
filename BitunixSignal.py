@@ -650,7 +650,7 @@ class BitunixSignal:
                                 last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                 price = (bid if side == "BUY" else ask if side == "SELL" else last) if bid<=last<=ask else last
                                 balance = float(self.portfoliodf["available"].iloc[0]) + float(self.portfoliodf["crossUnrealizedPNL"].iloc[0])
-                                qty = str(max(balance * 0.01 / price * int(self.settings.LEVERAGE),mtv))
+                                qty= str(max(balance * float(self.settings.ORDER_AMOUNT_PERCENTAGE) / price * int(self.settings.LEVERAGE),mtv))
 
                                 self.notifications.add_notification(
                                     f'{colors.YELLOW} Opening {"long" if side=="BUY" else "short"} position for {row.symbol} with {qty} qty @ {price})'
