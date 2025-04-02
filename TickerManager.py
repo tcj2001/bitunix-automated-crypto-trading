@@ -48,42 +48,6 @@ class Interval:
                 # Get the last color and its consecutive count
                 self.signal_strength = df['Consecutive'].iloc[-1]
 
-                # Calculate the close proximity
-                if self.settings.CANDLE_TREND_STUDY:                
-                    df['range'] = df['high'] - df['low']
-                    df['candle_trend'] = ((df['close'] - df['low'])/df['range'])*100
-                    df.fillna({'candle_trend':0}, inplace=True)
-                    df.fillna({'range':0}, inplace=True)
-
-                    #open and close criteria
-                    if df['candle_trend'].iloc[-1] > 70:
-                        self.candle_trend = 'BULLISH'
-                    elif df['candle_trend'].iloc[-1] < 30:
-                        self.candle_trend = 'BEARISH'
-                    else:
-                        self.candle_trend = 'HOLD'      
-
-                # Calculate the RSI
-                if self.settings.RSI_STUDY:
-                    df['rsi_fast'] = talib.RSI(df['close'],timeperiod=self.settings.RSI_FAST)
-                    df.fillna({'rsi_fast':0}, inplace=True)
-                    
-                    df['rsi_slow'] = talib.RSI(df['close'],timeperiod=self.settings.RSI_SLOW)
-                    df.fillna({'rsi_slow':0}, inplace=True)
-                
-                    df['rsi_slope'] = df['rsi_fast'].diff()
-                    df['rsi_angle'] = np.degrees(np.arctan(df['rsi_slope']))                                        
-                    df.fillna({'rsi_slope':0}, inplace=True)
-                    df.fillna({'rsi_angle':0}, inplace=True)                                    
-
-                    #open and close criteria
-                    if df['rsi_fast'].iloc[-1] > df['rsi_slow'].iloc[-1]:
-                        self.rsi_signal = "BUY"
-                    elif df['rsi_fast'].iloc[-1] < df['rsi_slow'].iloc[-1]:
-                        self.rsi_signal = "SELL"
-                    else:
-                        self.rsi_signal = "HOLD"
-
                 # Calculate the Moving Averages
                 if self.settings.EMA_STUDY:
                     df['ma_fast'] = talib.EMA(df['close'], timeperiod=self.settings.MA_FAST)
@@ -101,37 +65,22 @@ class Interval:
                     df['ma_slope'] = df['ma_medium'].diff()
                     df['ma_angle'] = np.degrees(np.arctan(df['ma_slope']))    
                     df.fillna({'ma_slope':0}, inplace=True)
-                    df.fillna({'ma_angle':0}, inplace=True)                                    
-
-                    if df['close'].iloc[-1] > df['ma_fast'].iloc[-1] and df['ma_fast'].iloc[-1] > df['ma_medium'].iloc[-1]:
-                        self.ema_signal = "BUY"
-                    elif df['close'].iloc[-1] < df['ma_fast'].iloc[-1] and df['ma_fast'].iloc[-1] < df['ma_medium'].iloc[-1]:
-                        self.ema_signal = "SELL"
+                    df.fillna({'ma_angle':0}, inplace=True)  
+                                                      
+                    if self.settings.EMA_CROSSING:
+                        if df['ma_fast'].iloc[-2] <= df['ma_medium'].iloc[-2] and df['ma_fast'].iloc[-1] > df['ma_medium'].iloc[-1]:
+                            self.ema_signal = "BUY"
+                        elif df['ma_fast'].iloc[-2] >= df['ma_medium'].iloc[-2] and df['ma_fast'].iloc[-1] <= df['ma_medium'].iloc[-1]:
+                            self.ema_signal = "SELL"
+                        else:
+                            self.ema_signal = "HOLD"
                     else:
-                        self.ema_signal = "HOLD"
-
-                # Calculate Bollinger Bands  
-                if self.settings.BBM_STUDY:
-                    df['BBL'] = 0.0
-                    df['BBM'] = 0.0
-                    df['BBU'] = 0.0
-                    df['BBU'], df['BBM'], df['BBL'] = talib.BBANDS(df['close'], timeperiod=self.settings.BBM_PERIOD, nbdevup=self.settings.BBM_STD, nbdevdn=self.settings.BBM_STD, )
-                    df.fillna({'BBL':0}, inplace=True)
-                    df.fillna({'BBM':0}, inplace=True)
-                    df.fillna({'BBU':0}, inplace=True)
-
-                    df['BBM_slope'] = df['BBM'].diff()
-                    df['BBM_angle'] = np.degrees(np.arctan(df['BBM_slope']))                                        
-                    df.fillna({'BBM_slope':0}, inplace=True)
-                    df.fillna({'BBM_angle':0}, inplace=True)                                    
-
-                    #open and close criteria
-                    if df['close'].iloc[-1] > df['BBM'].iloc[-1] and df['close'].iloc[-2] > df['BBM'].iloc[-2]:
-                        self.bbm_signal = "BUY"
-                    elif df['close'].iloc[-1] < df['BBM'].iloc[-1] and df['close'].iloc[-2] < df['BBM'].iloc[-2]:
-                        self.bbm_signal = "SELL"
-                    else:
-                        self.bbm_signal = "HOLD"
+                        if df['close'].iloc[-1] > df['ma_fast'].iloc[-1] and df['ma_fast'].iloc[-1] > df['ma_medium'].iloc[-1]:
+                            self.ema_signal = "BUY"
+                        elif df['close'].iloc[-1] < df['ma_fast'].iloc[-1] and df['ma_fast'].iloc[-1] < df['ma_medium'].iloc[-1]:
+                            self.ema_signal = "SELL"
+                        else:
+                            self.ema_signal = "HOLD"
 
                 # Calculate the MACD Line
                 if self.settings.MACD_STUDY:
@@ -148,13 +97,78 @@ class Interval:
                     df.fillna({'MACD_slope':0}, inplace=True)
                     df.fillna({'MACD_angle':0}, inplace=True)                                    
                         
-                    #open and close criteria
-                    if df['MACD_Line'].iloc[-1] > df['MACD_Signal'].iloc[-1]: 
-                        self.macd_signal = "BUY"
-                    elif df['MACD_Line'].iloc[-1] < df['MACD_Signal'].iloc[-1]:
-                        self.macd_signal = "SELL"
+                    if self.settings.MACD_CROSSING:
+                        if df['MACD_Line'].iloc[-2] <= df['MACD_Signal'].iloc[-2] and df['MACD_Line'].iloc[-1] > df['MACD_Signal'].iloc[-1]: 
+                            self.macd_signal = "BUY"
+                        elif df['MACD_Line'].iloc[-2] >= df['MACD_Signal'].iloc[-2] and df['MACD_Line'].iloc[-1] < df['MACD_Signal'].iloc[-1]: 
+                            self.macd_signal = "SELL"
+                        else:
+                            self.macd_signal = "HOLD"
                     else:
-                        self.macd_signal = "HOLD"
+                        if df['MACD_Line'].iloc[-1] > df['MACD_Signal'].iloc[-1]: 
+                            self.macd_signal = "BUY"
+                        elif df['MACD_Line'].iloc[-1] < df['MACD_Signal'].iloc[-1]:
+                            self.macd_signal = "SELL"
+                        else:
+                            self.macd_signal = "HOLD"
+
+                # Calculate Bollinger Bands  
+                if self.settings.BBM_STUDY:
+                    df['BBL'] = 0.0
+                    df['BBM'] = 0.0
+                    df['BBU'] = 0.0
+                    df['BBU'], df['BBM'], df['BBL'] = talib.BBANDS(df['close'], timeperiod=self.settings.BBM_PERIOD, nbdevup=self.settings.BBM_STD, nbdevdn=self.settings.BBM_STD, )
+                    df.fillna({'BBL':0}, inplace=True)
+                    df.fillna({'BBM':0}, inplace=True)
+                    df.fillna({'BBU':0}, inplace=True)
+
+                    df['BBM_slope'] = df['BBM'].diff()
+                    df['BBM_angle'] = np.degrees(np.arctan(df['BBM_slope']))                                        
+                    df.fillna({'BBM_slope':0}, inplace=True)
+                    df.fillna({'BBM_angle':0}, inplace=True)                                    
+
+                    if self.settings.BBM_CROSSING:
+                        if df['close'].iloc[-2] <= df['BBM'].iloc[-2] and df['close'].iloc[-1] > df['BBM'].iloc[-1]:
+                            self.bbm_signal = "BUY"
+                        elif df['close'].iloc[-2] >= df['BBM'].iloc[-2] and df['close'].iloc[-1] < df['BBM'].iloc[-1]:
+                            self.bbm_signal = "SELL"
+                        else:
+                            self.bbm_signal = "HOLD"
+                    else:
+                        if df['close'].iloc[-1] > df['BBM'].iloc[-1] and df['close'].iloc[-2] > df['BBM'].iloc[-2]:
+                            self.bbm_signal = "BUY"
+                        elif df['close'].iloc[-1] < df['BBM'].iloc[-1] and df['close'].iloc[-2] < df['BBM'].iloc[-2]:
+                            self.bbm_signal = "SELL"
+                        else:
+                            self.bbm_signal = "HOLD"
+
+                # Calculate the RSI
+                if self.settings.RSI_STUDY:
+                    df['rsi_fast'] = talib.RSI(df['close'],timeperiod=self.settings.RSI_FAST)
+                    df.fillna({'rsi_fast':0}, inplace=True)
+                    
+                    df['rsi_slow'] = talib.RSI(df['close'],timeperiod=self.settings.RSI_SLOW)
+                    df.fillna({'rsi_slow':0}, inplace=True)
+                
+                    df['rsi_slope'] = df['rsi_fast'].diff()
+                    df['rsi_angle'] = np.degrees(np.arctan(df['rsi_slope']))                                        
+                    df.fillna({'rsi_slope':0}, inplace=True)
+                    df.fillna({'rsi_angle':0}, inplace=True)                                    
+
+                    if self.settings.RSI_CROSSING:
+                        if df['rsi_fast'].iloc[-2] <= df['rsi_slow'].iloc[-2] and df['rsi_fast'].iloc[-1] > df['rsi_slow'].iloc[-1]:
+                            self.rsi_signal = "BUY"
+                        elif df['rsi_fast'].iloc[-2] >= df['rsi_slow'].iloc[-2] and df['rsi_fast'].iloc[-1] < df['rsi_slow'].iloc[-1]:
+                            self.rsi_signal = "SELL"
+                        else:
+                            self.rsi_signal = "HOLD"
+                    else:
+                        if df['rsi_fast'].iloc[-1] > df['rsi_slow'].iloc[-1]:
+                            self.rsi_signal = "BUY"
+                        elif df['rsi_fast'].iloc[-1] < df['rsi_slow'].iloc[-1]:
+                            self.rsi_signal = "SELL"
+                        else:
+                            self.rsi_signal = "HOLD"
 
                 # Calculate the ADX
                 if self.settings.ADX_STUDY:
@@ -165,24 +179,39 @@ class Interval:
                     else:
                         self.adx_signal = "WEAK"  
                         
+                # Calculate the close proximity
+                if self.settings.CANDLE_TREND_STUDY:                
+                    df['range'] = df['high'] - df['low']
+                    df['candle_trend'] = ((df['close'] - df['low'])/df['range'])*100
+                    df.fillna({'candle_trend':0}, inplace=True)
+                    df.fillna({'range':0}, inplace=True)
+
+                    #open and close criteria
+                    if df['candle_trend'].iloc[-1] > 70:
+                        self.candle_trend = 'BULLISH'
+                    elif df['candle_trend'].iloc[-1] < 30:
+                        self.candle_trend = 'BEARISH'
+                    else:
+                        self.candle_trend = 'HOLD'      
+
                     
                 #replace infinity   
                 df.replace([np.inf, -np.inf], 0, inplace=True)
                 
                 #open and close criteria
-                if  (not self.settings.EMA_CHECK_ON_OPEN or self.ema_signal == "BUY") and \
-                    (not self.settings.MACD_CHECK_ON_OPEN or self.macd_signal == "BUY") and \
-                    (not self.settings.BBM_CHECK_ON_OPEN or self.bbm_signal == "BUY") and \
-                    (not self.settings.RSI_CHECK_ON_OPEN or self.rsi_signal == "BUY") and \
-                    (not self.settings.ADX_CHECK_ON_OPEN or self.adx_signal == "STRONG") and \
-                    (not self.settings.CANDLE_TREND_CHECK_ON_OPEN or self.candle_trend == "BULLISH"):
+                if  (not self.settings.EMA_STUDY or not self.settings.EMA_CHECK_ON_OPEN or self.ema_signal == "BUY") and \
+                    (not self.settings.MACD_STUDY or not self.settings.MACD_CHECK_ON_OPEN or self.macd_signal == "BUY") and \
+                    (not self.settings.BBM_STUDY or not self.settings.BBM_CHECK_ON_OPEN or self.bbm_signal == "BUY") and \
+                    (not self.settings.RSI_STUDY or self.settings.RSI_CHECK_ON_OPEN or self.rsi_signal == "BUY") and \
+                    (not self.settings.ADX_STUDY or self.settings.ADX_CHECK_ON_OPEN or self.adx_signal == "STRONG") and \
+                    (not self.settings.CANDLE_TREND_STUDY or self.settings.CANDLE_TREND_CHECK_ON_OPEN or self.candle_trend == "BULLISH"):
                         self.current_signal = "BUY"
-                elif (not self.settings.EMA_CHECK_ON_OPEN or self.ema_signal == "SELL") and \
-                     (not self.settings.MACD_CHECK_ON_OPEN or self.macd_signal == "SELL") and \
-                     (not self.settings.BBM_CHECK_ON_OPEN or self.bbm_signal == "SELL") and \
-                     (not self.settings.RSI_CHECK_ON_OPEN or self.rsi_signal == "SELL") and \
-                     (not self.settings.ADX_CHECK_ON_OPEN or self.adx_signal == "STRONG") and \
-                     (not self.settings.CANDLE_TREND_CHECK_ON_OPEN or self.candle_trend == "BEARISH"):
+                elif (not self.settings.EMA_STUDY or not self.settings.EMA_CHECK_ON_OPEN or self.ema_signal == "SELL") and \
+                     (not self.settings.MACD_STUDY or not self.settings.MACD_CHECK_ON_OPEN or self.macd_signal == "SELL") and \
+                     (not self.settings.BBM_STUDY or not self.settings.BBM_CHECK_ON_OPEN or self.bbm_signal == "SELL") and \
+                     (not self.settings.RSI_STUDY or self.settings.RSI_CHECK_ON_OPEN or self.rsi_signal == "SELL") and \
+                     (not self.settings.ADX_STUDY or self.settings.ADX_CHECK_ON_OPEN or self.adx_signal == "STRONG") and \
+                     (not self.settings.CANDLE_TREND_STUDY or self.settings.CANDLE_TREND_CHECK_ON_OPEN or self.candle_trend == "BEARISH"):
                         self.current_signal = "SELL"
                 else:
                         self.current_signal = "HOLD"

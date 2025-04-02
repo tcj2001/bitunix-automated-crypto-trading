@@ -545,8 +545,12 @@ class BitunixSignal:
             self.tickerObjects.getCurrentData(period)
 
             self.signaldf_full = self.tickerObjects.signaldf_full
+
             if self.signaldf_full.empty:
+                self.positiondf2 = self.positiondf
+                self.positiondfStyle= self.positiondfrenderer.render_html(self.positiondf)           
                 return
+
             self.signaldf_full['charts'] = self.signaldf_full.apply(self.add_charts_button, axis=1)
             self.signaldf_full['bitunix'] = self.signaldf_full.apply(self.add_bitunix_button, axis=1)
             
@@ -556,14 +560,14 @@ class BitunixSignal:
             self.signaldf_filtered = self.tickerObjects.signaldf_filtered
 
             if not self.positiondf.empty and not self.signaldf_full.empty:
-                columns=['symbol', f"{period}_trend", f"{period}_cb", f"{period}_barcolor", f"{period}_ema", f"{period}_macd", f"{period}_bbm", f"{period}_rsi", f"{period}_candle_trend", f"{period}_open", f"{period}_close", f"{period}_high", f"{period}_low"]
-                columns2=["qty", "side", "unrealizedPNL", "realizedPNL", "ctime", "avgOpenPrice", "bid", "bidcolor", "last", "lastcolor", "ask", "askcolor", "charts", "bitunix", "action", "add", "reduce"]
-                if set(columns).issubset(self.signaldf_full.columns) and set(columns2).issubset(self.positiondf.columns):
-                    columnOrder= ['symbol', "side",  "unrealizedPNL", "realizedPNL", f"{period}_trend", f"{period}_cb", f"{period}_barcolor", f"{period}_ema", f"{period}_macd", f"{period}_bbm", f"{period}_rsi", f"{period}_adx", f"{period}_candle_trend", f"{period}_open", f"{period}_close", f"{period}_high", f"{period}_low", "qty", "ctime", "avgOpenPrice", "bid", "bidcolor", "last", "lastcolor", "ask", "askcolor", "charts", "bitunix", "action", "add", "reduce"]                
-                    self.positiondf2 = pd.merge(self.positiondf, self.signaldf_full[["symbol", f"{period}_open", f"{period}_close", f"{period}_high", f"{period}_low", 
-                            f"{period}_ema", f"{period}_macd", f"{period}_bbm", f"{period}_rsi", f"{period}_adx", f"{period}_candle_trend",
-                            f"{period}_trend",f"{period}_cb", f"{period}_barcolor"]], left_on="symbol", right_index=True, how="left")[columnOrder]    
-                    self.positiondfStyle= self.positiondfrenderer.render_html(self.positiondf2)
+                    columns=['symbol', f"{period}_trend", f"{period}_cb", f"{period}_barcolor", f"{period}_ema", f"{period}_macd", f"{period}_bbm", f"{period}_rsi", f"{period}_candle_trend", f"{period}_open", f"{period}_close", f"{period}_high", f"{period}_low"]
+                    columns2=["qty", "side", "unrealizedPNL", "realizedPNL", "ctime", "avgOpenPrice", "bid", "bidcolor", "last", "lastcolor", "ask", "askcolor", "charts", "bitunix", "action", "add", "reduce"]
+                    if set(columns).issubset(self.signaldf_full.columns) and set(columns2).issubset(self.positiondf.columns):
+                        columnOrder= ['symbol', "side",  "unrealizedPNL", "realizedPNL", f"{period}_trend", f"{period}_cb", f"{period}_barcolor", f"{period}_ema", f"{period}_macd", f"{period}_bbm", f"{period}_rsi", f"{period}_adx", f"{period}_candle_trend", f"{period}_open", f"{period}_close", f"{period}_high", f"{period}_low", "qty", "ctime", "avgOpenPrice", "bid", "bidcolor", "last", "lastcolor", "ask", "askcolor", "charts", "bitunix", "action", "add", "reduce"]                
+                        self.positiondf2 = pd.merge(self.positiondf, self.signaldf_full[["symbol", f"{period}_open", f"{period}_close", f"{period}_high", f"{period}_low", 
+                                f"{period}_ema", f"{period}_macd", f"{period}_bbm", f"{period}_rsi", f"{period}_adx", f"{period}_candle_trend",
+                                f"{period}_trend",f"{period}_cb", f"{period}_barcolor"]], left_on="symbol", right_index=True, how="left")[columnOrder]    
+                        self.positiondfStyle= self.positiondfrenderer.render_html(self.positiondf2)
             else:
                 self.positiondf2 = pd.DataFrame()
                 
@@ -736,7 +740,7 @@ class BitunixSignal:
                                 continue
 
                             # Moving average comparison between fast and medium
-                            if self.settings.EMA_CHECK_ON_CLOSE: 
+                            if self.settings.EMA_STUDY and self.settings.EMA_CHECK_ON_CLOSE: 
                                 if row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_ema'] == "SELL":
                                     last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                     price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
@@ -771,7 +775,7 @@ class BitunixSignal:
                                     continue
 
                             # MACD comparison between MACD and Signal
-                            if self.settings.MACD_CHECK_ON_CLOSE:
+                            if self.settings.MACD_STUDY and self.settings.MACD_CHECK_ON_CLOSE:
                                 if row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_macd'] == "SELL":
                                     last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                     price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
@@ -805,7 +809,7 @@ class BitunixSignal:
                                     continue
 
                             # Bollinger Band comparison between open and BBM
-                            if self.settings.BBM_CHECK_ON_CLOSE:
+                            if self.settings.BBM_STUDY and self.settings.BBM_CHECK_ON_CLOSE:
                                 if row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_bbm'] == "SELL":
                                     last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                     price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
@@ -822,7 +826,7 @@ class BitunixSignal:
                                     )
                                     continue
 
-                                if self.settings.CHECK_BBM and row.side == 'SELL' and self.signaldf_full.at[row.symbol, f'{period}_bbm'] == "BUY":
+                                if row.side == 'SELL' and self.signaldf_full.at[row.symbol, f'{period}_bbm'] == "BUY":
                                     last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                     price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
                                     self.notifications.add_notification(
@@ -839,7 +843,7 @@ class BitunixSignal:
                                     continue
                             
                             # RSI comparison
-                            if self.settings.RSI_CHECK_ON_CLOSE:
+                            if self.settings.RSI_STUDY and self.settings.RSI_CHECK_ON_CLOSE:
                                 if row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_rsi'] == "SELL":
                                     last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                     price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
@@ -873,7 +877,7 @@ class BitunixSignal:
                                     continue
 
                             # Close on weak trend after open
-                            if self.settings.ADX_CHECK_ON_CLOSE:
+                            if self.settings.ADX_STUDY and self.settings.ADX_CHECK_ON_CLOSE:
                                 if row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_adx'] == "WEAK":
                                     last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                     price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
@@ -907,7 +911,7 @@ class BitunixSignal:
                                     continue
 
                             # candle reversed
-                            if self.settings.CANDLE_TREND_CHECK_ON_CLOSE:
+                            if self.settings.CANDLE_TREND_STUDY and self.settings.CANDLE_TREND_CHECK_ON_CLOSE:
                                 if row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_barcolor'] == self.red and self.signaldf_full.at[row.symbol, f'{period}_candle_trend'] == "BEARISH":
                                     last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                     price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
