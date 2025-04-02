@@ -32,24 +32,32 @@ class Settings(BaseSettings):
 
     # Technical Indicators
     EMA_STUDY: bool = Field(default=True)
-    MACD_STUDY: bool = Field(default=True)
-    BBM_STUDY: bool = Field(default=True)
-    RSI_STUDY: bool = Field(default=True)
-    CANDLE_TREND_STUDY: bool = Field(default=True)
-    ADX_STUDY: bool = Field(default=True)
-
+    EMA_CROSSING: bool = Field(default=False)
     EMA_CHECK_ON_OPEN: bool = Field(default=True)
-    EMA_CHECK_ON_CLOSE: bool = Field(default=False)
-    MACD_CHECK_ON_OPEN: bool = Field(default=True)
+    EMA_CHECK_ON_CLOSE: bool = Field(default=True)
+
+    MACD_STUDY: bool = Field(default=True)
+    MACD_CROSSING: bool = Field(default=False)
+    MACD_CHECK_ON_OPEN: bool = Field(default=False)
     MACD_CHECK_ON_CLOSE: bool = Field(default=False)
-    RSI_CHECK_ON_OPEN: bool = Field(default=True)
-    RSI_CHECK_ON_CLOSE: bool = Field(default=False)
-    BBM_CHECK_ON_OPEN: bool = Field(default=True)
+
+    BBM_STUDY: bool = Field(default=True)
+    BBM_CROSSING: bool = Field(default=False)
+    BBM_CHECK_ON_OPEN: bool = Field(default=False)
     BBM_CHECK_ON_CLOSE: bool = Field(default=False)
-    CANDLE_TREND_CHECK_ON_OPEN: bool = Field(default=True)
-    CANDLE_TREND_CHECK_ON_CLOSE: bool = Field(default=False)
-    ADX_CHECK_ON_OPEN: bool = Field(default=True)
+
+    RSI_STUDY: bool = Field(default=True)
+    RSI_CROSSING: bool = Field(default=False)
+    RSI_CHECK_ON_OPEN: bool = Field(default=False)
+    RSI_CHECK_ON_CLOSE: bool = Field(default=False)
+
+    ADX_STUDY: bool = Field(default=True)
+    ADX_CHECK_ON_OPEN: bool = Field(default=False)
     ADX_CHECK_ON_CLOSE: bool = Field(default=False)
+
+    CANDLE_TREND_STUDY: bool = Field(default=True)
+    CANDLE_TREND_CHECK_ON_OPEN: bool = Field(default=False)
+    CANDLE_TREND_CHECK_ON_CLOSE: bool = Field(default=False)
 
     # Time Intervals
     SCREEN_REFRESH_INTERVAL: int = Field(default=1, ge=1)

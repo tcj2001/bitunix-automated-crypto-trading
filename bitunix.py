@@ -508,8 +508,8 @@ async def save_env_variable(key: str = Form(...), value: str = Form(...)):
         bitunix.bitunixSignal.notifications.add_notification(f"Updated {key} = {value} successfully")
         return {"message": f"Updated {key} = {value} successfully"}
     except ValidationError as e:
-        bitunix.bitunixSignal.notifications.add_notification(f"Updated {key} = {value} validation failed {e.errors()}")
-        return {"error": "Validation failed", "details": e.errors()}
+        bitunix.bitunixSignal.notifications.add_notification(f"{key} = {value} validation failed {e.errors()}")
+        return {"error": f"Validation failed, details: {e.errors()}"}
 
 def read_config(file_path):
     """Read the config file into a dictionary."""
@@ -557,58 +557,11 @@ async def stream_log_file(websocket: WebSocket):
     except WebSocketDisconnect:
         print("log Client disconnected. Stopping the log stream.")
 
-def log_settings():
-    #load env variable from .env
-    logger.info(f"autoTrade: {settings.AUTOTRADE}")
-    logger.info(f"leverage: {settings.LEVERAGE}")
-    logger.info(f"threshold: {settings.THRESHOLD}")
-    logger.info(f"min_volume: {settings.MIN_VOLUME}")
-    logger.info(f"order_amount_percentage: {settings.ORDER_AMOUNT_PERCENTAGE}")
-    logger.info(f"max_auto_trades: {settings.MAX_AUTO_TRADES}")
-    logger.info(f"profit_amount: {settings.PROFIT_AMOUNT}")
-    logger.info(f"loss_amount: {settings.LOSS_AMOUNT}")
-    logger.info(f"option_moving_average: {settings.OPTION_MOVING_AVERAGE}")
-    logger.info(f"bars: {settings.BARS}")
-    logger.info(f"ma_fast: {settings.MA_FAST}")
-    logger.info(f"ma_medium: {settings.MA_MEDIUM}")
-    logger.info(f"ma_slow: {settings.MA_SLOW}")
-    logger.info(f"ema_study: {settings.EMA_STUDY}")
-    logger.info(f"macd_study: {settings.MACD_STUDY}")
-    logger.info(f"bbm_study: {settings.BBM_STUDY}")
-    logger.info(f"rsi_study: {settings.RSI_STUDY}")
-    logger.info(f"adx_study: {settings.ADX_STUDY}")
-    logger.info(f"candle_trend_study: {settings.CANDLE_TREND_STUDY}")
-    logger.info(f"ema_check_on_open: {settings.EMA_CHECK_ON_OPEN}")
-    logger.info(f"ema_check_on_close: {settings.EMA_CHECK_ON_CLOSE}")
-    logger.info(f"macd_check_on_open: {settings.MACD_CHECK_ON_OPEN}")
-    logger.info(f"macd_check_on_close: {settings.MACD_CHECK_ON_CLOSE}")
-    logger.info(f"bbm_check_on_open: {settings.BBM_CHECK_ON_OPEN}")
-    logger.info(f"bbm_check_on_close: {settings.BBM_CHECK_ON_CLOSE}")
-    logger.info(f"rsi_check_on_open: {settings.RSI_CHECK_ON_OPEN}")
-    logger.info(f"rsi_check_on_close: {settings.RSI_CHECK_ON_CLOSE}")
-    logger.info(f"candle_trend_check_on_open: {settings.CANDLE_TREND_CHECK_ON_OPEN}")
-    logger.info(f"candle_trend_check_on_close: {settings.CANDLE_TREND_CHECK_ON_CLOSE}")
-    logger.info(f"adx_check_on_open: {settings.ADX_CHECK_ON_OPEN}")
-    logger.info(f"adx_check_on_close: {settings.ADX_CHECK_ON_CLOSE}")
-    logger.info(f"screen_refresh_interval: {settings.SCREEN_REFRESH_INTERVAL}")
-    logger.info(f"signal_check_interval: {settings.SIGNAL_CHECK_INTERVAL}")
-    logger.info(f"portfolio_api_interval: {settings.PORTFOLIO_API_INTERVAL}")
-    logger.info(f"pending_positions_api_interval: {settings.PENDING_POSITIONS_API_INTERVAL}")
-    logger.info(f"pending_orders_api_interval: {settings.PENDING_ORDERS_API_INTERVAL}")
-    logger.info(f"trade_history_api_interval: {settings.TRADE_HISTORY_API_INTERVAL}")
-    logger.info(f"position_history_api_interval: {settings.POSITION_HISTORY_API_INTERVAL}")
-    logger.info(f"ticker_data_api_interval: {settings.TICKER_DATA_API_INTERVAL}")
-    logger.info(f"public_websocket_restart_interval: {settings.PUBLIC_WEBSOCKET_RESTART_INTERVAL}")
-    logger.info(f"use_public_websocket: {settings.USE_PUBLIC_WEBSOCKET}")
-    logger.info(f"VERBOSE_LOGGING: {settings.VERBOSE_LOGGING}")
-    logger.info(f"benchmark: {settings.BENCHMARK}")         
-    
+  
 if __name__ == '__main__': 
     
     bitunix = bitunix(PASSWORD, API_KEY, SECRET_KEY, settings)
-    
-    log_settings()
-    
+    bitunix.bitunixSignal.notifications.add_notification(f"Starting....................")
     import uvicorn
     if settings.VERBOSE_LOGGING:
         llevel = "debug"

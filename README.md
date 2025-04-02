@@ -73,27 +73,32 @@ The platform can be configured through the `config.py` file or `config.txt`. Key
     
   - `Study Parameters`:
     - `EMA_STUDY`: Enable EMA study
-    - `MACD_STUDY`: Enable MACD study
-    - `BBM_STUDY`: Enable Bollinger Band study
-    - `RSI_STUDY`: Enable RSI study
-    - `CANDLE_TREND_STUDY`: Enable candle trend study
-    - `ADX_STUDY`: Enable ADX study
-  
-  - `Check on Opening a Position`:
+    - `EMA_CROSSING`: Check EMA crossing or crossed, COMPARING FAST AND MEDIUM MOVING AVERAGE 
     - `EMA_CHECK_ON_OPEN`: Check EMA on open
-    - `MACD_CHECK_ON_OPEN`: Check MACD on open
-    - `BBM_CHECK_ON_OPEN`: Check Bollinger Band on open
-    - `RSI_CHECK_ON_OPEN`: Check RSI on open
-    - `CANDLE_TREND_CHECK_ON_OPEN`: Check candle trend on open
-    - `ADX_CHECK_ON_OPEN`: Check ADX on open
-  
-  - `Check on Close a Position`:
     - `EMA_CHECK_ON_CLOSE`: Check EMA on close
+
+    - `MACD_STUDY`: Enable MACD study
+    - `MACD_CROSSING`: Check MACD crossing or crossed, comparing MACD line and signal line
+    - `MACD_CHECK_ON_OPEN`: Check MACD on open
     - `MACD_CHECK_ON_CLOSE`: Check MACD on close
+
+    - `BBM_STUDY`: Enable Bollinger Band study
+    - `BBM_CROSSING`: Check Bollinger Band crossing or crossed, comparing close and middle line
+    - `BBM_CHECK_ON_OPEN`: Check Bollinger Band on open
     - `BBM_CHECK_ON_CLOSE`: Check Bollinger Band on close
+
+    - `RSI_STUDY`: Enable RSI study
+    - `RSI_CROSSING`: Check RSI crossing or crossed, comparing fast and slow RSI
+    - `RSI_CHECK_ON_OPEN`: Check RSI on open
     - `RSI_CHECK_ON_CLOSE`: Check RSI on close
-    - `CANDLE_TREND_CHECK_ON_CLOSE`: Check candle trend on close
+
+    - `ADX_STUDY`: Enable ADX study
+    - `ADX_CHECK_ON_OPEN`: Check ADX on open
     - `ADX_CHECK_ON_CLOSE`: Check ADX on close
+  
+    - `CANDLE_TREND_STUDY`: Enable candle trend study
+    - `CANDLE_TREND_CHECK_ON_OPEN`: Check candle trend on open
+    - `CANDLE_TREND_CHECK_ON_CLOSE`: Check candle trend on close
     
   - `intervals`:
     - `SCREEN_REFRESH_INTERVAL`: Screen refresh interval
@@ -186,22 +191,12 @@ The platform can be configured through the `config.py` file or `config.txt`. Key
 
 ## Installation
 
-- This uses TA-LIb
-  - For windows install using precompiled wheel using
-    - pip install https://github.com/cgohlke/talib-build/releases/download/v0.6.3/ta_lib-0.6.3-cp313-cp313-win_amd64.whl
-  - For linux download (ubuntu 22.04)
-    - sudo apt-get update
-    - sudo apt-get install build-essential libssl-dev libffi-dev
-    - wget https://github.com/ta-lib/ta-lib/releases/download/v0.6.4/ta-lib_0.6.4_amd64.deb
-    - sudo dpkg -i ta-lib_0.6.4_amd64.deb
-    
-- Window install should easy (not my choice)
-  - wget https://github.com/tcj2001/bitunix-automated-crypto-trading/archive/refs/tags/Ver1.0.zip
-  - and install the package using the requirements.txt file
-
 - Linux install (ubuntu 22.04)
-  - Change the Ver1.0 to the latest version in the script
   - sudo su -
+  - # required for TA-Lib
+  - wget https://github.com/ta-lib/ta-lib/releases/download/v0.6.4/ta-lib_0.6.4_amd64.deb
+  - sudo dpkg -i ta-lib_0.6.4_amd64.deb
+  - # change the Ver1.0 to the latest version in the script below and run it
   - bash -c "\
     apt-get install -y python3-pip wget unzip dos2unix && \
     python3 -m pip install --upgrade pip && \
@@ -212,9 +207,26 @@ The platform can be configured through the `config.py` file or `config.txt`. Key
     cd code && \
     pip3 install -r requirements.txt && \
     cp sampleenv.txt .env"
+  - The package will be installed in the bitunix/code directory
+  - cd bitunix/code
+  - python3 bitunix.py 
 
-
-- The package will be installed in the bitunix/code directory
+- Windows
+  - mkdir c:\bitunix
+  - cd c:\bitunix
+  - python -m venv env
+  - .\env\Scripts\activate
+  - # check python version should be 3.13 or above
+  - python3 --version
+  - python -m pip install --upgrade pip
+  - pip install https://github.com/cgohlke/talib-build/releases/download/v0.6.3/ta_lib-0.6.3-cp313-cp313-win_amd64.whl
+  - wget https://github.com/tcj2001/bitunix-automated-crypto-trading/archive/refs/tags/Ver1.0.zip
+  - unzip zip file and copy the content inside C:\bitunix\Ver1.0.zip\bitunix-automated-crypto-trading-Ver1.0 to c:\bitunix
+  - pip install -r requirements.txt 
+  - # Make sure ta-lib is installed
+  - python -c "import talib; print(talib.get_functions());"
+  - copy sampleenv.txt to .env and update the keys accordingly
+  - python bitunix.py 
 
 - make sure to update the .env file with your keys
   api_key=your_api_key
