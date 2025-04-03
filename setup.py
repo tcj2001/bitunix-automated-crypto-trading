@@ -64,11 +64,10 @@ class CustomInstall(install):
 
 setup(
     name="bitunix_automated_crypto_trading",
-    version="1.8.0", 
+    version="1.9.0", 
     author="tcj2001",
     author_email="thomsonmathews@hotmail.com",
     description="Bitunix Futures Auto Trading Platform",
-    long_description_content_type="text/markdown",
     url="https://github.com/tcj2001/bitunix-automated-crypto-trading",
     packages=find_packages(include=['src', 'src.*']),
     package_dir={'': '.'},
