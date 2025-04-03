@@ -7,17 +7,6 @@ import subprocess
 import re
 import os
 
-class IncrementVersionSDist(sdist):
-    def run(self):
-        version = get_version()
-        print(f"Current version: {version}")
-        new_version = increment_version(version)
-        print(f"Incremented version to: {new_version}")
-        sdist.run(self)
-
-with open("README.md", "r", encoding="utf-8") as fh:
-    long_description = fh.read()
-
 class CustomInstall(install):
     """Custom install class to download and install platform-specific TA-Lib wheels.
     This avoids building TA-Lib from source, which can be problematic.
