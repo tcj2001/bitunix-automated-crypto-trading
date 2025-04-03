@@ -68,7 +68,6 @@ setup(
     author="tcj2001",
     author_email="thomsonmathews@hotmail.com",
     description="Bitunix Futures Auto Trading Platform",
-    long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/tcj2001/bitunix-automated-crypto-trading",
     packages=find_packages(include=['src', 'src.*']),
@@ -106,7 +105,6 @@ setup(
     },
     cmdclass={
         'install': CustomInstall,  # Override the install command
-        'sdist': IncrementVersionSDist,  # Override the sdist command to auto-increment version
     },
     package_data={
         "": ["templates/*.html", "static/*", "config.txt", "sampleenv.txt"],
