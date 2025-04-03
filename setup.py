@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 from setuptools.command.install import install
 import sys
 import os
@@ -40,7 +40,7 @@ class CustomInstall(install):
 
 setup(
     name="bitunix-automated-crypto-trading",
-    version="1.2.0",
+    version="1.3.0",
     author="tcj2001",
     author_email="thomsonmathews@hotmail.com",
     description="Bitunix Futures Auto Trading Platform",
