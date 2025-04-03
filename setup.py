@@ -39,7 +39,7 @@ class CustomInstall(install):
 
 
 setup(
-    name="bitunix-automated-crypto-trading",
+    name="bitunix_automated_crypto_trading",
     version="1.3.0",
     author="tcj2001",
     author_email="thomsonmathews@hotmail.com",
@@ -54,7 +54,7 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    python_requires=">=3.8",
+    python_requires=">=3.13",
     install_requires=[
         "fastapi",
         "uvicorn",
@@ -76,7 +76,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "bitunix-automated-crypto-trading=bitunix-automated-crypto-trading:bitunix",
+            "bitunix-automated-crypto-trading=bitunix_automated_crypto_trading.bitunix:main",
         ],
     },
     cmdclass={
