@@ -49,7 +49,7 @@ class CustomInstall(install):
 
 setup(
     name="bitunix_automated_crypto_trading",
-    version="1.4.0",
+    version="1.5.0",
     author="tcj2001",
     author_email="thomsonmathews@hotmail.com",
     description="Bitunix Futures Auto Trading Platform",
