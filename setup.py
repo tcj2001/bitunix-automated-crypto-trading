@@ -7,6 +7,13 @@ import subprocess
 import re
 import os
 
+def get_version():
+    with open("src/__init__.py") as init_file:
+        version_match = re.search(r"^__version__ = ['\"]([^'\"]+)['\"]", init_file.read(), re.M)
+        if version_match:
+            return version_match.group(1)
+        raise RuntimeError("Unable to find version string.")
+
 class CustomInstall(install):
     """Custom install class to download and install platform-specific TA-Lib wheels.
     This avoids building TA-Lib from source, which can be problematic.
@@ -64,7 +71,8 @@ class CustomInstall(install):
 
 setup(
     name="bitunix_automated_crypto_trading",
-    version="1.9.0", 
+    version=get_version(),  # Dynamically load the version
+    license="MIT",
     author="tcj2001",
     author_email="thomsonmathews@hotmail.com",
     description="Bitunix Futures Auto Trading Platform",
