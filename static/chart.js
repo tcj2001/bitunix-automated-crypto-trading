@@ -223,7 +223,7 @@ const createOrUpdateChart = (
     }
 
     // Find the min and max time from candlestickData
-    const times = data.map(d => d.x);
+    const times = data.map(d => d.time);
     const minTime = Math.min(...times);
     const maxTime = Math.max(...times);
 
