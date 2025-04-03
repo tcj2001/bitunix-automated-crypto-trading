@@ -218,43 +218,78 @@ class Interval:
                 df.replace([np.inf, -np.inf], 0, inplace=True)
                 
                 if self.settings.OPEN_ON_ANY_SIGNAL:
-                    #list buy or sell signals if any signal is true
-                    if  (not self.settings.EMA_STUDY or not self.settings.EMA_CHECK_ON_OPEN or self.ema_signal == "BUY") or \
-                        (not self.settings.MACD_STUDY or not self.settings.MACD_CHECK_ON_OPEN or self.macd_signal == "BUY") or \
-                        (not self.settings.BBM_STUDY or not self.settings.BBM_CHECK_ON_OPEN or self.bbm_signal == "BUY") or \
-                        (not self.settings.RSI_STUDY or self.settings.RSI_CHECK_ON_OPEN or self.rsi_signal == "BUY") or \
-                        (not self.settings.ADX_STUDY or self.settings.ADX_CHECK_ON_OPEN or self.adx_signal == "STRONG") or \
-                        (not self.settings.CANDLE_TREND_STUDY or self.settings.CANDLE_TREND_CHECK_ON_OPEN or self.candle_trend == "BULLISH"):
-                            self.current_signal = "BUY"
-                    elif (not self.settings.EMA_STUDY or not self.settings.EMA_CHECK_ON_OPEN or self.ema_signal == "SELL") or \
-                        (not self.settings.MACD_STUDY or not self.settings.MACD_CHECK_ON_OPEN or self.macd_signal == "SELL") or \
-                        (not self.settings.BBM_STUDY or not self.settings.BBM_CHECK_ON_OPEN or self.bbm_signal == "SELL") or \
-                        (not self.settings.RSI_STUDY or self.settings.RSI_CHECK_ON_OPEN or self.rsi_signal == "SELL") or \
-                        (not self.settings.ADX_STUDY or self.settings.ADX_CHECK_ON_OPEN or self.adx_signal == "STRONG") or \
-                        (not self.settings.CANDLE_TREND_STUDY or self.settings.CANDLE_TREND_CHECK_ON_OPEN or self.candle_trend == "BEARISH"):
-                            self.current_signal = "SELL"
-                    else:
-                            self.current_signal = "HOLD"
-                else:
-                    #list buy or sell signals only if all signal is true (if it is enabled)
-                    if  (not self.settings.EMA_STUDY or not self.settings.EMA_CHECK_ON_OPEN or self.ema_signal == "BUY") and \
-                        (not self.settings.MACD_STUDY or not self.settings.MACD_CHECK_ON_OPEN or self.macd_signal == "BUY") and \
-                        (not self.settings.BBM_STUDY or not self.settings.BBM_CHECK_ON_OPEN or self.bbm_signal == "BUY") and \
-                        (not self.settings.RSI_STUDY or not self.settings.RSI_CHECK_ON_OPEN or self.rsi_signal == "BUY") and \
-                        (not self.settings.ADX_STUDY or not self.settings.ADX_CHECK_ON_OPEN or self.adx_signal == "STRONG") and \
-                        (not self.settings.CANDLE_TREND_STUDY or not self.settings.CANDLE_TREND_CHECK_ON_OPEN or self.candle_trend == "BULLISH"):
-                            self.current_signal = "BUY"
-                    elif (not self.settings.EMA_STUDY or not self.settings.EMA_CHECK_ON_OPEN or self.ema_signal == "SELL") and \
-                        (not self.settings.MACD_STUDY or not self.settings.MACD_CHECK_ON_CLOSE or self.macd_signal == "SELL") and \
-                        (not self.settings.BBM_STUDY or not self.settings.BBM_CHECK_ON_OPEN or self.bbm_signal == "SELL") and \
-                        (not self.settings.RSI_STUDY or not self.settings.RSI_CHECK_ON_OPEN or self.rsi_signal == "SELL") and \
-                        (not self.settings.ADX_STUDY or not self.settings.ADX_CHECK_ON_OPEN or self.adx_signal == "STRONG") and \
-                        (not self.settings.CANDLE_TREND_STUDY or not self.settings.CANDLE_TREND_CHECK_ON_OPEN or  self.candle_trend == "BEARISH"):
-                            self.current_signal = "SELL"
-                    else:
-                            self.current_signal = "HOLD"
-                    
+                    # If EMA is enabled and crossing or MACD is enabled and crossing or BBM is enabled and crossing or RSI is enbabled and crossing
+                    # and 
+                    # ADX is enabled and strong and candle trend is enabled and bullish
+                    # then BUY or SELL
 
+                    # Check for BUY signal
+                    buy_conditions = (
+                        (not self.settings.EMA_STUDY or not self.settings.EMA_CHECK_ON_OPEN or self.ema_signal == "BUY") or
+                        (not self.settings.MACD_STUDY or not self.settings.MACD_CHECK_ON_OPEN or self.macd_signal == "BUY") or
+                        (not self.settings.BBM_STUDY or not self.settings.BBM_CHECK_ON_OPEN or self.bbm_signal == "BUY") or
+                        (not self.settings.RSI_STUDY or not self.settings.RSI_CHECK_ON_OPEN or self.rsi_signal == "BUY")
+                    )
+                    additional_buy_conditions = (
+                        (not self.settings.ADX_STUDY or not self.settings.ADX_CHECK_ON_OPEN or self.adx_signal == "STRONG") and
+                        (not self.settings.CANDLE_TREND_STUDY or not self.settings.CANDLE_TREND_CHECK_ON_OPEN or self.candle_trend == "BULLISH")
+                    )
+
+                    # Check for SELL signal
+                    sell_conditions = (
+                        (not self.settings.EMA_STUDY or not self.settings.EMA_CHECK_ON_OPEN or self.ema_signal == "SELL") or
+                        (not self.settings.MACD_STUDY or not self.settings.MACD_CHECK_ON_OPEN or self.macd_signal == "SELL") or
+                        (not self.settings.BBM_STUDY or not self.settings.BBM_CHECK_ON_OPEN or self.bbm_signal == "SELL") or
+                        (not self.settings.RSI_STUDY or not self.settings.RSI_CHECK_ON_OPEN or self.rsi_signal == "SELL")
+                    )
+                    additional_sell_conditions = (
+                        (not self.settings.ADX_STUDY or not self.settings.ADX_CHECK_ON_OPEN or self.adx_signal == "STRONG") and
+                        (not self.settings.CANDLE_TREND_STUDY or not self.settings.CANDLE_TREND_CHECK_ON_OPEN or self.candle_trend == "BEARISH")
+                    )
+
+                    # Determine current signal
+                    if buy_conditions and additional_buy_conditions:
+                        self.current_signal = "BUY"
+                    elif sell_conditions and additional_sell_conditions:
+                        self.current_signal = "SELL"
+                    else:
+                        self.current_signal = "HOLD"
+                else:
+                    # If EMA is enabled and crossing and MACD is enabled and crossing and BBM is enabled and crossing and RSI is enbabled and crossing
+                    # and 
+                    # ADX is enabled and strong and candle trend is enabled and bullish
+                    # then BUY or SELL
+                    buy_conditions = (
+                        (not self.settings.EMA_STUDY or not self.settings.EMA_CHECK_ON_OPEN or self.ema_signal == "BUY") and
+                        (not self.settings.MACD_STUDY or not self.settings.MACD_CHECK_ON_OPEN or self.macd_signal == "BUY") and
+                        (not self.settings.BBM_STUDY or not self.settings.BBM_CHECK_ON_OPEN or self.bbm_signal == "BUY") and
+                        (not self.settings.RSI_STUDY or not self.settings.RSI_CHECK_ON_OPEN or self.rsi_signal == "BUY")
+                    )
+                    additional_buy_conditions = (
+                        (not self.settings.ADX_STUDY or not self.settings.ADX_CHECK_ON_OPEN or self.adx_signal == "STRONG") and
+                        (not self.settings.CANDLE_TREND_STUDY or not self.settings.CANDLE_TREND_CHECK_ON_OPEN or self.candle_trend == "BULLISH")
+                    )
+
+                    # Check for SELL signal
+                    sell_conditions = (
+                        (not self.settings.EMA_STUDY or not self.settings.EMA_CHECK_ON_OPEN or self.ema_signal == "SELL") and
+                        (not self.settings.MACD_STUDY or not self.settings.MACD_CHECK_ON_OPEN or self.macd_signal == "SELL") and
+                        (not self.settings.BBM_STUDY or not self.settings.BBM_CHECK_ON_OPEN or self.bbm_signal == "SELL") and
+                        (not self.settings.RSI_STUDY or not self.settings.RSI_CHECK_ON_OPEN or self.rsi_signal == "SELL")
+                    )
+                    additional_sell_conditions = (
+                        (not self.settings.ADX_STUDY or not self.settings.ADX_CHECK_ON_OPEN or self.adx_signal == "STRONG") and
+                        (not self.settings.CANDLE_TREND_STUDY or not self.settings.CANDLE_TREND_CHECK_ON_OPEN or self.candle_trend == "BEARISH")
+                    )
+
+                    # Determine current signal
+                    if buy_conditions and additional_buy_conditions:
+                        self.current_signal = "BUY"
+                    elif sell_conditions and additional_sell_conditions:
+                        self.current_signal = "SELL"
+                    else:
+                        self.current_signal = "HOLD"
+                    
                    
             except Exception as e:
                 logger.info(f"Function: calculate_study, {e}, {e.args}, {type(e).__name__}")

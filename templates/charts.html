@@ -70,16 +70,21 @@
             const data1h = messageElement.chart1h;
             const data1d = messageElement.chart1d;
             const buysell = messageElement.buysell;
+            const ema_study = messageElement.ema_study;
             const ema_chart = messageElement.ema_chart;
+            const macd_study = messageElement.macd_study;
             const macd_chart = messageElement.macd_chart;
+            const bbm_study = messageElement.bbm_study;
             const bbm_chart = messageElement.bbm_chart;
+            const rsi_study = messageElement.rsi_study;
             const rsi_chart = messageElement.rsi_chart;
 
-            createOrUpdateChart('chart1m', data1m, buysell, ema_chart, macd_chart, bbm_chart, rsi_chart, 'minute'); 
-            createOrUpdateChart('chart5m', data5m, buysell, ema_chart, macd_chart, bbm_chart, rsi_chart, 'minute'); 
-            createOrUpdateChart('chart15m', data15m, buysell, ema_chart, macd_chart, bbm_chart, rsi_chart, 'minute' ); 
-            createOrUpdateChart('chart1h', data1h, buysell, ema_chart, macd_chart, bbm_chart, rsi_chart,'hour'); 
-            createOrUpdateChart('chart1d', data1d, buysell, ema_chart, macd_chart, bbm_chart, rsi_chart, 'day');
+
+            createOrUpdateChart('chart1m', data1m, buysell, ema_study, ema_chart, macd_study, macd_chart, bbm_study, bbm_chart, rsi_study, rsi_chart, 'minute'); 
+            createOrUpdateChart('chart5m', data5m, buysell, ema_study, ema_chart, macd_study, macd_chart, bbm_study, bbm_chart, rsi_study, rsi_chart, 'minute'); 
+            createOrUpdateChart('chart15m', data15m, buysell, ema_study, ema_chart, macd_study, macd_chart, bbm_study, bbm_chart, rsi_study, rsi_chart, 'minute'); 
+            createOrUpdateChart('chart1h', data1h, buysell, ema_study, ema_chart, macd_study, macd_chart, bbm_study, bbm_chart, rsi_study, rsi_chart, 'hour'); 
+            createOrUpdateChart('chart1d', data1d, buysell, ema_study, ema_chart, macd_study, macd_chart, bbm_study, bbm_chart, rsi_study, rsi_chart, 'day');
         };
 
         websocket.onerror = function(error) {
