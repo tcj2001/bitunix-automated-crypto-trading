@@ -520,12 +520,19 @@
                         const data = messageElement.chart;
                         const buysell = messageElement.buysell;
                         const period = messageElement.period;
+                        const ema_study = messageElement.ema_study;
+                        const macd_study = messageElement.macd_study;
+                        const bbm_study = messageElement.bbm_study;
+                        const rsi_study = messageElement.rsi_study;
+                        const adx_study = messageElement.adx_study;
+                        const candle_trend_study = messageElement.candle_trend_study;
+            
                         if (period === '1m' || period === '5m' || period === '15m') {
-                            createOrUpdateChart('chart', data, buysell, 'minute'); 
+                            createOrUpdateChart('chart', data, buysell, ema_study, macd_study, bbm_study, rsi_study, adx_study, candle_trend_study, 'minute'); 
                         } else if (period === '1h') {
-                            createOrUpdateChart('chart', data, buysell, 'hour'); 
+                            createOrUpdateChart('chart', data, buysell, ema_study, macd_study, bbm_study, rsi_study, adx_study, candle_trend_study, 'hour'); 
                         } else if (period === '1d') {
-                            createOrUpdateChart('chart', data, buysell, 'day'); 
+                            createOrUpdateChart('chart', data, buysell, ema_study, macd_study, bbm_study, rsi_study, adx_study, candle_trend_study, 'day'); 
                         }
                     };
 

@@ -1,5 +1,5 @@
 API_KEY=your_api_key
 SECRET_KEY=your_secret_key
 SECRET=your_token_secret
-PASSWORD=your_password
+PASSWORD=whatever_is_here_is_your_webpage_password
 HOST=0.0.0.0 

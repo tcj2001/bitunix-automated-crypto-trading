@@ -17,6 +17,7 @@ class Interval:
         self.settings=settings
         self._data = data
         
+        #these signals are used to list stocks in the signals sections on the main page
         self.current_signal="HOLD"
         self.ema_signal="HOLD"
         self.macd_signal="HOLD"
@@ -81,6 +82,9 @@ class Interval:
                             self.ema_signal = "SELL"
                         else:
                             self.ema_signal = "HOLD"
+                else:
+                    # Drop EMA columns if not used
+                    df.drop(['ma_fast', 'ma_medium', 'ma_slow', 'ma_slope', 'ma_angle'], axis=1, inplace=True, errors='ignore')
 
                 # Calculate the MACD Line
                 if self.settings.MACD_STUDY:
@@ -111,6 +115,9 @@ class Interval:
                             self.macd_signal = "SELL"
                         else:
                             self.macd_signal = "HOLD"
+                else:
+                    # Drop MACD columns if not used
+                    df.drop(['MACD_Line', 'MACD_Signal', 'MACD_Histogram', 'MACD_slope', 'MACD_angle'], axis=1, inplace=True, errors='ignore')
 
                 # Calculate Bollinger Bands  
                 if self.settings.BBM_STUDY:
@@ -141,6 +148,9 @@ class Interval:
                             self.bbm_signal = "SELL"
                         else:
                             self.bbm_signal = "HOLD"
+                else:
+                    # Drop BBM columns if not used
+                    df.drop(['BBL', 'BBM', 'BBU', 'BBM_slope', 'BBM_angle'], axis=1, inplace=True, errors='ignore') 
 
                 # Calculate the RSI
                 if self.settings.RSI_STUDY:
@@ -169,6 +179,9 @@ class Interval:
                             self.rsi_signal = "SELL"
                         else:
                             self.rsi_signal = "HOLD"
+                else:
+                    # Drop RSI columns if not used
+                    df.drop(['rsi_fast', 'rsi_slow', 'rsi_slope', 'rsi_angle'], axis=1, inplace=True, errors='ignore')  
 
                 # Calculate the ADX
                 if self.settings.ADX_STUDY:
@@ -178,6 +191,9 @@ class Interval:
                         self.adx_signal = "STRONG"
                     else:
                         self.adx_signal = "WEAK"  
+                else:
+                    # Drop ADX columns if not used
+                    df.drop(['ADX'], axis=1, inplace=True, errors='ignore')
                         
                 # Calculate the close proximity
                 if self.settings.CANDLE_TREND_STUDY:                
@@ -193,28 +209,51 @@ class Interval:
                         self.candle_trend = 'BEARISH'
                     else:
                         self.candle_trend = 'HOLD'      
+                else:
+                    # Drop candle trend columns if not used
+                    df.drop(['candle_trend', 'range'], axis=1, inplace=True, errors='ignore')
 
                     
                 #replace infinity   
                 df.replace([np.inf, -np.inf], 0, inplace=True)
                 
-                #open and close criteria
-                if  (not self.settings.EMA_STUDY or not self.settings.EMA_CHECK_ON_OPEN or self.ema_signal == "BUY") and \
-                    (not self.settings.MACD_STUDY or not self.settings.MACD_CHECK_ON_OPEN or self.macd_signal == "BUY") and \
-                    (not self.settings.BBM_STUDY or not self.settings.BBM_CHECK_ON_OPEN or self.bbm_signal == "BUY") and \
-                    (not self.settings.RSI_STUDY or self.settings.RSI_CHECK_ON_OPEN or self.rsi_signal == "BUY") and \
-                    (not self.settings.ADX_STUDY or self.settings.ADX_CHECK_ON_OPEN or self.adx_signal == "STRONG") and \
-                    (not self.settings.CANDLE_TREND_STUDY or self.settings.CANDLE_TREND_CHECK_ON_OPEN or self.candle_trend == "BULLISH"):
-                        self.current_signal = "BUY"
-                elif (not self.settings.EMA_STUDY or not self.settings.EMA_CHECK_ON_OPEN or self.ema_signal == "SELL") and \
-                     (not self.settings.MACD_STUDY or not self.settings.MACD_CHECK_ON_OPEN or self.macd_signal == "SELL") and \
-                     (not self.settings.BBM_STUDY or not self.settings.BBM_CHECK_ON_OPEN or self.bbm_signal == "SELL") and \
-                     (not self.settings.RSI_STUDY or self.settings.RSI_CHECK_ON_OPEN or self.rsi_signal == "SELL") and \
-                     (not self.settings.ADX_STUDY or self.settings.ADX_CHECK_ON_OPEN or self.adx_signal == "STRONG") and \
-                     (not self.settings.CANDLE_TREND_STUDY or self.settings.CANDLE_TREND_CHECK_ON_OPEN or self.candle_trend == "BEARISH"):
-                        self.current_signal = "SELL"
+                if self.settings.OPEN_ON_ANY_SIGNAL:
+                    #list buy or sell signals if any signal is true
+                    if  (not self.settings.EMA_STUDY or not self.settings.EMA_CHECK_ON_OPEN or self.ema_signal == "BUY") or \
+                        (not self.settings.MACD_STUDY or not self.settings.MACD_CHECK_ON_OPEN or self.macd_signal == "BUY") or \
+                        (not self.settings.BBM_STUDY or not self.settings.BBM_CHECK_ON_OPEN or self.bbm_signal == "BUY") or \
+                        (not self.settings.RSI_STUDY or self.settings.RSI_CHECK_ON_OPEN or self.rsi_signal == "BUY") or \
+                        (not self.settings.ADX_STUDY or self.settings.ADX_CHECK_ON_OPEN or self.adx_signal == "STRONG") or \
+                        (not self.settings.CANDLE_TREND_STUDY or self.settings.CANDLE_TREND_CHECK_ON_OPEN or self.candle_trend == "BULLISH"):
+                            self.current_signal = "BUY"
+                    elif (not self.settings.EMA_STUDY or not self.settings.EMA_CHECK_ON_OPEN or self.ema_signal == "SELL") or \
+                        (not self.settings.MACD_STUDY or not self.settings.MACD_CHECK_ON_OPEN or self.macd_signal == "SELL") or \
+                        (not self.settings.BBM_STUDY or not self.settings.BBM_CHECK_ON_OPEN or self.bbm_signal == "SELL") or \
+                        (not self.settings.RSI_STUDY or self.settings.RSI_CHECK_ON_OPEN or self.rsi_signal == "SELL") or \
+                        (not self.settings.ADX_STUDY or self.settings.ADX_CHECK_ON_OPEN or self.adx_signal == "STRONG") or \
+                        (not self.settings.CANDLE_TREND_STUDY or self.settings.CANDLE_TREND_CHECK_ON_OPEN or self.candle_trend == "BEARISH"):
+                            self.current_signal = "SELL"
+                    else:
+                            self.current_signal = "HOLD"
                 else:
-                        self.current_signal = "HOLD"
+                    #list buy or sell signals only if all signal is true (if it is enabled)
+                    if  (not self.settings.EMA_STUDY or not self.settings.EMA_CHECK_ON_OPEN or self.ema_signal == "BUY") and \
+                        (not self.settings.MACD_STUDY or not self.settings.MACD_CHECK_ON_OPEN or self.macd_signal == "BUY") and \
+                        (not self.settings.BBM_STUDY or not self.settings.BBM_CHECK_ON_OPEN or self.bbm_signal == "BUY") and \
+                        (not self.settings.RSI_STUDY or not self.settings.RSI_CHECK_ON_OPEN or self.rsi_signal == "BUY") and \
+                        (not self.settings.ADX_STUDY or not self.settings.ADX_CHECK_ON_OPEN or self.adx_signal == "STRONG") and \
+                        (not self.settings.CANDLE_TREND_STUDY or not self.settings.CANDLE_TREND_CHECK_ON_OPEN or self.candle_trend == "BULLISH"):
+                            self.current_signal = "BUY"
+                    elif (not self.settings.EMA_STUDY or not self.settings.EMA_CHECK_ON_OPEN or self.ema_signal == "SELL") and \
+                        (not self.settings.MACD_STUDY or not self.settings.MACD_CHECK_ON_CLOSE or self.macd_signal == "SELL") and \
+                        (not self.settings.BBM_STUDY or not self.settings.BBM_CHECK_ON_OPEN or self.bbm_signal == "SELL") and \
+                        (not self.settings.RSI_STUDY or not self.settings.RSI_CHECK_ON_OPEN or self.rsi_signal == "SELL") and \
+                        (not self.settings.ADX_STUDY or not self.settings.ADX_CHECK_ON_OPEN or self.adx_signal == "STRONG") and \
+                        (not self.settings.CANDLE_TREND_STUDY or not self.settings.CANDLE_TREND_CHECK_ON_OPEN or  self.candle_trend == "BEARISH"):
+                            self.current_signal = "SELL"
+                    else:
+                            self.current_signal = "HOLD"
+                    
 
                    
             except Exception as e:

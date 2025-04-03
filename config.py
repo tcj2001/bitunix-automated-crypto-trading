@@ -31,6 +31,8 @@ class Settings(BaseSettings):
     ADX_PERIOD: int = Field(default=14, ge=1)
 
     # Technical Indicators
+    OPEN_ON_ANY_SIGNAL: bool = Field(default=True)
+
     EMA_STUDY: bool = Field(default=True)
     EMA_CROSSING: bool = Field(default=False)
     EMA_CHECK_ON_OPEN: bool = Field(default=True)
