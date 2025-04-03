@@ -1,7 +1,7 @@
 const charts = {};
 
 const createOrUpdateChart = (
-    chartId, data, buysell, ema_study, macd_study, bbm_study, rsi_study, adx_study, candle_trend_study, timeUnit
+    chartId, data, buysell, ema_chart, macd_chart, bbm_chart, rsi_chart, timeUnit
 ) => {
     const datasets = [];
     const scales = {}; // Dynamic y-axis configuration
@@ -51,7 +51,7 @@ const createOrUpdateChart = (
     });
 
     // EMA Study
-    if (ema_study) {
+    if (ema_chart) {
         datasets.push({
             label: 'EMA Slow',
             data: mapOptionalData(data, 'ma_slow'),
@@ -91,7 +91,7 @@ const createOrUpdateChart = (
     }
 
     // BBM Study
-    if (bbm_study) {
+    if (bbm_chart) {
         datasets.push({
             label: 'BBU',
             data: mapOptionalData(data, 'BBU'),
@@ -130,7 +130,7 @@ const createOrUpdateChart = (
     }
 
     // MACD Study
-    if (macd_study) {
+    if (macd_chart) {
 
         scales['y-axis-macd'] = {
             type: 'linear',
@@ -180,7 +180,7 @@ const createOrUpdateChart = (
     }
 
     // RSI Study
-    if (rsi_study) {
+    if (rsi_chart) {
 
         scales['y-axis-rsi'] = {
             type: 'linear',

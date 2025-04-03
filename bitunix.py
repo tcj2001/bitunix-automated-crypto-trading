@@ -385,12 +385,10 @@ async def wscharts(websocket):
                         "chart1h":chart1h,
                         "chart1d":chart1d,
                         "buysell": buysell,
-                        "ema_study": settings.EMA_STUDY,
-                        "macd_study": settings.MACD_STUDY,
-                        "bbm_study": settings.BBM_STUDY,    
-                        "rsi_study": settings.RSI_STUDY,
-                        "adx_study": settings.ADX_STUDY,
-                        "candle_trend_study": settings.CANDLE_TREND_STUDY
+                        "ema_chart": settings.EMA_CHART,
+                        "macd_chart": settings.MACD_CHART,
+                        "bbm_chart": settings.BBM_CHART,    
+                        "rsi_chart": settings.RSI_CHART,
                     }
                 
                     await queue.put(json.dumps(data))
@@ -460,12 +458,10 @@ async def wschart(websocket):
                         "chart":chart,
                         "buysell": buysell,
                         "period": period,
-                        "ema_study": settings.EMA_STUDY,
-                        "macd_study": settings.MACD_STUDY,
-                        "bbm_study": settings.BBM_STUDY,    
-                        "rsi_study": settings.RSI_STUDY,
-                        "adx_study": settings.ADX_STUDY,
-                        "candle_trend_study": settings.CANDLE_TREND_STUDY
+                        "ema_chart": settings.EMA_CHART,
+                        "macd_chart": settings.MACD_CHART,
+                        "bbm_chart": settings.BBM_CHART,    
+                        "rsi_chart": settings.RSI_CHART,
                     }
                 
                     await queue.put(json.dumps(data))

@@ -33,21 +33,25 @@ class Settings(BaseSettings):
     # Technical Indicators
     OPEN_ON_ANY_SIGNAL: bool = Field(default=True)
 
+    EMA_CHART: bool = Field(default=True)
     EMA_STUDY: bool = Field(default=True)
     EMA_CROSSING: bool = Field(default=False)
     EMA_CHECK_ON_OPEN: bool = Field(default=True)
     EMA_CHECK_ON_CLOSE: bool = Field(default=True)
 
+    MACD_CHART: bool = Field(default=False)
     MACD_STUDY: bool = Field(default=True)
     MACD_CROSSING: bool = Field(default=False)
     MACD_CHECK_ON_OPEN: bool = Field(default=False)
     MACD_CHECK_ON_CLOSE: bool = Field(default=False)
 
+    BBM_CHART: bool = Field(default=False)
     BBM_STUDY: bool = Field(default=True)
     BBM_CROSSING: bool = Field(default=False)
     BBM_CHECK_ON_OPEN: bool = Field(default=False)
     BBM_CHECK_ON_CLOSE: bool = Field(default=False)
 
+    RSI_CHART: bool = Field(default=False)
     RSI_STUDY: bool = Field(default=True)
     RSI_CROSSING: bool = Field(default=False)
     RSI_CHECK_ON_OPEN: bool = Field(default=False)
