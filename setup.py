@@ -73,7 +73,7 @@ setup(
         "colorama",
         "pandas",
         "numpy",
-        "TA-Lib",  # Technical Analysis Library
+        #"TA-Lib",  # Technical Analysis Library
     ],
     entry_points={
         "console_scripts": [
