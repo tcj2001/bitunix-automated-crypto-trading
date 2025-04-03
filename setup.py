@@ -76,7 +76,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "bitunix-automated-crypto-trading=bitunix-automated-crypto-trading.bitunix:main",
+            "bitunix-automated-crypto-trading=bitunix-automated-crypto-trading:bitunix",
         ],
     },
     cmdclass={
