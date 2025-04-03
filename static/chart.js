@@ -1,7 +1,7 @@
 const charts = {};
 
 const createOrUpdateChart = (
-    chartId, data, buysell, ema_chart, macd_chart, bbm_chart, rsi_chart, timeUnit
+    chartId, data, buysell, ema_study, ema_display, macd_study, macd_display, bbm_study, bbm_display, rsi_study, rsi_display, timeUnit
 ) => {
     const datasets = [];
     const scales = {}; // Dynamic y-axis configuration
@@ -51,7 +51,7 @@ const createOrUpdateChart = (
     });
 
     // EMA Study
-    if (ema_chart) {
+    if (ema_study) {
         datasets.push({
             label: 'EMA Slow',
             data: mapOptionalData(data, 'ma_slow'),
@@ -74,7 +74,8 @@ const createOrUpdateChart = (
             fill: false,
             type: 'line',
             pointRadius: 0,
-            yAxisID: 'y-axis'
+            yAxisID: 'y-axis',
+            hidden: !ema_display // Hide if not displayed
         });
 
         datasets.push({
@@ -86,12 +87,13 @@ const createOrUpdateChart = (
             fill: false,
             type: 'line',
             pointRadius: 0,
-            yAxisID: 'y-axis'
+            yAxisID: 'y-axis',
+            hidden: !ema_display // Hide if not displayed
         });
     }
 
     // BBM Study
-    if (bbm_chart) {
+    if (bbm_study) {
         datasets.push({
             label: 'BBU',
             data: mapOptionalData(data, 'BBU'),
@@ -101,7 +103,8 @@ const createOrUpdateChart = (
             fill: false,
             type: 'line',
             pointRadius: 0,
-            yAxisID: 'y-axis'
+            yAxisID: 'y-axis',
+            hidden: !bbm_display // Hide if not displayed
         });
 
         datasets.push({
@@ -113,7 +116,8 @@ const createOrUpdateChart = (
             fill: false,
             type: 'line',
             pointRadius: 0,
-            yAxisID: 'y-axis'
+            yAxisID: 'y-axis',
+            hidden: !bbm_display // Hide if not displayed
         });
 
         datasets.push({
@@ -125,12 +129,13 @@ const createOrUpdateChart = (
             fill: false,
             type: 'line',
             pointRadius: 0,
-            yAxisID: 'y-axis'
+            yAxisID: 'y-axis',
+            hidden: !bbm_display // Hide if not displayed
         });
     }
 
     // MACD Study
-    if (macd_chart) {
+    if (macd_study) {
 
         scales['y-axis-macd'] = {
             type: 'linear',
@@ -147,7 +152,8 @@ const createOrUpdateChart = (
             fill: false,
             type: 'line',
             pointRadius: 0,
-            yAxisID: 'y-axis-macd'
+            yAxisID: 'y-axis-macd',
+            hidden: !macd_display // Hide if not displayed
         });
 
         datasets.push({
@@ -159,7 +165,8 @@ const createOrUpdateChart = (
             fill: false,
             type: 'line',
             pointRadius: 0,
-            yAxisID: 'y-axis-macd'
+            yAxisID: 'y-axis-macd',
+            hidden: !macd_display // Hide if not displayed
         });
 
         scales['y-axis-macd-histogram'] = {
@@ -180,7 +187,7 @@ const createOrUpdateChart = (
     }
 
     // RSI Study
-    if (rsi_chart) {
+    if (rsi_study) {
 
         scales['y-axis-rsi'] = {
             type: 'linear',
@@ -197,7 +204,8 @@ const createOrUpdateChart = (
             fill: false,
             type: 'line',
             pointRadius: 0,
-            yAxisID: 'y-axis-rsi'
+            yAxisID: 'y-axis-rsi',
+            hidden: !rsi_display // Hide if not displayed
         });
 
         datasets.push({
@@ -209,7 +217,8 @@ const createOrUpdateChart = (
             fill: false,
             type: 'line',
             pointRadius: 0,
-            yAxisID: 'y-axis-rsi'
+            yAxisID: 'y-axis-rsi',
+            hidden: !rsi_display // Hide if not displayed
         });
     }
 
