@@ -8,20 +8,10 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
     <link rel="stylesheet" href="static/styles.css">
     <link rel="stylesheet" href="static/chart.css">    
-    <style> 
-        .mainbody { 
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            margin-top: 80px; /* Adjust according to header height */
-        } 
-    </style>        
 </head>
 <body>
-    <header>
-        <div class="container">
+    <div class="chart-body">
+        <div class="chart-grid"> 
             <div class="right">
                 <div class="label">Symbol</div>
                 <div id='symbol'></div> 
@@ -30,11 +20,7 @@
                 <div class="label">Close</div>
                 <div id='close'></div>
             </div>
-        </div>
-    </header>
-    <div class="mainbody">
-        <div class="chart-grid"> 
-            <div class="chart-container"> 
+                <div class="chart-container"> 
                 <canvas id="chart1m"></canvas> 
             </div> 
             <div class="chart-container"> 
@@ -84,12 +70,18 @@
             const data1h = messageElement.chart1h;
             const data1d = messageElement.chart1d;
             const buysell = messageElement.buysell;
+            const ema_study = messageElement.ema_study;
+            const macd_study = messageElement.macd_study;
+            const bbm_study = messageElement.bbm_study;
+            const rsi_study = messageElement.rsi_study;
+            const adx_study = messageElement.adx_study;
+            const candle_trend_study = messageElement.candle_trend_study;
 
-            createOrUpdateChart('chart1m', data1m, buysell, 'minute'); 
-            createOrUpdateChart('chart5m', data5m, buysell, 'minute'); 
-            createOrUpdateChart('chart15m', data15m, buysell, 'minute' ); 
-            createOrUpdateChart('chart1h', data1h, buysell,  'hour'); 
-            createOrUpdateChart('chart1d', data1d, buysell, 'day');
+            createOrUpdateChart('chart1m', data1m, buysell, ema_study, macd_study, bbm_study, rsi_study, adx_study, candle_trend_study, 'minute'); 
+            createOrUpdateChart('chart5m', data5m, buysell, ema_study, macd_study, bbm_study, rsi_study, adx_study, candle_trend_study,'minute'); 
+            createOrUpdateChart('chart15m', data15m, buysell, ema_study, macd_study, bbm_study, rsi_study, adx_study, candle_trend_study,'minute' ); 
+            createOrUpdateChart('chart1h', data1h, buysell, ema_study, macd_study, bbm_study, rsi_study, adx_study, candle_trend_study, 'hour'); 
+            createOrUpdateChart('chart1d', data1d, buysell, ema_study, macd_study, bbm_study, rsi_study, adx_study, candle_trend_study, 'day');
         };
 
         websocket.onerror = function(error) {

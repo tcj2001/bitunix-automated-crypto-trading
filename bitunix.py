@@ -385,6 +385,12 @@ async def wscharts(websocket):
                         "chart1h":chart1h,
                         "chart1d":chart1d,
                         "buysell": buysell,
+                        "ema_study": settings.EMA_STUDY,
+                        "macd_study": settings.MACD_STUDY,
+                        "bbm_study": settings.BBM_STUDY,    
+                        "rsi_study": settings.RSI_STUDY,
+                        "adx_study": settings.ADX_STUDY,
+                        "candle_trend_study": settings.CANDLE_TREND_STUDY
                     }
                 
                     await queue.put(json.dumps(data))
@@ -453,7 +459,13 @@ async def wschart(websocket):
                         "close":close,
                         "chart":chart,
                         "buysell": buysell,
-                        "period": period
+                        "period": period,
+                        "ema_study": settings.EMA_STUDY,
+                        "macd_study": settings.MACD_STUDY,
+                        "bbm_study": settings.BBM_STUDY,    
+                        "rsi_study": settings.RSI_STUDY,
+                        "adx_study": settings.ADX_STUDY,
+                        "candle_trend_study": settings.CANDLE_TREND_STUDY
                     }
                 
                     await queue.put(json.dumps(data))
@@ -493,6 +505,7 @@ async def get_env_variables():
 # Save updated environment variables
 @app.post("/save-config")
 async def save_env_variable(key: str = Form(...), value: str = Form(...)):
+    global settings
     # Read the existing configuration
     config = read_config(CONFIG_FILE)
     # Temporarily update the config dictionary for validation
