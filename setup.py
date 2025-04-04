@@ -9,7 +9,7 @@ import os
 
 def get_version():
     # Default version if all else fails
-    DEFAULT_VERSION = "2.0.0"
+    DEFAULT_VERSION = "2.5.0"
     
     # First try to get version from version.py if it exists
     version_file_path = 'version.py'
@@ -137,7 +137,7 @@ setup(
     include_package_data=True,
     classifiers=[
         "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: MIT License",
+        "License :: MIT AND (Apache-2.0 OR BSD-2-Clause)",
         "Operating System :: OS Independent",
     ],
     python_requires=">=3.13",  # Required for the TA-Lib wheel compatibility
