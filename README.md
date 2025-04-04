@@ -196,12 +196,12 @@ The platform can be configured through the `config.py` file or `config.txt`. Key
   - # required for TA-Lib
   - wget https://github.com/ta-lib/ta-lib/releases/download/v0.6.4/ta-lib_0.6.4_amd64.deb
   - sudo dpkg -i ta-lib_0.6.4_amd64.deb
-  - # change the Ver1.0 to the latest version in the script below and run it
+  - # change the tags/2.0 to the latest version in the script below and run it
   - bash -c "\
     apt-get install -y python3-pip wget unzip dos2unix && \
     python3 -m pip install --upgrade pip && \
     mkdir bitunix && cd bitunix && \
-    wget https://github.com/tcj2001/bitunix-automated-crypto-trading/archive/refs/tags/Ver1.0.tar.gz -O bitunix.tar.gz && \
+    wget https://github.com/tcj2001/bitunix-automated-crypto-trading/archive/refs/tags/2.0.tar.gz -O bitunix.tar.gz && \
     mkdir code && \
     tar --strip-components=1 -xvzf bitunix.tar.gz -C code && \
     cd code && \
@@ -220,7 +220,8 @@ The platform can be configured through the `config.py` file or `config.txt`. Key
   - python3 --version
   - python -m pip install --upgrade pip
   - pip install https://github.com/cgohlke/talib-build/releases/download/v0.6.3/ta_lib-0.6.3-cp313-cp313-win_amd64.whl
-  - wget https://github.com/tcj2001/bitunix-automated-crypto-trading/archive/refs/tags/Ver1.0.zip
+  - # change the tags/2.0 to the latest version in the script below and run it
+  - wget https://github.com/tcj2001/bitunix-automated-crypto-trading/archive/refs/tags/2.0.zip
   - unzip zip file and copy the content inside C:\bitunix\Ver1.0.zip\bitunix-automated-crypto-trading-Ver1.0 to c:\bitunix
   - pip install -r requirements.txt 
   - # Make sure ta-lib is installed
