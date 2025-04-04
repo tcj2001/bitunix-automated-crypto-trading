@@ -7,66 +7,6 @@ import subprocess
 import re
 import os
 
-def get_version():
-    # Default version if all else fails
-    DEFAULT_VERSION = "2.5.0"
-    
-    # First try to get version from version.py if it exists
-    version_file_path = 'version.py'
-    if os.path.exists(version_file_path):
-        try:
-            with open(version_file_path, 'r') as f:
-                version_file = f.read()
-            version_match = re.search(r"__version__ = ['\"]([^'\"]*)['\"]", version_file, re.M)
-            if version_match:
-                return version_match.group(1)
-        except Exception:
-            pass  # Fall through to next method
-    
-    # Next try to get version from git tags
-    try:
-        # Get the latest Git tag (e.g., v2.0.0)
-        version = subprocess.check_output(["git", "describe", "--tags"]).strip().decode("utf-8")
-        # Ensure the tag is clean and remove 'v' prefix if present
-        if version.startswith("v"):
-            version = version[1:]
-        # Validate version format (e.g., 2.0.0)
-        if re.match(r"^\d+\.\d+\.\d+$", version):
-            # Save to version.py for future use
-            with open('version.py', 'w') as f:
-                f.write(f'__version__ = "{version}"')
-            return version
-    except Exception as e:
-        print(f"Warning: Unable to determine version from Git tags: {e}")
-    
-    # If we get here, use the default version
-    print(f"Using default version: {DEFAULT_VERSION}")
-    # Save to version.py for future use
-    with open('version.py', 'w') as f:
-        f.write(f'__version__ = "{DEFAULT_VERSION}"')
-    return DEFAULT_VERSION
-
-# Increment version for sdist command
-def increment_version(version_string):
-    # Parse version (assuming format like 1.7.0)
-    major, minor, patch = map(int, version_string.split('.'))
-    # Increment patch version
-    patch += 1
-    new_version = f"{major}.{minor}.{patch}"
-    # Write back to version.py
-    with open('version.py', 'w') as f:
-        f.write(f'__version__ = "{new_version}"')
-    return new_version
-
-# Custom sdist command that increments version
-class IncrementVersionSDist(sdist):
-    def run(self):
-        version = get_version()
-        print(f"Current version: {version}")
-        new_version = increment_version(version)
-        print(f"Incremented version to: {new_version}")
-        sdist.run(self)
-
 class CustomInstall(install):
     """Custom install class to download and install platform-specific TA-Lib wheels.
     This avoids building TA-Lib from source, which can be problematic.
@@ -126,7 +66,7 @@ class CustomInstall(install):
 
 setup(
     name="bitunix_automated_crypto_trading",
-    version=get_version(),  # Dynamically load the version
+    version="2.5.6",  # Dynamically load the version
     license="MIT",
     author="tcj2001",
     author_email="thomsonmathews@hotmail.com",
@@ -167,7 +107,6 @@ setup(
     },
     cmdclass={
         'install': CustomInstall,  # Override the install command
-        'sdist': IncrementVersionSDist,  # Override the sdist command to auto-increment version
     },
     package_data={
         "": ["templates/*.html", "static/*", "config.txt", "sampleenv.txt"],
