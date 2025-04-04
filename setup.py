@@ -9,9 +9,15 @@ import os
 
 def get_version():
     try:
-        ret = subprocess.check_output(["git", "describe", "--tags"]).strip().decode("utf-8")
-        print(f"Git version: {ret}")
-        return ret
+        # Get the latest Git tag (e.g., v2.0.0)
+        version = subprocess.check_output(["git", "describe", "--tags"]).strip().decode("utf-8")
+        # Ensure the tag is clean and remove 'v' prefix if present
+        if version.startswith("v"):
+            version = version[1:]
+        # Validate version format (e.g., 2.0.0)
+        if not re.match(r"^\d+\.\d+\.\d+$", version):
+            raise ValueError(f"Invalid version format: {version}")
+        return version
     except Exception:
         raise RuntimeError("Unable to determine version from Git tags.")
 
@@ -45,7 +51,6 @@ class CustomInstall(install):
                 try:
                     print(f"Downloading {url}...")
                     urllib.request.urlretrieve(url, file_name)
-                    
                     # Install the .whl file with --no-build-isolation to prevent building from source
                     print(f"Installing {file_name}...")
                     subprocess.check_call([sys.executable, "-m", "pip", "install", file_name, "--no-build-isolation"])
@@ -58,11 +63,14 @@ class CustomInstall(install):
                 print(f"\n------------------------------------------------------")
                 print(f"Platform {platform} detected. installing TA-Lib.")
                 print("------------------------------------------------------\n")
+                url = "https://github.com/ta-lib/ta-lib/releases/download/v0.6.4/ta-lib_0.6.4_amd64.deb"
+                file_name = "ta-lib_0.6.4_amd64.deb"
                 try:
-                    url = "https://github.com/ta-lib/ta-lib/releases/download/v0.6.4/ta-lib_0.6.4_amd64.deb"
-                    file_name = "ta-lib_0.6.4_amd64.deb"
+                    print(f"Downloading {url}...")
                     urllib.request.urlretrieve(url, file_name)
+                    print(f"Installing {file_name}...")
                     subprocess.check_call(["sudo", "dpkg", "-i", file_name])
+                    print("TA-Lib wheel installed successfully.")
                 except Exception as e:
                     print(f"Error installing TA-Lib wheel: {e}")
                     print("For Linux, you can use:")
