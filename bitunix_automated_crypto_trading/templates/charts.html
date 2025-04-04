@@ -20,21 +20,11 @@
                 <div class="label">Close</div>
                 <div id='close'></div>
             </div>
-                <div class="chart-container"> 
-                <canvas id="chart1m"></canvas> 
-            </div> 
-            <div class="chart-container"> 
-                <canvas id="chart5m"></canvas> 
-            </div> 
-            <div class="chart-container"> 
-                <canvas id="chart15m"></canvas> 
-            </div> 
-            <div class="chart-container"> 
-                <canvas id="chart1h"></canvas> 
-            </div> 
-            <div class="chart-container"> 
-                <canvas id="chart1d"></canvas> 
-            </div> 
+            <div id="chart1m" class="chart-container"> </div>
+            <div id="chart5m" class="chart-container"> </div>
+            <div id="chart15m" class="chart-container"> </div>
+            <div id="chart1h" class="chart-container"> </div>
+            <div id="chart1d" class="chart-container"> </div>
         </div>    
     </div>
     <script src="/static/chart.js"></script>
@@ -91,6 +81,9 @@
         };
 
         websocket.onclose = function() {
+            charts.forEach(chart => {
+                delete charts[chart];
+            });
         };
 
 

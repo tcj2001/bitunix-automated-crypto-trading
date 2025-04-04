@@ -20,12 +20,60 @@ const createOrUpdateChart = (
         rsi_fast: 'rgba(156, 23, 23, 0.7)',    // Red for RSI Fast  
     };
 
+    const candlestickData = data.map(d => ({
+        x: parseInt(d.time),
+        o: parseFloat(d.open),
+        h: parseFloat(d.high),
+        l: parseFloat(d.low),
+        c: parseFloat(d.close)
+    }));
+
     const mapOptionalData = (data, key, yKey = key.replace('_', '')) => {
         return data.filter(d => typeof d[key] !== 'undefined' && parseFloat(d[key]) !== 0).map(d => ({
             x: parseInt(d.time),
             y: parseFloat(d[key])
         }));
     };
+
+    const slowMA = mapOptionalData(data, 'ma_slow');
+    const mediumMA = mapOptionalData(data, 'ma_medium');
+    const fastMA = mapOptionalData(data, 'ma_fast');
+    const macdLine = mapOptionalData(data, 'MACD_Line');
+    const signalLine = mapOptionalData(data, 'MACD_Signal');
+    const macdHistogram = mapOptionalData(data, 'MACD_Histogram');
+    const BBL = mapOptionalData(data, 'BBL');
+    const BBM = mapOptionalData(data, 'BBM');
+    const BBU = mapOptionalData(data, 'BBU');
+    const rsi_slow = mapOptionalData(data, 'rsi_slow');
+    const rsi_fast = mapOptionalData(data, 'rsi_fast');
+
+    // Find the min and max time from candlestickData
+    const times = candlestickData.map(d => d.x);
+    const minTime = Math.min(...times);
+    const maxTime = Math.max(...times);
+
+    const buyselldata = buysell.filter(d => {
+        const time = parseInt(d.ctime);
+        return time >= minTime && time <= maxTime;
+    }).map(d => ({
+        x: parseInt(d.ctime),
+        y: parseFloat(d.price),
+        side: d.side,
+        backgroundColor: d.side === 'BUY' ? 'rgba(0, 255, 0, 0.9)' : 'rgba(255, 0, 0, 0.9)', // Color based on buy/sell
+        borderColor: d.side === 'BUY' ? 'rgba(0, 255, 0, 1)' : 'rgba(255, 0, 0, 1)',
+        borderWidth: 2,
+        pointRadius: 5, // Increased for better visibility
+        pointStyle: 'triangle' // Changed for better visibility
+    }));
+
+    const timeSettings = {
+        second: { unit: 'second', stepSize: 1, displayFormats: { second: 'HH:mm:ss' } },
+        minute: { unit: 'minute', stepSize: 1, displayFormats: { minute: 'HH:mm' } },
+        hour: { unit: 'hour', stepSize: 1, displayFormats: { hour: 'HH:mm' } },
+        day: { unit: 'day', stepSize: 1, displayFormats: { day: 'MMM dd' } }
+    };
+
+    const timeConfig = timeSettings[timeUnit] || timeSettings['second'];
 
 
     // Candlestick Data
@@ -38,13 +86,7 @@ const createOrUpdateChart = (
     datasets.push({
         type: 'candlestick',
         label: 'Candlestick Data',
-        data: data.map(d => ({
-            x: parseInt(d.time),
-            o: parseFloat(d.open),
-            h: parseFloat(d.high),
-            l: parseFloat(d.low),
-            c: parseFloat(d.close)
-        })),
+        data: candlestickData,
         borderColor: 'rgba(0, 0, 0, 1)',
         backgroundColor: 'rgba(75, 192, 192, 0.2)',
         yAxisID: 'y-axis' // Unique y-axis ID
@@ -54,7 +96,7 @@ const createOrUpdateChart = (
     if (ema_study) {
         datasets.push({
             label: 'EMA Slow',
-            data: mapOptionalData(data, 'ma_slow'),
+            data: slowMA,
             backgroundColor: studyColors.ema_slow,
             borderColor: studyColors.ema_slow,
             borderWidth: 1,
@@ -67,7 +109,7 @@ const createOrUpdateChart = (
     
         datasets.push({
             label: 'EMA Medium',
-            data: mapOptionalData(data, 'ma_medium'),
+            data: mediumMA,
             backgroundColor: studyColors.ema_medium,
             borderColor: studyColors.ema_medium,
             borderWidth: 1,
@@ -80,7 +122,7 @@ const createOrUpdateChart = (
 
         datasets.push({
             label: 'EMA Fast',
-            data: mapOptionalData(data, 'ma_fast'),
+            data: fastMA,
             backgroundColor: studyColors.ema_fast,
             borderColor: studyColors.ema_fast,
             borderWidth: 1,
@@ -96,7 +138,7 @@ const createOrUpdateChart = (
     if (bbm_study) {
         datasets.push({
             label: 'BBU',
-            data: mapOptionalData(data, 'BBU'),
+            data: BBU,
             backgroundColor: studyColors.bbu,
             borderColor: studyColors.bbu,
             borderWidth: 1,
@@ -109,7 +151,7 @@ const createOrUpdateChart = (
 
         datasets.push({
             label: 'BBM',
-            data: mapOptionalData(data, 'BBM'),
+            data: BBM,
             backgroundColor: studyColors.bbm,
             borderColor: studyColors.bbm,
             borderWidth: 1,
@@ -122,7 +164,7 @@ const createOrUpdateChart = (
 
         datasets.push({
             label: 'BBL',
-            data: mapOptionalData(data, 'BBL'),
+            data: BBL,
             backgroundColor: studyColors.bbl,
             borderColor: studyColors.bbl,
             borderWidth: 1,
@@ -145,7 +187,7 @@ const createOrUpdateChart = (
 
         datasets.push({
             label: 'MACD Line',
-            data: mapOptionalData(data, 'MACD_Line'),
+            data: macdLine,
             backgroundColor: studyColors.macd_line,
             borderColor: studyColors.macd_line,
             borderWidth: 1,
@@ -158,7 +200,7 @@ const createOrUpdateChart = (
 
         datasets.push({
             label: 'MACD Signal',
-            data: mapOptionalData(data, 'MACD_Signal'),
+            data: signalLine,
             backgroundColor: studyColors.macd_signal,
             borderColor: studyColors.macd_signal,
             borderWidth: 1,
@@ -176,7 +218,7 @@ const createOrUpdateChart = (
         };
         datasets.push({
             label: 'MACD Histogram',
-            data: mapOptionalData(data, 'MACD_Histogram'),
+            data: macdHistogram,
             backgroundColor: studyColors.macd_histogram,
             borderColor: studyColors.macd_histogram,
             borderWidth: 0,
@@ -197,7 +239,7 @@ const createOrUpdateChart = (
 
         datasets.push({
             label: 'RSI SLOW',
-            data: mapOptionalData(data, 'rsi_slow'),
+            data: rsi_slow,
             backgroundColor: studyColors.rsi_slow,
             borderColor: studyColors.rsi_slow,
             borderWidth: 1,
@@ -210,7 +252,7 @@ const createOrUpdateChart = (
 
         datasets.push({
             label: 'RSI FAST',
-            data: mapOptionalData(data, 'rsi_fast'),
+            data: rsi_fast,
             backgroundColor: studyColors.rsi_fast,
             borderColor: studyColors.rsi_fast,
             borderWidth: 1,
@@ -222,32 +264,19 @@ const createOrUpdateChart = (
         });
     }
 
-    // Find the min and max time from candlestickData
-    const times = data.map(d => d.time);
-    const minTime = Math.min(...times);
-    const maxTime = Math.max(...times);
-
     // Buy/Sell data points
-    datasets.push(...buysell.filter(d => {
-        const time = parseInt(d.ctime);
-        return time >= minTime && time <= maxTime;
-    }).map(d => ({
-        label: d.side === 'BUY' ? 'Buy' : 'Sell',
-        data: [{ x: parseInt(d.ctime), y: parseFloat(d.price) }],
-        backgroundColor: d.side === 'BUY' ? 'rgba(0, 255, 0, 0.9)' : 'rgba(255, 0, 0, 0.9)',
-        borderColor: d.side === 'BUY' ? 'rgba(0, 255, 0, 1)' : 'rgba(255, 0, 0, 1)',
-        borderWidth: 2,
-        pointStyle: 'triangle',
-        pointRadius: 5,
-        yAxisID: 'y-axis'
-    })));
+    datasets.push({
+        label: 'BuySell',
+        data: buyselldata,
+        type: 'scatter',
+        backgroundColor: buyselldata.map(d => d.backgroundColor),
+        borderColor: buyselldata.map(d => d.borderColor),
+        borderWidth: buyselldata.map(d => d.borderWidth),
+        pointRadius: buyselldata.map(d => d.pointRadius),
+        pointStyle: buyselldata.map(d => d.pointStyle),
+        yAxisID: 'y-axis' // Unique y-axis ID
+    });
 
-    const timeSettings = {
-        second: { unit: 'second', stepSize: 1, displayFormats: { second: 'HH:mm:ss' } },
-        minute: { unit: 'minute', stepSize: 1, displayFormats: { minute: 'HH:mm' } },
-        hour: { unit: 'hour', stepSize: 1, displayFormats: { hour: 'HH:mm' } },
-        day: { unit: 'day', stepSize: 1, displayFormats: { day: 'MMM dd' } }
-    };
 
     // Define chart configuration
     const chartConfig = {
@@ -256,12 +285,13 @@ const createOrUpdateChart = (
         options: {
             scales: {
                 x: {
-                    type: 'time',
-                    time: { unit: timeUnit, stepSize: 1, displayFormats: { second: 'HH:mm:ss', minute: 'HH:mm', hour: 'HH:mm', day: 'MMM dd' } }
+                    type: 'linear',
+                    time: timeConfig
                 },
                 ...scales // Dynamically include y-axis configurations
             },
             plugins: {
+                responsive: true,
                 tooltip: {
                     callbacks: {
                         label: function (context) {
@@ -273,17 +303,25 @@ const createOrUpdateChart = (
                             const x = context.parsed.x !== undefined ? context.parsed.x : 'N/A';
                             const y = context.parsed.y !== undefined ? context.parsed.y : 'N/A';
                 
+                            // Check if the dataset is buysell
+                            if (context.dataset.label === 'BuySell') {
+                                const side = context.raw.side !== undefined ? context.raw.side : 'N/A'; // Side
+                                const price = context.raw.y !== undefined ? context.raw.y : 'N/A'; // Price
+                                const time = context.raw.x !== undefined ? context.raw.x : 'N/A'; // Time
+                                return `${context.dataset.label}: (Side: ${side}, Price: ${price}, Time: ${time})`;
+                            }
                             // Check if the dataset is candlestick
-                            if (context.dataset.type === 'candlestick') {
+                            else if (context.dataset.type === 'candlestick') {
                                 const o = context.raw.o !== undefined ? context.raw.o : 'N/A'; // Open
                                 const h = context.raw.h !== undefined ? context.raw.h : 'N/A'; // High
                                 const l = context.raw.l !== undefined ? context.raw.l : 'N/A'; // Low
                                 const c = context.raw.c !== undefined ? context.raw.c : 'N/A'; // Close
                                 return `${context.dataset.label}: (Open: ${o}, High: ${h}, Low: ${l}, Close: ${c})`;
                             }
-                
-                            // Default for other datasets
-                            return `${context.dataset.label}: (${x}, ${y})`;
+                            else {
+                                // Default for other datasets
+                                return `${context.dataset.label}: (${x}, ${y})`;
+                            }
                         }
                     }
                 }
@@ -304,7 +342,18 @@ const createOrUpdateChart = (
         charts[chartId].update();
     }
     else {
-        const ctx = document.getElementById(chartId).getContext('2d');
+        if (charts[chartId]) {
+            charts[chartId].destroy(); // Destroy the existing chart instance
+            delete charts[chartId]
+        }
+
+        const chartContainer = document.querySelector(`.chart-container#${chartId}`);
+        chartContainer.innerHTML=""
+        const newCanvas = document.createElement('canvas');
+        newCanvas.id = chartId;
+        chartContainer.appendChild(newCanvas);
+
+        const ctx = newCanvas.getContext('2d');
         charts[chartId] = new Chart(ctx, chartConfig);
     }
 };

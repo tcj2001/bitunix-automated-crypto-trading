@@ -31,7 +31,7 @@ from config import Settings
 from pydantic import ValidationError
 
 ENV_FILE = ".env"
-CONFIG_FILE = "config.txt"
+CONFIG_FILE = "bitunix_automated_crypto_trading/config.txt"
 LOG_FILE = "app.log"
 
 #load environment variables
@@ -82,7 +82,7 @@ class bitunix():
                 await ws.send_text(message)
 
 app = FastAPI()
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory="bitunix_automated_crypto_trading/static"), name="static")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Adjust this for production
@@ -90,7 +90,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory="bitunix_automated_crypto_trading/templates")
 SECRET=os.getenv('SECRET')
 login_manager = LoginManager(SECRET, token_url="/auth/login", use_cookie=True)
 login_manager.cookie_name = "auth_token"
