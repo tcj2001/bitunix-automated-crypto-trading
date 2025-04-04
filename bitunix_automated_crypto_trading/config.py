@@ -87,4 +87,4 @@ class Settings(BaseSettings):
 
     class Config:
         # Specify the file name for loading environment variables
-        env_file = "config.txt"
+        env_file = "bitunix_automated_crypto_trading/config.txt"

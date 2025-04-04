@@ -14,10 +14,10 @@ class CustomInstall(install):
     def run(self):
         # First run the standard installation process
         install.run(self)
-        
+
         # Then handle TA-Lib installation separately
         self.install_talib()
-    
+
     def install_talib(self):
         # Detect the operating system
         platform = sys.platform
@@ -72,9 +72,9 @@ setup(
     author_email="thomsonmathews@hotmail.com",
     description="Bitunix Futures Auto Trading Platform",
     url="https://github.com/tcj2001/bitunix-automated-crypto-trading",
-    packages=find_packages(include=['src', 'src.*']),
-    package_dir={'': '.'},
-    include_package_data=True,
+    packages=find_packages(where='src'),
+    package_dir={'': 'src'},
+
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
@@ -102,7 +102,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "bitunixautotrade=src.bitunix:main",
+            "bitunixautotrade=bitunix:main",
         ],
     },
     cmdclass={
@@ -111,4 +111,6 @@ setup(
     package_data={
         "": ["templates/*.html", "static/*", "config.txt", "sampleenv.txt"],
     },
+    # Include non-code files in the package
+    include_package_data=True,
 )

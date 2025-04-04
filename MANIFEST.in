@@ -1,0 +1,7 @@
+include README.md
+include RUNNING.md
+include requirements.txt
+include src/config.txt
+include src/sampleenv.txt
+recursive-include src/templates *.html
+recursive-include src/static *
