@@ -8,11 +8,10 @@ import re
 import os
 
 def get_version():
-    with open("src/__init__.py") as init_file:
-        version_match = re.search(r"^__version__ = ['\"]([^'\"]+)['\"]", init_file.read(), re.M)
-        if version_match:
-            return version_match.group(1)
-        raise RuntimeError("Unable to find version string.")
+    try:
+        return subprocess.check_output(["git", "describe", "--tags"]).strip().decode("utf-8")
+    except Exception:
+        raise RuntimeError("Unable to determine version from Git tags.")
 
 class CustomInstall(install):
     """Custom install class to download and install platform-specific TA-Lib wheels.
