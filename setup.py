@@ -9,7 +9,9 @@ import os
 
 def get_version():
     try:
-        return subprocess.check_output(["git", "describe", "--tags"]).strip().decode("utf-8")
+        ret = subprocess.check_output(["git", "describe", "--tags"]).strip().decode("utf-8")
+        print(f"Git version: {ret}")
+        return ret
     except Exception:
         raise RuntimeError("Unable to determine version from Git tags.")
 
