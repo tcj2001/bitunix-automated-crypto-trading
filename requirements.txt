@@ -28,6 +28,6 @@ colorama
 
 
 # Data Processing
-TA-LIB
+#TA-LIB
 pandas
 numpy
