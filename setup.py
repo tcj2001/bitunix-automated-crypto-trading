@@ -137,7 +137,7 @@ setup(
     include_package_data=True,
     classifiers=[
         "Programming Language :: Python :: 3",
-        "License :: MIT AND (Apache-2.0 OR BSD-2-Clause)",
+        "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
     python_requires=">=3.13",  # Required for the TA-Lib wheel compatibility
