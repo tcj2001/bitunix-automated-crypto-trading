@@ -66,7 +66,7 @@ class CustomInstall(install):
 
 setup(
     name="bitunix_automated_crypto_trading",
-    version="2.5.6",  # Dynamically load the version
+    version="2.5.7",  # Dynamically load the version
     license="MIT",
     author="tcj2001",
     author_email="thomsonmathews@hotmail.com",
