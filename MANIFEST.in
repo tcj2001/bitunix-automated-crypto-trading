@@ -1,7 +1,0 @@
-include README.md
-include RUNNING.md
-include requirements.txt
-include bitunix_automated_crypto_trading/config.txt
-include bitunix_automated_crypto_trading/sampleenv.txt
-recursive-include bitunix_automated_crypto_trading/templates *.html
-recursive-include bitunix_automated_crypto_trading/static *

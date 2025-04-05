@@ -7,11 +7,15 @@ import json
 import time
 from datetime import datetime
 import pytz
+from pathlib import Path
+
+
 from ThreadManager import ThreadManager
 from BitunixApi import BitunixApi
 from BitunixSignal import BitunixSignal
 from NotificationManager import NotificationManager
-
+from DataFrameHtmlRenderer import DataFrameHtmlRenderer
+from config import Settings
 from logger import Logger
 logger = Logger(__name__).get_logger()
 
@@ -22,16 +26,14 @@ from fastapi.templating import Jinja2Templates
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi_login import LoginManager
 from fastapi_login.exceptions import InvalidCredentialsException
-from DataFrameHtmlRenderer import DataFrameHtmlRenderer
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from dotenv import load_dotenv, dotenv_values, set_key
-from config import Settings
 from pydantic import ValidationError
 
 ENV_FILE = ".env"
-CONFIG_FILE = "bitunix_automated_crypto_trading/config.txt"
+CONFIG_FILE = os.path.dirname(os.path.abspath(__file__))+"/config.txt"
 LOG_FILE = "app.log"
 
 #load environment variables
@@ -82,7 +84,9 @@ class bitunix():
                 await ws.send_text(message)
 
 app = FastAPI()
-app.mount("/static", StaticFiles(directory="bitunix_automated_crypto_trading/static"), name="static")
+app.mount("/static", StaticFiles(directory=os.path.dirname(os.path.abspath(__file__))+("/static")), name="static")
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Adjust this for production
@@ -90,7 +94,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-templates = Jinja2Templates(directory="bitunix_automated_crypto_trading/templates")
+templates = Jinja2Templates(directory=os.path.dirname(os.path.abspath(__file__))+"/templates")
 SECRET=os.getenv('SECRET')
 login_manager = LoginManager(SECRET, token_url="/auth/login", use_cookie=True)
 login_manager.cookie_name = "auth_token"
