@@ -72,8 +72,8 @@ setup(
     author_email="thomsonmathews@hotmail.com",
     description="Bitunix Futures Auto Trading Platform",
     url="https://github.com/tcj2001/bitunix-automated-crypto-trading",
-    packages=find_packages(where='src'),
-    package_dir={'': 'src'},
+    packages=find_packages(where='bitunix_automated_crypto_trading'),
+    package_dir={'': 'bitunix_automated_crypto_trading'},
 
     classifiers=[
         "Programming Language :: Python :: 3",
@@ -109,7 +109,7 @@ setup(
         'install': CustomInstall,  # Override the install command
     },
     package_data={
-        "": ["templates/*.html", "static/*", "config.txt", "sampleenv.txt"],
+        "": [""],
     },
     # Include non-code files in the package
     include_package_data=True,
