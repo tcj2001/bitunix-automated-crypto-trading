@@ -285,7 +285,7 @@ const createOrUpdateChart = (
         options: {
             scales: {
                 x: {
-                    type: 'linear',
+                    type: 'time',
                     time: timeConfig
                 },
                 ...scales // Dynamically include y-axis configurations
@@ -295,6 +295,7 @@ const createOrUpdateChart = (
                 tooltip: {
                     callbacks: {
                         label: function (context) {
+                            
                             // Handle cases where context.parsed might be undefined
                             if (!context.parsed) {
                                 return `${context.dataset.label}: Data unavailable`;
