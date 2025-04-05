@@ -100,7 +100,7 @@ class BitunixSignal:
             olist = [entry['symbol'] for entry in self.pendingOrders['orderList']]
         newlist=olist+plist+list(set(symbols))
         self.tickerList=newlist[:300]
-        #self.tickerList=['POPCATUSDT','MANAUSDT']
+        #self.tickerList=['IMXUSDT']
 
         [await self.add_ticker_to_tickerObjects(sym) for sym in self.tickerList]
         self.notifications.add_notification(f"{len(self.tickerList)} ticker list loaded") 
