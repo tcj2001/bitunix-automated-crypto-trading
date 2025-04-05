@@ -66,7 +66,7 @@ class CustomInstall(install):
 
 setup(
     name="bitunix_automated_crypto_trading",
-    version="2.5.7",  # Dynamically load the version
+    version="2.5.8",
     license="MIT",
     author="tcj2001",
     author_email="thomsonmathews@hotmail.com",
@@ -102,7 +102,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "bitunixautotrade=bitunix:main",
+            "bitunixautotrade=bitunix_automated_crypto_trading.bitunix:main",
         ],
     },
     cmdclass={
