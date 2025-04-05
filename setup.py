@@ -66,14 +66,13 @@ class CustomInstall(install):
 
 setup(
     name="bitunix_automated_crypto_trading",
-    version="2.5.8",
+    version="2.6.8",
     license="MIT",
     author="tcj2001",
     author_email="thomsonmathews@hotmail.com",
     description="Bitunix Futures Auto Trading Platform",
     url="https://github.com/tcj2001/bitunix-automated-crypto-trading",
-    packages=find_packages(where='bitunix_automated_crypto_trading'),
-    package_dir={'': 'bitunix_automated_crypto_trading'},
+    packages=find_packages(),
 
     classifiers=[
         "Programming Language :: Python :: 3",
@@ -102,14 +101,14 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "bitunixautotrade=bitunix_automated_crypto_trading.bitunix:main",
+            "bitunixautotrade=bitunix_automated_crypto_trading.bitunix:app",
         ],
     },
     cmdclass={
         'install': CustomInstall,  # Override the install command
     },
     package_data={
-        "": [""],
+        "": ["requirements.txt", "README.md"],
     },
     # Include non-code files in the package
     include_package_data=True,
