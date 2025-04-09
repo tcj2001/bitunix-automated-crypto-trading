@@ -10,22 +10,44 @@
     <link rel="stylesheet" href="static/chart.css">    
 </head>
 <body>
+    <div class="container">
+        <div class="left">
+            <div class="label">Symbol</div>
+            <div id='symbol'></div> 
+        </div>
+        <div class="right">
+            <div class="label">Close</div>
+            <div id='close'></div>
+        </div>
+    </div>
     <div class="chart-body">
-        <div class="chart-grid"> 
-            <div class="right">
-                <div class="label">Symbol</div>
-                <div id='symbol'></div> 
-            </div>
-            <div class="right">
-                <div class="label">Close</div>
-                <div id='close'></div>
-            </div>
+
+        <div id="chart1m" class="chart-area"> 
             <div id="chart1m" class="chart-container"> </div>
+            <div  id="chart1m-macd" class="chart-container"></div> 
+            <div  id="chart1m-rsi" class="chart-container"></div> 
+        </div>
+        <div id="chart5m" class="chart-area"> 
             <div id="chart5m" class="chart-container"> </div>
+            <div  id="chart5m-macd" class="chart-container"></div> 
+            <div  id="chart5m-rsi" class="chart-container"></div> 
+        </div>
+        <div id="chart15m" class="chart-area"> 
             <div id="chart15m" class="chart-container"> </div>
+            <div  id="chart15m-macd" class="chart-container"></div> 
+            <div  id="chart15m-rsi" class="chart-container"></div> 
+        </div>
+        <div id="chart1h" class="chart-area"> 
             <div id="chart1h" class="chart-container"> </div>
+            <div  id="chart1h-macd" class="chart-container"></div> 
+            <div  id="chart1h-rsi" class="chart-container"></div> 
+        </div>
+        <div id="chart1d" class="chart-area"> 
             <div id="chart1d" class="chart-container"> </div>
-        </div>    
+            <div  id="chart1d-macd" class="chart-container"></div> 
+            <div  id="chart1d-rsi" class="chart-container"></div> 
+        </div>
+        
     </div>
     <script src="/static/chart.js"></script>
     <script>
