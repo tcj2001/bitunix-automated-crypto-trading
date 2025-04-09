@@ -8,6 +8,7 @@
     height: 100%; /* Let the grid adapt naturally */
     position: relative; /* Position relative for absolute children */
     pointer-events: auto;
+    overflow: hidden;
     aspect-ratio: 1; /* Ensure square shape */
     display: flex; /* Enable flexbox for modal content */
     flex-direction: column; /* Stack children vertically */

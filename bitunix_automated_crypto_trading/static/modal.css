@@ -47,8 +47,9 @@
     height: 80vw; /* height equal to the width */
     max-width: 80vh; /* max width 80% of viewport height */
     max-height: 80vh; /* max height 80% of viewport height */
+    padding: 10px;
     background-color: white;
-    border: 1px solid #ccc;
+    border: 5px solid #080505;
     box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
     resize: none;
     pointer-events: auto;
