@@ -1,18 +1,13 @@
 .chart-body { 
-    display: flex; /*
-    overflow-y: auto; /* Enable vertical scrolling */
-    height: calc(100vh - 100px); /* Ensure it accounts for header height */
-    box-sizing: border-box; /* Prevent height calculation issues due to padding */
-    grid-template-columns: repeat(2, 1fr);
-    grid-template-rows: repeat(3, 1fr);
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* Two equal-width columns */
+    gap: 20px; /* Space between the columns */
 } 
 
 .chart-area {
     height: 100%; /* Let the grid adapt naturally */
-    resize: none;
     position: relative; /* Position relative for absolute children */
     pointer-events: auto;
-    overflow: hidden;
     aspect-ratio: 1; /* Ensure square shape */
     display: flex; /* Enable flexbox for modal content */
     flex-direction: column; /* Stack children vertically */
