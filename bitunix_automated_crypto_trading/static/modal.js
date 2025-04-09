@@ -47,91 +47,100 @@ function initializeModal(containerId, overlayId, modalId, options = {}) {
   let isDragging = false;
   let offsetX, offsetY;
 
-  // get x,y corindates
+  // get x,y coordinates
   if (allowMove || allowResize) {
-    // Add mousemove event listener to the modal
-    modal.addEventListener('mousemove', (event) => {
-      isDragging = true;
-      // Get the bounding client rectangle of the modal
+    let isDragging = false;
+    let offsetX, offsetY;
+    let currentResizeHandle = null;
+    const resizeHandles = modal.querySelectorAll('.resize-handle');
+
+    // Function to handle mouse move during drag
+    const drag = (event) => {
+      if (!isDragging || currentResizeHandle) return;
+      const newLeft = event.clientX - offsetX;
+      const newTop = event.clientY - offsetY;
+
+      // Keep modal within viewport (optional, but good practice)
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const modalWidth = modal.offsetWidth;
+      const modalHeight = modal.offsetHeight;
+
+      modal.style.left = `${Math.max(0, Math.min(newLeft, viewportWidth - modalWidth))}px`;
+      modal.style.top = `${Math.max(0, Math.min(newTop, viewportHeight - modalHeight))}px`;
+    };
+
+    // Function to handle mouse move during resize
+    const resize = (event) => {
+      if (!currentResizeHandle) return;
       const modalRect = modal.getBoundingClientRect();
-      // Calculate the cursor's position relative to the modal
-      offsetX = event.clientX - modalRect.left;
-      offsetY = event.clientY - modalRect.top;
-      const viewportWidth =  modal.style.width;
-      const viewportHeight =  modal.style.height;
+      const isTop = currentResizeHandle.classList.contains('resize-top-right') || currentResizeHandle.classList.contains('resize-top-left');
+      const isBottom = currentResizeHandle.classList.contains('resize-bottom-right') || currentResizeHandle.classList.contains('resize-bottom-left');
+      const isLeft = currentResizeHandle.classList.contains('resize-bottom-left') || currentResizeHandle.classList.contains('resize-top-left');
+      const isRight = currentResizeHandle.classList.contains('resize-bottom-right') || currentResizeHandle.classList.contains('resize-top-right');
 
-      if (allowMove && isDragging) { 
-        const newLeft = event.clientX - offsetX;
-        const newTop = event.clientY - offsetY;
-    
-        // Keep modal within viewport (optional, but good practice)
-        const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
-        const modalWidth = modal.offsetWidth;
-        const modalHeight = modal.offsetHeight;
-    
-        modal.style.left = `${Math.max(0, Math.min(newLeft, viewportWidth - modalWidth))}px`;
-        modal.style.top = `${Math.max(0, Math.min(newTop, viewportHeight - modalHeight))}px`;
+      if (isTop) {
+        const newHeight = modalRect.bottom - event.clientY;
+        modal.style.height = `${Math.max(0, newHeight)}px`;
+        modal.style.top = `${Math.min(modalRect.bottom - getComputedStyle(modal).minHeight.replace('px', ''), event.clientY)}px`;
       }
-    
-      if (allowResize) {
-        resizeHandles.forEach((handle) => {
-          handle.addEventListener('mousedown', (event) => {
-            event.stopPropagation(); // Prevent dragging from starting on resize handle
-            const modalRect = modal.getBoundingClientRect();
-            const isTop = handle.classList.contains('resize-top-right') || handle.classList.contains('resize-top-left');
-            const isBottom = handle.classList.contains('resize-bottom-right') || handle.classList.contains('resize-bottom-left');
-            const isLeft = handle.classList.contains('resize-bottom-left') || handle.classList.contains('resize-top-left');
-            const isRight = handle.classList.contains('resize-bottom-right') || handle.classList.contains('resize-top-right');
-    
-            document.addEventListener('mousemove', (resizeEvent) => {
-              if (isTop) {
-                const deltaY = resizeEvent.clientY - modalRect.top;
-                modal.style.height = `${modalRect.bottom - resizeEvent.clientY}px`;
-                modal.style.top = `${resizeEvent.clientY}px`;
-              }
-              if (isBottom) {
-                modal.style.height = `${resizeEvent.clientY - modalRect.top}px`;
-              }
-              if (isLeft) {
-                const deltaX = resizeEvent.clientX - modalRect.left;
-                modal.style.width = `${modalRect.right - resizeEvent.clientX}px`;
-                modal.style.left = `${resizeEvent.clientX}px`;
-              }
-              if (isRight) {
-                modal.style.width = `${resizeEvent.clientX - modalRect.left}px`;
-              }
-            });
-    
-            const stopResize = () => {
-              document.removeEventListener('mousemove', null);
-              document.removeEventListener('mouseup', stopResize);
-            };
-            document.addEventListener('mouseup', stopResize);
-          });
-        });
-      } 
-      else {
-        const resizeHandles = modal.querySelectorAll('.resize-handle');
-        resizeHandles.forEach(handle => handle.style.display = 'none');
+      if (isBottom) {
+        const newHeight = event.clientY - modalRect.top;
+        modal.style.height = `${Math.max(0, newHeight)}px`;
       }
-    });
-  }
+      if (isLeft) {
+        const newWidth = modalRect.right - event.clientX;
+        modal.style.width = `${Math.max(0, newWidth)}px`;
+        modal.style.left = `${Math.min(modalRect.right - getComputedStyle(modal).minWidth.replace('px', ''), event.clientX)}px`;
+      }
+      if (isRight) {
+        const newWidth = event.clientX - modalRect.left;
+        modal.style.width = `${Math.max(0, newWidth)}px`;
+      }
+    };
 
-  if (allowMove) {
-    document.addEventListener('mouseup', () => {
+    // Function to stop dragging/resizing
+    const stopInteraction = () => {
       isDragging = false;
-      modal.style.cursor = 'default';
-    });
+      currentResizeHandle = null;
+      document.removeEventListener('mousemove', drag);
+      document.removeEventListener('mousemove', resize);
+      document.removeEventListener('mouseup', stopInteraction);
+    };
+
+    // Event listener for mouse down on the modal (for dragging)
+    if (allowMove) {
+      modal.addEventListener('mousedown', (event) => {
+        if (event.target === modal) { // Only start dragging if clicked directly on the modal, not a child
+          isDragging = true;
+          const modalRect = modal.getBoundingClientRect();
+          offsetX = event.clientX - modalRect.left;
+          offsetY = event.clientY - modalRect.top;
+          document.addEventListener('mousemove', drag);
+          document.addEventListener('mouseup', stopInteraction);
+        }
+      });
+    }
+
+    // Event listeners for mouse down on resize handles
+    if (allowResize) {
+      resizeHandles.forEach((handle) => {
+        handle.addEventListener('mousedown', (event) => {
+          event.stopPropagation(); // Prevent dragging from starting on resize handle
+          currentResizeHandle = handle;
+          document.addEventListener('mousemove', resize);
+          document.addEventListener('mouseup', stopInteraction);
+        });
+      });
+
+      // Ensure resize handles are visible when resizing is allowed
+      resizeHandles.forEach(handle => handle.style.display = 'block');
+    } else {
+      // Ensure resize handles are hidden when resizing is not allowed
+      resizeHandles.forEach(handle => handle.style.display = 'none');
+    }
   }
 
-
-  modal.addEventListener('mouseleave', () => {
-    offsetX = 0;
-    offsetY = 0;
-    isDragging = false;
-    modal.style.cursor = 'default';
-  });
 
 
   const openModal = () => {
@@ -156,7 +165,7 @@ function initializeModal(containerId, overlayId, modalId, options = {}) {
 
   overlay.addEventListener('click', (event) => {
     if (event.target.id === 'modal-container') {
-      closeModal();
+      //closeModal();
     }
   });
 

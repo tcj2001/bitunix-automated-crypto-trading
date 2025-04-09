@@ -378,7 +378,8 @@ const createOrUpdateChart = (
     
             valueContent.style.width = 'auto'; // Adjust width as needed
             valueContent.style.height = 'auto'; // Adjust height as needed
-            valueContent.innerHTML = `<strong>${values[0].values[0].value.time}</strong><br>`; // Clear previous content
+            valueContent.innerHTML = `<strong>${chartId}</strong><br>`; // Clear previous content
+            valueContent.innerHTML += `<strong>${values[0].values[0].value.time}</strong><br>`; // Clear previous content
             if (values.length > 0) {
     
                 // Populate the box with values
