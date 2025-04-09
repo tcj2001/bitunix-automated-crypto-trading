@@ -66,7 +66,7 @@ class CustomInstall(install):
 
 setup(
     name="bitunix_automated_crypto_trading",
-    version="2.6.8",
+    version="3.0.0",
     license="MIT",
     author="tcj2001",
     author_email="thomsonmathews@hotmail.com",
