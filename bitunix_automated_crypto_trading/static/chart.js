@@ -1,6 +1,6 @@
 
 const charts = {};
-let chartContainer, macdContainer, rsiContainer;
+let candlestickContainer, macdContainer, rsiContainer;
 
 const studyColors = {
     ema_slow: 'rgba(0, 123, 255, 0.7)',    // Blue for EMA Slow
@@ -27,7 +27,7 @@ const timeSettings = {
 const createOrUpdateChart = (
     chartId, data, buysell, ema_study, ema_display, macd_study, macd_display, bbm_study, bbm_display, rsi_study, rsi_display, timeUnit
 ) => {
-
+    const candlestickChartId=`${chartId}-candlestick`;
     const timeConfig = timeSettings[timeUnit] || timeSettings['second'];
 
     const mapOptionalData = (data, key, yKey = key.replace('_', '')) => {
@@ -115,17 +115,18 @@ const createOrUpdateChart = (
 }));
 
     const buyselldata = buysell
-        .filter(d => parseInt(d.time) >= highestStartTime) // Filter data
+        .filter(d => parseInt(d.ctime) >= highestStartTime) // Filter data
         .map(d => ({
         x: parseInt(d.ctime),
         y: parseFloat(d.price),
-        time: new Date(parseInt(d.ctime)).toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: false }),
+        qty: parseFloat(d.qty),
         side: d.side,
-        backgroundColor: d.side === 'BUY' ? 'rgba(0, 255, 0, 0.9)' : 'rgba(255, 0, 0, 0.9)', // Color based on buy/sell
-        borderColor: d.side === 'BUY' ? 'rgba(0, 255, 0, 1)' : 'rgba(255, 0, 0, 1)',
+        time: new Date(parseInt(d.ctime)).toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: false }),
+        backgroundColor: d.side === 'BUY' ? 'rgba(3, 735, 0, 0.9)' : 'rgba(228, 48, 48, 0.9)', // Color based on buy/sell
+        borderColor: d.side === 'BUY' ? 'rgb(3, 73, 3)' : 'rgba(255, 0, 0, 1)',
         borderWidth: 2,
         pointRadius: 5, // Increased for better visibility
-        pointStyle: 'triangle' // Changed for better visibility
+        pointStyle: 'circle' // Changed for better visibility
     }));
 
     // main chart /////////////////////////////////////////////////////////////////////////////////////////
@@ -294,30 +295,30 @@ const createOrUpdateChart = (
     };
 
     // Render or update the main candlestick chart
-    if (charts[chartId]) {
+    if (charts[candlestickChartId]) {
         // Assign only the 'data' of the specified dataset (indexed by x)
         chartConfig.data.datasets.forEach((dataset, index) => {
-            if (charts[chartId].data.datasets[index]) {
-                charts[chartId].data.datasets[index].data = dataset.data; // Update only the data property
+            if (charts[candlestickChartId].data.datasets[index]) {
+                charts[candlestickChartId].data.datasets[index].data = dataset.data; // Update only the data property
             }
         });
-        charts[chartId].options = chartConfig.options;
-        charts[chartId].update();
+        charts[candlestickChartId].options = chartConfig.options;
+        charts[candlestickChartId].update();
     }
     else {
-        if (charts[chartId]) {
-            charts[chartId].destroy(); // Destroy the existing chart instance
-            delete charts[chartId]
+        if (charts[candlestickChartId]) {
+            charts[candlestickChartId].destroy(); // Destroy the existing chart instance
+            delete charts[candlestickChartId]
         }
 
-        chartContainer = document.querySelector(`.chart-container#${chartId}`);
-        chartContainer.innerHTML = "";
+        candlestickContainer = document.querySelector(`.chart-container#${candlestickChartId}`);
+        candlestickContainer.innerHTML = "";
         const newCanvas = document.createElement('canvas');
-        newCanvas.id = chartId;
-        chartContainer.appendChild(newCanvas);
+        newCanvas.id = candlestickChartId;
+        candlestickContainer.appendChild(newCanvas);
 
         const ctx = newCanvas.getContext('2d');
-        charts[chartId] = new Chart(ctx, chartConfig);
+        charts[candlestickChartId] = new Chart(ctx, chartConfig);
     
         //crosshair 
         const chartArea = document.querySelector(`.chart-area#${chartId}`);
@@ -373,11 +374,11 @@ const createOrUpdateChart = (
                 horizontalCrosshair.style.display = 'none';
             }
             
-            const values = getValuesAtCrosshairPosition(mouseX);
+            const values = getValuesAtCrosshairPosition(candlestickChartId, relativeX);
     
             valueContent.style.width = 'auto'; // Adjust width as needed
             valueContent.style.height = 'auto'; // Adjust height as needed
-            valueContent.innerHTML = `<strong>Time: ${values[0].values[0].value.time}</strong><br>`;// Add time to the valueContent
+            valueContent.innerHTML = `<strong>${values[0].values[0].value.time}</strong><br>`; // Clear previous content
             if (values.length > 0) {
     
                 // Populate the box with values
@@ -389,18 +390,20 @@ const createOrUpdateChart = (
                         if (dataPoint.value === undefined) {
                             continue; // Skip if value is undefined
                         }
-                        if (chartLabel == 'chart') {
+                        if (chartLabel.includes('-candlestick')) {
                             if (dataPoint.label === 'Candlestick Data') {
-                                valueContent.innerHTML += `${dataPoint.label}: o:${dataPoint.value.o}, h:${dataPoint.value.h}, l:${dataPoint.value.l}, c:${dataPoint.value.c}<br>`;
+                                valueContent.innerHTML += `${dataPoint.label}: o:${dataPoint.value.o.toFixed(4)}, h:${dataPoint.value.h.toFixed(4)}, l:${dataPoint.value.l.toFixed(4)}, c:${dataPoint.value.c.toFixed(4)}<br>`;
+                            } if(dataPoint.label === 'BuySell'){
+                                valueContent.innerHTML += `${dataPoint.label}: ${dataPoint.value.side}, qty: ${dataPoint.value.qty}, price: ${dataPoint.value.y} <br>`;
                             } else {
-                                valueContent.innerHTML += `${dataPoint.label}: y:${dataPoint.value.y}<br>`;
+                                valueContent.innerHTML += `${dataPoint.label}: ${dataPoint.value.y.toFixed(4)}<br>`;
                             }
                         }
-                        if (chartLabel == 'chart-macd') {
-                            valueContent.innerHTML += `${dataPoint.label}: y:${dataPoint.value.y}<br>`;
+                        if (chartLabel.includes('-macd')) {
+                            valueContent.innerHTML += `${dataPoint.label}: ${dataPoint.value.y.toFixed(4)}<br>`;
                         }
-                        if (chartLabel == 'chart-rsi') {
-                            valueContent.innerHTML += `${dataPoint.label}: y:${dataPoint.value.y}<br>`;
+                        if (chartLabel.includes('-rsi')) {
+                            valueContent.innerHTML += `${dataPoint.label}: ${dataPoint.value.y.toFixed(4)}<br>`;
                         }
                     }
                 }   
@@ -435,6 +438,7 @@ const createOrUpdateChart = (
         chartArea.addEventListener('mouseleave', () => {
             verticalCrosshair.style.display = 'none';
             horizontalCrosshair.style.display = 'none';
+            valueContent.style.display = 'none';
         });
     
     }
@@ -474,13 +478,13 @@ const createOrUpdateChart = (
         destroySubChart('rsiChart');
     }
     // Set the heights of the charts based on the ratios
-    if (chartContainer && macdContainer && rsiContainer) {
+    if (candlestickContainer && macdContainer && rsiContainer) {
         const chartRatio = 6; // Ratio for the main chart
         const macdRatio = 2; // Ratio for the MACD chart
         const rsiRatio = 2; // Ratio for the RSI chart
         const totalRatio = chartRatio + macdRatio + rsiRatio;
         const chartHeight = 100 / totalRatio; // Calculate the height percentage for each chart
-        chartContainer.style.flex = chartRatio;
+        candlestickContainer.style.flex = chartRatio;
         macdContainer.style.flex = macdRatio;
         rsiContainer.style.flex = rsiRatio;
     }
@@ -622,10 +626,11 @@ const destroySubChart = (chartId) => {
 };
 
 
-function getValuesAtCrosshairPosition(crosshairX) {
+function getValuesAtCrosshairPosition(chartid, crosshairX) {
     let chartDataAtX = [];
     
     for (let chart in charts) {
+        if (!chart.includes(chartid)) continue;
         const xScale = charts[chart].scales.x; // Access the X-axis scale
         const datasets = charts[chart].data.datasets; // Access chart datasets
 
@@ -635,7 +640,7 @@ function getValuesAtCrosshairPosition(crosshairX) {
 
         datasets.forEach(dataset => {
             dataset.data.forEach((dataPoint, index) => {
-                const dataX = xScale.getPixelForValue(dataPoint.x || dataPoint.t || index); // Get pixel for each data point
+                const dataX = xScale.getPixelForValue(dataPoint.x); // Get pixel for each data point
                 
                 // Find the nearest data point to the crosshair
                 const distance = Math.abs(crosshairX - dataX);
