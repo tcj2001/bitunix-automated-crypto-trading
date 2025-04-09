@@ -1,25 +1,28 @@
 <div id="modal-overlay" class="modal-overlay">
     <div id="modal-container" class="modal-container">
         <div id="modal" class="modal">
-            <div class="scrollable-view">
-                <div class="container">
-                    <div class="right">
-                        <div class="label">Symbol</div>
-                        <div id='symbol'></div> 
-                    </div>
-                    <div class="right">
-                        <div class="label">Close</div>
-                        <div id='close'></div>
-                    </div>
+            <button id="close-modal">Close</button>
+            <div class="container">
+                <div class="right">
+                    <div class="label">Symbol</div>
+                    <div id='symbol'></div> 
                 </div>
-                <div  id="chart" class="chart-container"> 
-                </div> 
+                <div class="right">
+                    <div class="label">Close</div>
+                    <div id='close'></div>
+                </div>
             </div>
+            
+            <div id="chart" class="chart-area"> 
+                <div  id="chart" class="chart-container"></div> 
+                <div  id="chart-macd" class="chart-container"></div> 
+                <div  id="chart-rsi" class="chart-container"></div> 
+            </div>
+            
             <div class="resize-handle resize-top-right"></div>
             <div class="resize-handle resize-bottom-right"></div>
             <div class="resize-handle resize-bottom-left"></div>
             <div class="resize-handle resize-top-left"></div>
-            <button id="close-modal">Close</button>
         </div>
     </div>
 </div>

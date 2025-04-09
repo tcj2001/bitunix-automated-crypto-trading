@@ -354,6 +354,7 @@
                         maxHeight : '100vh',
                         allowMove: false,
                         allowResize: false,
+                        crosshair: false,
                         onClose: () => {}
                     });
 
@@ -432,6 +433,7 @@
                         maxHeight : '80vh',
                         allowMove: false,
                         allowResize: false,
+                        crosshair: false,
                         onClose: () => {
                             websocket_l.close();
                         }
@@ -496,9 +498,12 @@
                         maxHeight : '80vw',
                         allowMove: false,
                         allowResize: false,
+                        crosshair: true,
                         onClose: () => {
                             websocket_c2.close();
                             delete charts['chart'];
+                            delete charts['chart-macd'];
+                            delete charts['chart-rsi'];
                         }
                     });
 

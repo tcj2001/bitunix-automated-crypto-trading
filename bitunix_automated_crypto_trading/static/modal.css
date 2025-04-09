@@ -4,6 +4,12 @@
     margin-bottom: 20px;
   }
   
+  .fixed-view{
+    height: 80%;
+    margin-bottom: 20px;
+  }
+
+
   .modal-overlay {
     display: none; /* Hidden initially */
     position: fixed;
@@ -25,14 +31,11 @@
   
   .modal-container { /* Added container for positioning */
     width: 100%;
-    height: 100vw; /* Set height equal to the screen width */
-    max-height: 100vw; /* Ensure height does not exceed the width */
+    height: 100%; /* Set height equal to the screen width */
     position: fixed;
     z-index: 1000;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -40,15 +43,19 @@
   }
   
   .modal {
-    width: 100%;
-    height: 100vw; /* Set height equal to the screen width */
-    max-height: 100vw; /* Ensure height does not exceed the width */
+    width: 80vw; /* 80% of the viewport width */
+    height: 80vw; /* height equal to the width */
+    max-width: 80vh; /* max width 80% of viewport height */
+    max-height: 80vh; /* max height 80% of viewport height */
     background-color: white;
-    padding: 20px;
     border: 1px solid #ccc;
     box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
-    resize: none; /* Disable default resizing */
-    pointer-events: auto; /* Make modal interactable */
+    resize: none;
+    pointer-events: auto;
+    overflow: hidden;
+    aspect-ratio: 1; /* Ensure square shape */
+    display: flex; /* Enable flexbox for modal content */
+    flex-direction: column; /* Stack children vertically */
   }
   
   .modal .resize-handle {
