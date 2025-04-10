@@ -168,7 +168,7 @@ const createOrUpdateChart = (
             type: 'line',
             pointRadius: 0,
             yAxisID: 'y-axis-candlestick',
-            hidden: true
+            hidden: !ema_display
         });
 
         datasets.push({

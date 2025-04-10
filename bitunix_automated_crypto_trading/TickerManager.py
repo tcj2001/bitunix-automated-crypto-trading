@@ -19,7 +19,8 @@ class Interval:
         
         #these signals are used to list stocks in the signals sections on the main page
         self.current_signal="HOLD"
-        self.ema_signal="HOLD"
+        self.ema_open_signal="HOLD"
+        self.ema_close_signal="HOLD"
         self.macd_signal="HOLD"
         self.bbm_signal="HOLD"
         self.rsi_signal="HOLD"
@@ -69,19 +70,33 @@ class Interval:
                     df.fillna({'ma_angle':0}, inplace=True)  
                                                       
                     if self.settings.EMA_CROSSING:
-                        if df['ma_fast'].iloc[-2] <= df['ma_medium'].iloc[-2] and df['ma_fast'].iloc[-1] > df['ma_medium'].iloc[-1]:
-                            self.ema_signal = "BUY"
-                        elif df['ma_fast'].iloc[-2] >= df['ma_medium'].iloc[-2] and df['ma_fast'].iloc[-1] <= df['ma_medium'].iloc[-1]:
-                            self.ema_signal = "SELL"
+                        if df['ma_medium'].iloc[-2] <= df['ma_slow'].iloc[-2] and df['ma_medium'].iloc[-1] > df['ma_slow'].iloc[-1]:
+                            self.ema_open_signal = "BUY"
+                            self.ema_close_signal = "BUY"
+                        elif df['ma_medium'].iloc[-2] >= df['ma_slow'].iloc[-2] and df['ma_medium'].iloc[-1] < df['ma_slow'].iloc[-1]:
+                            self.ema_open_signal = "SELL"
+                            self.ema_close_signal = "SELL"
                         else:
-                            self.ema_signal = "HOLD"
+                            self.ema_open_signal = "HOLD"
+                            self.ema_close_signal = "HOLD"
+
+                        if self.settings.EMA_CLOSE_ON_FAST_MEDIUM:
+                            if df['ma_fast'].iloc[-2] <= df['ma_medium'].iloc[-2] and df['ma_fast'].iloc[-1] > df['ma_medium'].iloc[-1]:
+                                self.ema_close_signal = "BUY"
+                            elif df['ma_fast'].iloc[-2] >= df['ma_medium'].iloc[-2] and df['ma_fast'].iloc[-1] < df['ma_medium'].iloc[-1]:
+                                self.ema_close_signal = "SELL"
+                            else:
+                                self.ema_close_signal = "HOLD"
                     else:
-                        if df['close'].iloc[-1] > df['ma_fast'].iloc[-1] and df['ma_fast'].iloc[-1] > df['ma_medium'].iloc[-1]:
-                            self.ema_signal = "BUY"
-                        elif df['close'].iloc[-1] < df['ma_fast'].iloc[-1] and df['ma_fast'].iloc[-1] < df['ma_medium'].iloc[-1]:
-                            self.ema_signal = "SELL"
+                        if df['close'].iloc[-1] > df['ma_medium'].iloc[-1] and df['ma_medium'].iloc[-1] > df['ma_slow'].iloc[-1]:
+                            self.ema_open_signal = "BUY"
+                            self.ema_close_signal = "BUY"
+                        elif df['close'].iloc[-1] < df['ma_medium'].iloc[-1] and df['ma_medium'].iloc[-1] < df['ma_slow'].iloc[-1]:
+                            self.ema_open_signal = "SELL"
+                            self.ema_close_signal = "SELL"
                         else:
-                            self.ema_signal = "HOLD"
+                            self.ema_open_signal = "HOLD"
+                            self.ema_close_signal = "HOLD"
                 else:
                     # Drop EMA columns if not used
                     df.drop(['ma_fast', 'ma_medium', 'ma_slow', 'ma_slope', 'ma_angle'], axis=1, inplace=True, errors='ignore')
@@ -225,7 +240,7 @@ class Interval:
 
                     # Check for BUY signal
                     buy_conditions = (
-                        (self.settings.EMA_STUDY and self.settings.EMA_CHECK_ON_OPEN and self.ema_signal == "BUY") or
+                        (self.settings.EMA_STUDY and self.settings.EMA_CHECK_ON_OPEN and self.ema_open_signal == "BUY") or
                         (self.settings.MACD_STUDY and self.settings.MACD_CHECK_ON_OPEN and self.macd_signal == "BUY") or
                         (self.settings.BBM_STUDY and self.settings.BBM_CHECK_ON_OPEN and self.bbm_signal == "BUY") or
                         (self.settings.RSI_STUDY and self.settings.RSI_CHECK_ON_OPEN and self.rsi_signal == "BUY")
@@ -237,7 +252,7 @@ class Interval:
 
                     # Check for SELL signal
                     sell_conditions = (
-                        (self.settings.EMA_STUDY and self.settings.EMA_CHECK_ON_OPEN and self.ema_signal == "SELL") or
+                        (self.settings.EMA_STUDY and self.settings.EMA_CHECK_ON_OPEN and self.ema_open_signal == "SELL") or
                         (self.settings.MACD_STUDY and self.settings.MACD_CHECK_ON_OPEN and self.macd_signal == "SELL") or
                         (self.settings.BBM_STUDY and self.settings.BBM_CHECK_ON_OPEN and self.bbm_signal == "SELL") or
                         (self.settings.RSI_STUDY and self.settings.RSI_CHECK_ON_OPEN and self.rsi_signal == "SELL")
@@ -260,7 +275,7 @@ class Interval:
                     # ADX is enabled and strong and candle trend is enabled and bullish
                     # then BUY or SELL
                     buy_conditions = (
-                        (not self.settings.EMA_STUDY or not self.settings.EMA_CHECK_ON_OPEN or self.ema_signal == "BUY") and
+                        (not self.settings.EMA_STUDY or not self.settings.EMA_CHECK_ON_OPEN or self.ema_open_signal == "BUY") and
                         (not self.settings.MACD_STUDY or not self.settings.MACD_CHECK_ON_OPEN or self.macd_signal == "BUY") and
                         (not self.settings.BBM_STUDY or not self.settings.BBM_CHECK_ON_OPEN or self.bbm_signal == "BUY") and
                         (not self.settings.RSI_STUDY or not self.settings.RSI_CHECK_ON_OPEN or self.rsi_signal == "BUY")
@@ -272,7 +287,7 @@ class Interval:
 
                     # Check for SELL signal
                     sell_conditions = (
-                        (not self.settings.EMA_STUDY or not self.settings.EMA_CHECK_ON_OPEN or self.ema_signal == "SELL") and
+                        (not self.settings.EMA_STUDY or not self.settings.EMA_CHECK_ON_OPEN or self.ema_open_signal == "SELL") and
                         (not self.settings.MACD_STUDY or not self.settings.MACD_CHECK_ON_OPEN or self.macd_signal == "SELL") and
                         (not self.settings.BBM_STUDY or not self.settings.BBM_CHECK_ON_OPEN or self.bbm_signal == "SELL") and
                         (not self.settings.RSI_STUDY or not self.settings.RSI_CHECK_ON_OPEN or self.rsi_signal == "SELL")
@@ -548,7 +563,8 @@ class Tickers:
                     if not interval._data is None:
                         args[0].get_interval_ticks(intervalId)._data = interval._data
                         args[0].get_interval_ticks(intervalId).current_signal = interval.current_signal                        
-                        args[0].get_interval_ticks(intervalId).ema_signal = interval.ema_signal
+                        args[0].get_interval_ticks(intervalId).ema_open_signal = interval.ema_open_signal
+                        args[0].get_interval_ticks(intervalId).ema_close_signal = interval.ema_close_signal
                         args[0].get_interval_ticks(intervalId).macd_signal = interval.macd_signal
                         args[0].get_interval_ticks(intervalId).bbm_signal = interval.bbm_signal                        
                         args[0].get_interval_ticks(intervalId).rsi_signal = interval.rsi_signal
@@ -584,7 +600,8 @@ class Tickers:
                                 f"{period}_trend": intervalObj.current_signal,
                                 f"{period}_cb": intervalObj.signal_strength,
                                 f"{period}_barcolor": lastcandle['barcolor'],
-                                f"{period}_ema": intervalObj.ema_signal,
+                                f"{period}_ema_open": intervalObj.ema_open_signal,
+                                f"{period}_ema_close": intervalObj.ema_close_signal,
                                 f"{period}_macd":intervalObj.macd_signal,
                                 f"{period}_bbm":intervalObj.bbm_signal,
                                 f"{period}_rsi":intervalObj.rsi_signal,

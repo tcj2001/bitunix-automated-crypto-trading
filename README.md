@@ -73,9 +73,10 @@ The platform can be configured through the `config.py` file or `config.txt`. Key
     
   - `Study Parameters`:
     - `EMA_STUDY`: Enable EMA study
-    - `EMA_CROSSING`: Check EMA crossing or crossed, COMPARING FAST AND MEDIUM MOVING AVERAGE 
+    - `EMA_CROSSING`: Check EMA crossing or crossed, COMPARING MEDIUM AND SLOW MOVING AVERAGE 
     - `EMA_CHECK_ON_OPEN`: Check EMA on open
     - `EMA_CHECK_ON_CLOSE`: Check EMA on close
+    - `EMA_CLOSE_ON_FAST_MEDIUM`: Check EMA close comparing fast and medium
 
     - `MACD_STUDY`: Enable MACD study
     - `MACD_CROSSING`: Check MACD crossing or crossed, comparing MACD line and signal line
@@ -156,37 +157,7 @@ The platform can be configured through the `config.py` file or `config.txt`. Key
   - AutoTradeProcess function inside BitunixSignal.py, you can setup your opening and closing trading strategy
   - User interface will list the stocks in the signal window with BUY or SELL signal based on the descending value of signal_strength
   - All study can be controlled thru environment variables
-  - Auto trade process open the trade based on following conditions:
-    - If the current candle is bullish 
-      and moving average is above the medium moving average
-      and MACD_line > Signal_line
-      and RSI is above the long RSI
-      and current close is above bollinger band middle line
-      and ADX is above 25 (STRONG)
-      it will open long position
-    - If the current candle is bearish
-      and moving average is below the medium moving average
-      and MACD_line < Signal_line
-      and RSI is below the long RSI
-      and current close is belowe bollinger band middle line
-      and ADX is above 25 (STRONG)
-      it will open short position
-  - Auto trade process closes the trade based on following conditions:
-    - If the current candle is bearish, it will close the trade
-    - If the trade is in profit and greater than the profit_amount , it will close the trade
-    - If the trade is in profit and greater than the profit_amount , it will close the trade
-    - If the trade is in loss and greater than the loss_amount , it will close the trade
-    - If the order is open for more than 1 minute, it will close the open orders
-    - It will close long or short postions:
-      - If the trade is long and the fast moving average is above the medium moving average, it will close the trade
-      - If the trade is short and the fast moving average is below the medium moving average, it will close the trade
-      - If the trade is long and the MACD_line < Signal_line, it will close the trade
-      - If the trade is short and the MACD_line > Signal_line, it will close the trade
-      - If the trade is long and the short RSI < long RSI, it will close the trade
-      - If the trade is short and the short RSI > long RSI, it will close the trade
-      - if the trade is long and current close is less bollinger band middle line , it will close the trade
-      - if the trade is short and the current close is above bollinger band middle line , it will close the trade
-      - if the trade is long or short and the ADX is below 25 (WEAK), it will close the trade
+  - Auto trade process for opening the trade and closing the trade is configurable using the config file
 
 
 ## Installation

@@ -18,8 +18,8 @@ class Settings(BaseSettings):
     BARS: int = Field(default=100, ge=1)
 
     # Technical Indicators Parameters
-    MA_FAST: int = Field(default=12, ge=1)
-    MA_MEDIUM: int = Field(default=26, ge=1)
+    MA_FAST: int = Field(default=10, ge=1)
+    MA_MEDIUM: int = Field(default=20, ge=1)
     MA_SLOW: int = Field(default=50, ge=1)
     RSI_FAST: int = Field(default=6, ge=1)
     RSI_SLOW: int = Field(default=24, ge=1)
@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     EMA_CROSSING: bool = Field(default=False)
     EMA_CHECK_ON_OPEN: bool = Field(default=True)
     EMA_CHECK_ON_CLOSE: bool = Field(default=True)
+    EMA_CLOSE_ON_FAST_MEDIUM: bool = Field(default=True)
 
     MACD_CHART: bool = Field(default=False)
     MACD_STUDY: bool = Field(default=True)
