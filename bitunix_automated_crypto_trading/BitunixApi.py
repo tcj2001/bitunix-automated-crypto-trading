@@ -91,7 +91,7 @@ class BitunixApi:
             "nonce": nonce,           
         }
         
-        query_string = urlencode(sorted(params.items())).replace('=','') if params else ""
+        query_string = urlencode(sorted(params.items())).replace('=','').replace('&','')  if params else ""
         signature = await self.sign_request(nonce, timestamp, query_params=query_string)
         headers["sign"] = signature  
 
