@@ -258,6 +258,7 @@ const createOrUpdateChart = (
         type: 'candlestick',
         data: { datasets },
         options: {
+            responsive: true,
             animation: false,
             maintainAspectRatio: false,
             transitions: {
@@ -289,6 +290,21 @@ const createOrUpdateChart = (
                     mode: 'index',
                     intersect: false,
                     enabled: false,
+                },
+                zoom: {
+                    zoom: {
+                        wheel: {
+                            enabled: true // Enable zooming with the mouse wheel
+                        },
+                        pinch: {
+                            enabled: true // Enable pinch-to-zoom
+                        },
+                        mode: 'xy' // Allow zooming in both directions
+                    },
+                    pan: {
+                        enabled: true, // Enable panning
+                        mode: 'xy' // Allow panning in both directions
+                    }
                 }
             }
         }
@@ -374,7 +390,7 @@ const createOrUpdateChart = (
                 horizontalCrosshair.style.display = 'none';
             }
             
-            const values = getValuesAtCrosshairPosition(candlestickChartId, relativeX);
+            const values = getValuesAtCrosshairPosition(chartId, relativeX);
     
             valueContent.style.width = 'auto'; // Adjust width as needed
             valueContent.style.height = 'auto'; // Adjust height as needed
@@ -590,7 +606,23 @@ function createOrUpdateSubChart(chartId, labels, lineData1, lineData2, barData, 
                     intersect: false,
                     enabled: false,
                 }
+            },
+            zoom: {
+                zoom: {
+                    wheel: {
+                        enabled: true // Enable zooming with the mouse wheel
+                    },
+                    pinch: {
+                        enabled: true // Enable pinch-to-zoom
+                    },
+                    mode: 'xy' // Allow zooming in both directions
+                },
+                pan: {
+                    enabled: true, // Enable panning
+                    mode: 'xy' // Allow panning in both directions
+                }
             }
+
         }
     };
 
