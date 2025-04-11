@@ -1027,7 +1027,10 @@ class BitunixSignal:
                 side = data['side']
                 positionId = data['positionId']
                 event = data['event']
-                entryValue = float(data['entryValue'])
+                if 'entryValue' in data:
+                    entryValue = float(data['entryValue'])
+                else:
+                    entryValue = 0
                 price = entryValue / qty if entryValue != 0 and qty != 0 else 0
 
                 if event == "OPEN":

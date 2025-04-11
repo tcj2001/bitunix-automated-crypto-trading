@@ -30,10 +30,12 @@ const createOrUpdateChart = (
     const candlestickChartId=`${chartId}-candlestick`;
     const timeConfig = timeSettings[timeUnit] || timeSettings['second'];
 
-    const mapOptionalData = (data, key, yKey = key.replace('_', '')) => {
+    const mapOptionalData = (data, key, slopeKey='') => {
         return data.filter(d => typeof d[key] !== 'undefined' && parseFloat(d[key]) !== 0).map(d => ({
             x: parseInt(d.time),
             y: parseFloat(d[key]),
+            slope: slopeKey ? parseFloat(d[slopeKey]) : null, // Optional slope value
+            label: key,
             time: new Date(parseInt(d.time)).toLocaleString('en-US', {
                 year: 'numeric',
                 month: 'numeric',
@@ -47,7 +49,7 @@ const createOrUpdateChart = (
     };
 
     slowMA = mapOptionalData(data, 'ma_slow');
-    mediumMA = mapOptionalData(data, 'ma_medium');
+    mediumMA = mapOptionalData(data, 'ma_medium', 'ma_medium_slope');
     fastMA = mapOptionalData(data, 'ma_fast');
     macdLine = mapOptionalData(data, 'MACD_Line');
     signalLine = mapOptionalData(data, 'MACD_Signal');
@@ -410,10 +412,10 @@ const createOrUpdateChart = (
                         if (chartLabel.includes('-candlestick')) {
                             if (dataPoint.label === 'Candlestick Data') {
                                 valueContent.innerHTML += `${dataPoint.label}: o:${dataPoint.value.o.toFixed(4)}, h:${dataPoint.value.h.toFixed(4)}, l:${dataPoint.value.l.toFixed(4)}, c:${dataPoint.value.c.toFixed(4)}<br>`;
-                            } if(dataPoint.label === 'BuySell'){
+                            } else if(dataPoint.label === 'BuySell'){
                                 valueContent.innerHTML += `${dataPoint.label}: ${dataPoint.value.side}, qty: ${dataPoint.value.qty}, price: ${dataPoint.value.y} <br>`;
                             } else {
-                                valueContent.innerHTML += `${dataPoint.label}: ${dataPoint.value.y.toFixed(4)}<br>`;
+                                valueContent.innerHTML += `${dataPoint.label}: ${dataPoint.value.y.toFixed(4)}, slope: ${dataPoint.value.slope ? dataPoint.value.slope.toFixed(8) : 'N/A'} <br>`;
                             }
                         }
                         if (chartLabel.includes('-macd')) {
