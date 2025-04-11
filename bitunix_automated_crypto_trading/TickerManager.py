@@ -55,20 +55,27 @@ class Interval:
                     df['ma_fast'] = talib.EMA(df['close'], timeperiod=self.settings.MA_FAST)
                     df['ma_fast'] = df['ma_fast'].bfill()
                     df.fillna({'ma_fast':0}, inplace=True)
+                    df['ma_fast_slope'] = df['ma_fast'].diff()
+                    df['ma_fast_angle'] = np.degrees(np.arctan(df['ma_fast_slope']))    
+                    df.fillna({'ma_fast_slope':0}, inplace=True)
+                    df.fillna({'ma_fast_angle':0}, inplace=True)  
 
-                    df['ma_slow'] = talib.EMA(df['close'], timeperiod=self.settings.MA_SLOW)
-                    df['ma_slow'] = df['ma_slow'].bfill()
-                    df.fillna({'ma_slow':0}, inplace=True)
-                
                     df['ma_medium'] = talib.EMA(df['close'], timeperiod=self.settings.MA_MEDIUM)
                     df['ma_medium'] = df['ma_medium'].bfill()
                     df.fillna({'ma_medium':0}, inplace=True)
-
-                    df['ma_slope'] = df['ma_medium'].diff()
-                    df['ma_angle'] = np.degrees(np.arctan(df['ma_slope']))    
-                    df.fillna({'ma_slope':0}, inplace=True)
-                    df.fillna({'ma_angle':0}, inplace=True)  
+                    df['ma_medium_slope'] = df['ma_medium'].diff()
+                    df['ma_medium_angle'] = np.degrees(np.arctan(df['ma_medium_slope']))    
+                    df.fillna({'ma_medium_slope':0}, inplace=True)
+                    df.fillna({'ma_medium_angle':0}, inplace=True)  
                                                       
+                    df['ma_slow'] = talib.EMA(df['close'], timeperiod=self.settings.MA_SLOW)
+                    df['ma_slow'] = df['ma_slow'].bfill()
+                    df.fillna({'ma_slow':0}, inplace=True)
+                    df['ma_slow_slope'] = df['ma_slow'].diff()
+                    df['ma_slow_angle'] = np.degrees(np.arctan(df['ma_slow_slope']))    
+                    df.fillna({'ma_slow_slope':0}, inplace=True)
+                    df.fillna({'ma_slow_angle':0}, inplace=True)  
+                
                     if self.settings.EMA_CROSSING:
                         if df['ma_medium'].iloc[-2] <= df['ma_slow'].iloc[-2] and df['ma_medium'].iloc[-1] > df['ma_slow'].iloc[-1]:
                             self.ema_open_signal = "BUY"
@@ -111,10 +118,10 @@ class Interval:
                     df.fillna({'MACD_Signal':0}, inplace=True)
                     df.fillna({'MACD_Histogram':0}, inplace=True)
                             
-                    df['MACD_slope'] = df['MACD_Signal'].diff()
-                    df['MACD_angle'] = np.degrees(np.arctan(df['MACD_slope']))                                        
-                    df.fillna({'MACD_slope':0}, inplace=True)
-                    df.fillna({'MACD_angle':0}, inplace=True)                                    
+                    df['MACD_Line_slope'] = df['MACD_Line'].diff()
+                    df['MACD_Line_angle'] = np.degrees(np.arctan(df['MACD_Line_slope']))                                        
+                    df.fillna({'MACD_Line_slope':0}, inplace=True)
+                    df.fillna({'MACD_Line_angle':0}, inplace=True)                                    
                         
                     if self.settings.MACD_CROSSING:
                         if df['MACD_Line'].iloc[-2] <= df['MACD_Signal'].iloc[-2] and df['MACD_Line'].iloc[-1] > df['MACD_Signal'].iloc[-1]: 
@@ -171,14 +178,18 @@ class Interval:
                 if self.settings.RSI_STUDY:
                     df['rsi_fast'] = talib.RSI(df['close'],timeperiod=self.settings.RSI_FAST)
                     df.fillna({'rsi_fast':0}, inplace=True)
+                    df['rsi_fast_slope'] = df['rsi_fast'].diff()
+                    df['rsi_fast_angle'] = np.degrees(np.arctan(df['rsi_fast_slope']))                                        
+                    df.fillna({'rsi_fast_slope':0}, inplace=True)
+                    df.fillna({'rsi_fast_angle':0}, inplace=True)                                    
                     
                     df['rsi_slow'] = talib.RSI(df['close'],timeperiod=self.settings.RSI_SLOW)
                     df.fillna({'rsi_slow':0}, inplace=True)
+                    df['rsi_slow_slope'] = df['rsi_slow'].diff()
+                    df['rsi_slow_angle'] = np.degrees(np.arctan(df['rsi_slow_slope']))                                        
+                    df.fillna({'rsi_slow_slope':0}, inplace=True)
+                    df.fillna({'rsi_slow_angle':0}, inplace=True)                                    
                 
-                    df['rsi_slope'] = df['rsi_fast'].diff()
-                    df['rsi_angle'] = np.degrees(np.arctan(df['rsi_slope']))                                        
-                    df.fillna({'rsi_slope':0}, inplace=True)
-                    df.fillna({'rsi_angle':0}, inplace=True)                                    
 
                     if self.settings.RSI_CROSSING:
                         if df['rsi_fast'].iloc[-2] <= df['rsi_slow'].iloc[-2] and df['rsi_fast'].iloc[-1] > df['rsi_slow'].iloc[-1]:
