@@ -496,8 +496,9 @@ class BitunixSignal:
         try:
             self.positionHistoryData = await self.bitunixApi.GetPositionHistoryData()
             if self.positionHistoryData and 'positionList' in self.positionHistoryData:
-                self.positionHistorydf = pd.DataFrame(self.positionHistoryData['positionList'], columns=["symbol", "side","realizedPNL", "ctime", "maxQty", "closePrice","fee", "funding"])
+                self.positionHistorydf = pd.DataFrame(self.positionHistoryData['positionList'], columns=["symbol", "side","realizedPNL", "ctime", "mtime","maxQty", "closePrice","fee", "funding"])
                 self.positionHistorydf['ctime'] = pd.to_datetime(self.positionHistorydf['ctime'].astype(float), unit='ms').dt.tz_localize('UTC').dt.tz_convert(cst).dt.strftime('%Y-%m-%d %H:%M:%S')
+                self.positionHistorydf['mtime'] = pd.to_datetime(self.positionHistorydf['mtime'].astype(float), unit='ms').dt.tz_localize('UTC').dt.tz_convert(cst).dt.strftime('%Y-%m-%d %H:%M:%S')
                 self.positionHistorydf['charts'] = self.positionHistorydf.apply(self.add_charts_button, axis=1)
                 self.positionHistorydf['bitunix'] = self.positionHistorydf.apply(self.add_bitunix_button, axis=1)
 
