@@ -17,6 +17,7 @@ logger = Logger(__name__).get_logger()
 colors = Colors()
 import gc
 from concurrent.futures import ProcessPoolExecutor
+import sqlite3
 
 cst = pytz.timezone('US/Central')
 
@@ -84,6 +85,11 @@ class BitunixSignal:
         self.lastAutoTradeTime = time.time()
         self.lastTickerDataTime = time.time()
         
+        #sqllite database connection
+        self.connection = sqlite3.connect("bitunix.db") 
+        self.cursor = self.connection.cursor()
+        self.cursor.execute("CREATE TABLE IF NOT EXISTS benchmark (id INTEGER PRIMARY KEY, process_name TEXT, time INTEGER)")
+        
     async def update_settings(self, settings):
         self.settings = settings
         self.tickerObjects.update_settings(settings)
@@ -129,38 +135,6 @@ class BitunixSignal:
         self.GetPositionHistoryDataTask = AsyncThreadRunner(self.GetPositionHistoryData, interval=int(self.settings.POSITION_HISTORY_API_INTERVAL))
         self.GetPositionHistoryDataTask.start_thread(thread_name="GetPositionHistoryData")
        
-        #run restartable asynch thread
-        await self.restartable_jobs()
-
-    async def restart_jobs(self):
-
-        #stop websocket async thread jobs
-        await self.bitunixPrivateWebSocketClient.stop_websocket()
-        await self.ProcessPrivateDataTask.stop_thread()
-        
-        if self.settings.USE_PUBLIC_WEBSOCKET:
-            await self.bitunixPublicDepthWebSocketClient.stop_websocket()
-            await self.UpdateDepthDataTask.stop_thread()
-            
-            await self.bitunixPublicTickerWebSocketClient.stop_websocket()
-            await self.UpdateTickerDataTask.stop_thread()
-
-            #kill the loop to restart public websocket
-            #not using for now
-            #await self.restartPublicWebsocketTask.stop_thread()
-
-        #stop onetime / periodic async thread jobs
-        await self.LoadKlineHistoryTask.stop_thread()
-        await self.GetTickerDataTask.stop_thread()
-        await self.AutoTradeProcessTask.stop_thread()   
-
-        #start jobs
-        await self.load_tickers()
-        await self.restartable_jobs()
-
-    async def restartable_jobs(self):
-        #start cancelable async jobs
-        #websocket jobs
         self.ProcessPrivateDataTask = AsyncThreadRunner(self.bitunixPrivateWebSocketClient.run_websocket, 0, self.ProcessPrivateData)
         self.ProcessPrivateDataTask.start_thread(thread_name="ProcessPrivateData")
 
@@ -184,39 +158,6 @@ class BitunixSignal:
         self.AutoTradeProcessTask = AsyncThreadRunner(self.AutoTradeProcess, interval=int(self.settings.SIGNAL_CHECK_INTERVAL))
         self.AutoTradeProcessTask.start_thread(thread_name="AutoTradeProcess")
 
-        #start the loop to restart public websocket
-        #if self.settings.USE_PUBLIC_WEBSOCKET:
-        #    self.restartPublicWebsocketTask = AsyncThreadRunner(self.restartPublicWebsocket, interval=0)
-        #    self.restartPublicWebsocketTask.start_thread(thread_name="restartPublicWebsocket")
-
-    #this is a normal task runing in a async thread, that can be cancelled
-    # this runs in a async thread to stop and start the public websocket, as we found some lagging when it runs continously
-    #not used now
-    async def restartPublicWebsocket(self): 
-        while True:
-            await asyncio.sleep(int(self.settings.PUBLIC_WEBSOCKET_RESTART_INTERVAL))
-            
-            if self.settings.VERBOSE_LOGGING:
-                self.notifications.add_notification('Restarting public websocket')
-                logger.info(f"Restarting public websocket")
-            
-            if self.settings.USE_PUBLIC_WEBSOCKET:
-                await self.UpdateDepthDataTask.stop_thread()
-                await self.UpdateTickerDataTask.stop_thread() 
-            
-            await asyncio.sleep(30)
-
-            if self.settings.USE_PUBLIC_WEBSOCKET:
-                self.bitunixPublicDepthWebSocketClient.tickerList = self.tickerList
-                self.UpdateDepthDataTask = AsyncThreadRunner(self.bitunixPublicDepthWebSocketClient.run_websocket, 0, self.UpdateDepthData)
-                self.UpdateDepthDataTask.start_thread(thread_name="UpdateDepthData")
-
-                self.bitunixPublicTickerWebSocketClient.tickerList = self.tickerList
-                self.UpdateTickerDataTask = AsyncThreadRunner(self.bitunixPublicTickerWebSocketClient.run_websocket, 0, self.UpdateTickerData)
-                self.UpdateTickerDataTask.start_thread(thread_name="UpdateTickerData")
-
-            if self.settings.VERBOSE_LOGGING:
-                self.notifications.add_notification('Restared public websocket')
 
     ###########################################################################################################
     async def DefinehtmlRenderers(self):
@@ -300,7 +241,7 @@ class BitunixSignal:
             logger.info(f"GetTickerData: elapsed time {time.time()-start}")
     
     
-    #websocket data
+    #websocket data to update ticker lastprice and other relavent data
     async def UpdateTickerData(self, message):
         if message=="":
             return
@@ -327,7 +268,7 @@ class BitunixSignal:
         if self.settings.VERBOSE_LOGGING:
             logger.info(f"Function: UpdateTickerData, time:{ts}, symbol:{symbol}, highest:{highest}, lowest:{lowest}, volume:{volume}, volumeInCurrency:{volumeInCurrency}")
 
-    #websocket data    
+    #websocket data to update bid and ask
     async def UpdateDepthData(self, message):
         if message=="":
             return
@@ -457,14 +398,14 @@ class BitunixSignal:
             #if not self.settings.USE_PUBLIC_WEBSOCKET:                    
             #get bid las ask using api for the symbols in pending psotion
             if not self.positiondf.empty:
-                if self.settings.USE_PUBLIC_WEBSOCKET:
+                if not self.settings.USE_PUBLIC_WEBSOCKET:
                     await asyncio.create_task(self.apply_last_data(','.join(self.positiondf['symbol'].astype(str).tolist())))                                                
-                await asyncio.gather(
-                    *[
-                        asyncio.create_task(self.apply_depth_data(row['symbol']))
-                        for index, row in self.positiondf.iterrows()
-                    ]
-                )                
+                    await asyncio.gather(
+                        *[
+                            asyncio.create_task(self.apply_depth_data(row['symbol']))
+                            for index, row in self.positiondf.iterrows()
+                        ]
+                    )                
                     
 
         except Exception as e:
@@ -598,14 +539,14 @@ class BitunixSignal:
                 #get bid las ask using api for max_auto_trades rows
                 if not self.signaldf.empty:
                     m = min(self.signaldf.shape[0], int(self.settings.MAX_AUTO_TRADES))
-                    if self.settings.USE_PUBLIC_WEBSOCKET:
+                    if not self.settings.USE_PUBLIC_WEBSOCKET:
                         await asyncio.create_task(self.apply_last_data(','.join(self.signaldf['symbol'][:m].astype(str).tolist())))                 
-                    await asyncio.gather(
-                        *[
-                            asyncio.create_task(self.apply_depth_data(row['symbol']))
-                            for index, row in self.signaldf[:m].iterrows()
-                        ]
-                    )  
+                        await asyncio.gather(
+                            *[
+                                asyncio.create_task(self.apply_depth_data(row['symbol']))
+                                for index, row in self.signaldf[:m].iterrows()
+                            ]
+                        )  
 
         except Exception as e:
             logger.info(f"Function: BuySellList, {e}, {e.args}, {type(e).__name__}")
