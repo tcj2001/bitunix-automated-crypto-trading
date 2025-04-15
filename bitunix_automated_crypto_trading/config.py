@@ -1,6 +1,7 @@
 from pydantic import Field, SecretStr, validator
 from pydantic_settings import BaseSettings
 import os
+import sqlite3
 
 class Settings(BaseSettings):
     # Start autotrading on start
@@ -89,3 +90,26 @@ class Settings(BaseSettings):
     class Config:
         # Specify the file name for loading environment variables
         env_file = os.path.dirname(os.path.abspath(__file__))+"/config.txt"
+
+    @classmethod
+    def load_from_db(cls, db_path: str, table_name: str = "settings"):
+        # Connect to SQLite database
+        connection = sqlite3.connect(db_path)
+        cursor = connection.cursor()
+
+        # Fetch all parameters and values from the database
+        cursor.execute(f"SELECT param, value FROM {table_name}")
+        rows = cursor.fetchall()
+        connection.close()
+
+        # Map fetched data to the class attributes dynamically
+        settings_dict = {}
+        for param, value in rows:
+            # Convert string 'value' to proper type based on attribute type
+            if hasattr(cls, param):
+                attr_type = type(getattr(cls(), param))
+                settings_dict[param] = attr_type(value) if attr_type != bool else value.lower() in ("true", "1")
+
+        # Create the Settings instance with mapped data
+        return cls(**settings_dict)
+
