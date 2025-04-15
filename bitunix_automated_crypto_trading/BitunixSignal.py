@@ -16,8 +16,10 @@ from logger import Logger, Colors
 logger = Logger(__name__).get_logger()
 colors = Colors()
 import gc
+import os
 from concurrent.futures import ProcessPoolExecutor
 import sqlite3
+import queue
 
 cst = pytz.timezone('US/Central')
 
@@ -71,9 +73,8 @@ class BitunixSignal:
 
         #websockets
         self.bitunixPrivateWebSocketClient = BitunixPrivateWebSocketClient(self.api_key, self.secret_key)
-        if self.settings.USE_PUBLIC_WEBSOCKET:
-            self.bitunixPublicDepthWebSocketClient = BitunixPublicWebSocketClient(self.api_key, self.secret_key, "depth")
-            self.bitunixPublicTickerWebSocketClient = BitunixPublicWebSocketClient(self.api_key, self.secret_key, "ticker")
+        self.bitunixPublicDepthWebSocketClient = BitunixPublicWebSocketClient(self.api_key, self.secret_key, "depth")
+        self.bitunixPublicTickerWebSocketClient = BitunixPublicWebSocketClient(self.api_key, self.secret_key, "ticker")
 
         self.tickerList=[]
 
@@ -87,8 +88,6 @@ class BitunixSignal:
         
         #sqllite database connection
         self.connection = sqlite3.connect("bitunix.db") 
-        self.cursor = self.connection.cursor()
-        self.cursor.execute("CREATE TABLE IF NOT EXISTS benchmark (id INTEGER PRIMARY KEY, process_name TEXT, time INTEGER)")
         
     async def update_settings(self, settings):
         self.settings = settings
@@ -138,15 +137,19 @@ class BitunixSignal:
         self.ProcessPrivateDataTask = AsyncThreadRunner(self.bitunixPrivateWebSocketClient.run_websocket, 0, self.ProcessPrivateData)
         self.ProcessPrivateDataTask.start_thread(thread_name="ProcessPrivateData")
 
-        if self.settings.USE_PUBLIC_WEBSOCKET:
+        self.bitunixPublicDepthWebSocketClient.tickerList = self.tickerList
+        self.StoreDepthDataTask = AsyncThreadRunner(self.bitunixPublicDepthWebSocketClient.run_websocket, 0, self.StoreDepthData)
+        self.StoreDepthDataTask.start_thread(thread_name="StoreDepthData")
+        self.depth_queue = queue.Queue()
+        self.ProcessDepthDataTask = AsyncThreadRunner(self.ProcessDepthData, interval=0) # run only once
+        self.ProcessDepthDataTask.start_thread(thread_name="ProcessDepthData")
 
-            self.bitunixPublicDepthWebSocketClient.tickerList = self.tickerList
-            self.UpdateDepthDataTask = AsyncThreadRunner(self.bitunixPublicDepthWebSocketClient.run_websocket, 0, self.UpdateDepthData)
-            self.UpdateDepthDataTask.start_thread(thread_name="UpdateDepthData")
-
-            self.bitunixPublicTickerWebSocketClient.tickerList = self.tickerList
-            self.UpdateTickerDataTask = AsyncThreadRunner(self.bitunixPublicTickerWebSocketClient.run_websocket, 0, self.UpdateTickerData)
-            self.UpdateTickerDataTask.start_thread(thread_name="UpdateTickerData")
+        self.bitunixPublicTickerWebSocketClient.tickerList = self.tickerList
+        self.StoreTickerDataTask = AsyncThreadRunner(self.bitunixPublicTickerWebSocketClient.run_websocket, 0, self.StoreTickerData)
+        self.StoreTickerDataTask.start_thread(thread_name="StoreTickerData")
+        self.ticker_queue = queue.Queue()
+        self.ProcessTickerDataTask = AsyncThreadRunner(self.ProcessTickerData, interval=0) # run only once
+        self.ProcessTickerDataTask.start_thread(thread_name="ProcessTickerData")
 
         #normal processes
         self.LoadKlineHistoryTask = AsyncThreadRunner(self.LoadKlineHistory, interval=0) # run only once
@@ -158,6 +161,8 @@ class BitunixSignal:
         self.AutoTradeProcessTask = AsyncThreadRunner(self.AutoTradeProcess, interval=int(self.settings.SIGNAL_CHECK_INTERVAL))
         self.AutoTradeProcessTask.start_thread(thread_name="AutoTradeProcess")
 
+        self.AutoTradeProcessTask = AsyncThreadRunner(self.checkPeriodicProcess, interval=0)
+        self.AutoTradeProcessTask.start_thread(thread_name="checkPeriodicProcess")
 
     ###########################################################################################################
     async def DefinehtmlRenderers(self):
@@ -239,58 +244,90 @@ class BitunixSignal:
         self.lastTickerDataTime = time.time()
         if self.settings.VERBOSE_LOGGING:
             logger.info(f"GetTickerData: elapsed time {time.time()-start}")
+        if self.settings.BENCHMARK:
+            self.connection = sqlite3.connect("bitunix.db") 
+            self.cursor = self.connection.cursor()
+            self.cursor.execute("INSERT INTO benchmark (process_name, time) VALUES (?, ?)", ("GetTickerData", time.time()-start))
+            self.connection.commit()
     
     
     #websocket data to update ticker lastprice and other relavent data
-    async def UpdateTickerData(self, message):
-        if message=="":
-            return
+    async def StoreTickerData(self, message):
+        if self.settings.USE_PUBLIC_WEBSOCKET:
+            if message=="":
+                return
+            self.ticker_queue.put(message)
+            #if self.settings.VERBOSE_LOGGING:
+            #    pass
+                #data = json.loads(message)
+                #cst_time = datetime.utcfromtimestamp(int(data['ts'] / 1000)) - timedelta(hours=5)
+                #logger.info(f"{cst_time.strftime('%Y-%m-%d %H:%M:%S')} - {message}")
+
+    async def ProcessTickerData(self):
         try:
-            data = json.loads(message)
-            if 'symbol' in data and data['ch'] in ['ticker']:
-                symbol = data['symbol']
-                ts = data['ts']
-                last= float(data['data']['la'])
-                highest= float(data['data']['h'])
-                lowest= float(data['data']['l'])
-                volume= float(data['data']['b'])
-                volumeInCurrency= float(data['data']['q'])
-                tickerObj = self.tickerObjects.get(symbol)
-                if tickerObj:
-                    tickerObj.set_24hrData(highest,lowest,volume,volumeInCurrency)
-                    tickerObj.form_candle(last, ts)
-                del tickerObj
+            while True:
+                message = self.ticker_queue.get()
+                if message is None:
+                    await asyncio.sleep(0)
+                    continue
+                data = json.loads(message)
+                if 'symbol' in data and data['ch'] in ['ticker']:
+                    symbol = data['symbol']
+                    ts = data['ts']
+                    last= float(data['data']['la'])
+                    highest= float(data['data']['h'])
+                    lowest= float(data['data']['l'])
+                    volume= float(data['data']['b'])
+                    volumeInCurrency= float(data['data']['q'])
+                    tickerObj = self.tickerObjects.get(symbol)
+                    if tickerObj:
+                        tickerObj.set_24hrData(highest,lowest,volume,volumeInCurrency)
+                        tickerObj.form_candle(last, ts)
+                    del tickerObj
+                    gc.collect()
+                del data  
                 gc.collect()
-            del data  
-            gc.collect()
         except Exception as e:
-            logger.info(f"Function: UpdateTickerData, {e}, {e.args}, {type(e).__name__}")
-        if self.settings.VERBOSE_LOGGING:
-            logger.info(f"Function: UpdateTickerData, time:{ts}, symbol:{symbol}, highest:{highest}, lowest:{lowest}, volume:{volume}, volumeInCurrency:{volumeInCurrency}")
+            logger.info(f"Function: StoreTickerData, {e}, {e.args}, {type(e).__name__}")
+
+            
 
     #websocket data to update bid and ask
-    async def UpdateDepthData(self, message):
-        if message=="":
-            return
+    async def StoreDepthData(self, message):
+        if self.settings.USE_PUBLIC_WEBSOCKET:
+            if message=="":
+                return
+            self.depth_queue.put(message)
+            #if self.settings.VERBOSE_LOGGING:
+            #    pass
+                #data = json.loads(message)
+                #cst_time = datetime.utcfromtimestamp(int(data['ts'] / 1000)) - timedelta(hours=5)
+                #logger.info(f"{cst_time.strftime('%Y-%m-%d %H:%M:%S')} - {message}")
+
+    async def ProcessDepthData(self):
         try:
-            data = json.loads(message)
-            if 'symbol' in data and data['ch'] in ['depth_book1']:
-                symbol = data['symbol']
-                ts = data['ts']
-                bid = float(data['data']['b'][0][0])
-                ask = float(data['data']['a'][0][0])
-                tickerObj = self.tickerObjects.get(symbol)
-                if tickerObj:
-                    tickerObj.set_bid(bid)
-                    tickerObj.set_ask(ask)
-                del tickerObj
-                gc.collect()
-            del data
-            gc.collect()    
+            while True:
+                message = self.depth_queue.get()
+                if message is None:
+                    await asyncio.sleep(0)
+                    continue
+                data = json.loads(message)
+                if 'symbol' in data and data['ch'] in ['depth_book1']:
+                    symbol = data['symbol']
+                    ts = data['ts']
+                    bid = float(data['data']['b'][0][0])
+                    ask = float(data['data']['a'][0][0])
+                    tickerObj = self.tickerObjects.get(symbol)
+                    if tickerObj:
+                        tickerObj.set_bid(bid)
+                        tickerObj.set_ask(ask)
+                    del tickerObj
+                    gc.collect()
+                del data
+                gc.collect()    
         except Exception as e:
-            logger.info(f"Function: UpdateDepthData, {e}, {e.args}, {type(e).__name__}")
-        if self.settings.VERBOSE_LOGGING:
-            logger.info(f"Function: UpdateDepthData, time:{ts}, symbol:{symbol}, bid:{bid}, ask:{ask}")
+            logger.info(f"Function: StoreDepthData, {e}, {e.args}, {type(e).__name__}")
+        
 
     # this is called to update last price, as the websocket is lagging
     # this is only called for the tickers in the pendingpositions
@@ -338,6 +375,13 @@ class BitunixSignal:
         gc.collect()
                 
     ###########################################################################################################
+    async def checkPeriodicProcess(self):
+        while True:
+            if self.lastAutoTradeTime + 300 < time.time()  or self.lastTickerDataTime + 300 < time.time():
+                self.notifications.add_notification("AutoTradeProcess or GetTickerData is not running")
+                os._exit(1) 
+                break
+            await asyncio.sleep(300)
 
     async def GetportfolioData(self):
         start=time.time()
@@ -522,7 +566,7 @@ class BitunixSignal:
                     self.signaldf = self.signaldf_filtered[[
                         "symbol", f"{period}_trend",f"{period}_cb", f"{period}_barcolor",
                         f"{period}_ema_open", f"{period}_ema_close", f"{period}_macd", f"{period}_bbm", f"{period}_rsi",f"{period}_adx",f"{period}_candle_trend",
-                        'lastcolor', 'bidcolor', 'askcolor', 'bid', 'ask', 'last',
+                        'lastcolor', 'bidcolor', 'askcolor', 'bid', 'last', 'ask',
                         f"{period}_open", f"{period}_close", f"{period}_high", f"{period}_low", 
                     ]].sort_values(by=[f'{period}_cb'], ascending=[False])
 
@@ -899,6 +943,11 @@ class BitunixSignal:
                 
         if self.settings.VERBOSE_LOGGING:
             logger.info(f"AutoTradeProcess: elapsed time {time.time()-start}")
+        if self.settings.BENCHMARK:
+            self.connection = sqlite3.connect("bitunix.db") 
+            self.cursor = self.connection.cursor()
+            self.cursor.execute("INSERT INTO benchmark (process_name, time) VALUES (?, ?)", ("AutoTradeProcess", time.time()-start))
+            self.connection.commit()
 
         del df
         gc.collect()
