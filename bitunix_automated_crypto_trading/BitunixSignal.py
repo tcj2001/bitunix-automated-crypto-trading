@@ -20,6 +20,9 @@ import os
 from concurrent.futures import ProcessPoolExecutor
 import sqlite3
 import queue
+from collections import deque
+import threading
+
 
 cst = pytz.timezone('US/Central')
 
@@ -73,8 +76,10 @@ class BitunixSignal:
 
         #websockets
         self.bitunixPrivateWebSocketClient = BitunixPrivateWebSocketClient(self.api_key, self.secret_key)
-        self.bitunixPublicDepthWebSocketClient = BitunixPublicWebSocketClient(self.api_key, self.secret_key, "depth")
-        self.bitunixPublicTickerWebSocketClient = BitunixPublicWebSocketClient(self.api_key, self.secret_key, "ticker")
+        
+        if self.settings.USE_PUBLIC_WEBSOCKET:
+            self.bitunixPublicDepthWebSocketClient = BitunixPublicWebSocketClient(self.api_key, self.secret_key, "depth")
+            self.bitunixPublicTickerWebSocketClient = BitunixPublicWebSocketClient(self.api_key, self.secret_key, "ticker")
 
         self.tickerList=[]
 
@@ -137,32 +142,36 @@ class BitunixSignal:
         self.ProcessPrivateDataTask = AsyncThreadRunner(self.bitunixPrivateWebSocketClient.run_websocket, 0, self.ProcessPrivateData)
         self.ProcessPrivateDataTask.start_thread(thread_name="ProcessPrivateData")
 
-        self.bitunixPublicDepthWebSocketClient.tickerList = self.tickerList
-        self.StoreDepthDataTask = AsyncThreadRunner(self.bitunixPublicDepthWebSocketClient.run_websocket, 0, self.StoreDepthData)
-        self.StoreDepthDataTask.start_thread(thread_name="StoreDepthData")
-        self.depth_queue = queue.Queue()
-        self.ProcessDepthDataTask = AsyncThreadRunner(self.ProcessDepthData, interval=0) # run only once
-        self.ProcessDepthDataTask.start_thread(thread_name="ProcessDepthData")
+        if self.settings.USE_PUBLIC_WEBSOCKET:
+            self.bitunixPublicDepthWebSocketClient.tickerList = self.tickerList
+            self.StoreDepthDataTask = AsyncThreadRunner(self.bitunixPublicDepthWebSocketClient.run_websocket, 0, self.StoreDepthData)
+            self.StoreDepthDataTask.start_thread(thread_name="StoreDepthData")
+            self.depth_que = asyncio.Queue()
+            self.ProcessDepthDataTask = AsyncThreadRunner(self.ProcessDepthData, interval=0) # run only once
+            self.ProcessDepthDataTask.start_thread(thread_name="ProcessDepthData")
 
-        self.bitunixPublicTickerWebSocketClient.tickerList = self.tickerList
-        self.StoreTickerDataTask = AsyncThreadRunner(self.bitunixPublicTickerWebSocketClient.run_websocket, 0, self.StoreTickerData)
-        self.StoreTickerDataTask.start_thread(thread_name="StoreTickerData")
-        self.ticker_queue = queue.Queue()
-        self.ProcessTickerDataTask = AsyncThreadRunner(self.ProcessTickerData, interval=0) # run only once
-        self.ProcessTickerDataTask.start_thread(thread_name="ProcessTickerData")
+            self.bitunixPublicTickerWebSocketClient.tickerList = self.tickerList
+            self.StoreTickerDataTask = AsyncThreadRunner(self.bitunixPublicTickerWebSocketClient.run_websocket, 0, self.StoreTickerData)
+            self.StoreTickerDataTask.start_thread(thread_name="StoreTickerData")
+            self.ticker_que = asyncio.Queue()
+            self.ProcessTickerDataTask = AsyncThreadRunner(self.ProcessTickerData, interval=0) # run only once
+            self.ProcessTickerDataTask.start_thread(thread_name="ProcessTickerData")
+            
 
         #normal processes
         self.LoadKlineHistoryTask = AsyncThreadRunner(self.LoadKlineHistory, interval=0) # run only once
         self.LoadKlineHistoryTask.start_thread(thread_name="LoadKlineHistory")
 
-        self.GetTickerDataTask = AsyncThreadRunner(self.GetTickerData, interval=int(self.settings.TICKER_DATA_API_INTERVAL))
-        self.GetTickerDataTask.start_thread(thread_name="GetTickerData")
-
         self.AutoTradeProcessTask = AsyncThreadRunner(self.AutoTradeProcess, interval=int(self.settings.SIGNAL_CHECK_INTERVAL))
         self.AutoTradeProcessTask.start_thread(thread_name="AutoTradeProcess")
 
-        self.AutoTradeProcessTask = AsyncThreadRunner(self.checkPeriodicProcess, interval=0)
-        self.AutoTradeProcessTask.start_thread(thread_name="checkPeriodicProcess")
+        if not self.settings.USE_PUBLIC_WEBSOCKET:
+            self.GetTickerDataTask = AsyncThreadRunner(self.GetTickerData, interval=int(self.settings.TICKER_DATA_API_INTERVAL))
+            self.GetTickerDataTask.start_thread(thread_name="GetTickerData")
+
+            self.checkPeriodicProcessTask = AsyncThreadRunner(self.checkPeriodicProcess, interval=0)
+            self.checkPeriodicProcessTask.start_thread(thread_name="checkPeriodicProcess")
+
 
     ###########################################################################################################
     async def DefinehtmlRenderers(self):
@@ -217,118 +226,115 @@ class BitunixSignal:
 
     #api data       
     async def GetTickerData(self):
-        start=time.time()
+        if not self.settings.USE_PUBLIC_WEBSOCKET:
+            start=time.time()
+            # Get the current time and set the seconds and microseconds to zero
+            current_time = datetime.now()
+            current_minute = current_time.replace(second=0, microsecond=0)
+            ts = int(current_minute.timestamp())*1000
 
-        # Get the current time and set the seconds and microseconds to zero
-        current_time = datetime.now()
-        current_minute = current_time.replace(second=0, microsecond=0)
-        ts = int(current_minute.timestamp())*1000
+            #api used insted of websocket
+            data = await self.bitunixApi.GetTickerData()
+            self.tickerdf = pd.DataFrame()
+            if data:
+                
+                # Create a DataFrame from the data
+                self.tickerdf = pd.DataFrame(data, columns=["symbol", "last"])
+                
+                #remove not required symbols
+                self.tickerdf.loc[~self.tickerdf['symbol'].isin(self.tickerObjects.symbols()), :] = None
+                self.tickerdf.dropna(inplace=True)
+                
+                self.tickerdf['ts']=ts
+                self.tickerdf["tickerObj"] = self.tickerdf["symbol"].map(self.tickerObjects.get_tickerDict())
+                self.tuples_list = list(zip(self.tickerdf["tickerObj"],  self.tickerdf["last"].astype(float), self.tickerdf["ts"]))
+                self.tickerObjects.form_candle(self.tuples_list)
 
-        #api used insted of websocket
-        data = await self.bitunixApi.GetTickerData()
-        self.tickerdf = pd.DataFrame()
-        if data:
-            
-            # Create a DataFrame from the data
-            self.tickerdf = pd.DataFrame(data, columns=["symbol", "last"])
-            
-            #remove not required symbols
-            self.tickerdf.loc[~self.tickerdf['symbol'].isin(self.tickerObjects.symbols()), :] = None
-            self.tickerdf.dropna(inplace=True)
-            
-            self.tickerdf['ts']=ts
-            self.tickerdf["tickerObj"] = self.tickerdf["symbol"].map(self.tickerObjects.get_tickerDict())
-            self.tuples_list = list(zip(self.tickerdf["tickerObj"],  self.tickerdf["last"].astype(float), self.tickerdf["ts"]))
-            self.tickerObjects.form_candle(self.tuples_list)
-
-        self.lastTickerDataTime = time.time()
-        if self.settings.VERBOSE_LOGGING:
-            logger.info(f"GetTickerData: elapsed time {time.time()-start}")
-        if self.settings.BENCHMARK:
-            self.connection = sqlite3.connect("bitunix.db") 
-            self.cursor = self.connection.cursor()
-            self.cursor.execute("INSERT INTO benchmark (process_name, time) VALUES (?, ?)", ("GetTickerData", time.time()-start))
-            self.connection.commit()
+            self.lastTickerDataTime = time.time()
+            if self.settings.VERBOSE_LOGGING:
+                logger.info(f"GetTickerData: elapsed time {time.time()-start}")
+            if self.settings.BENCHMARK:
+                self.connection = sqlite3.connect("bitunix.db") 
+                self.cursor = self.connection.cursor()
+                self.cursor.execute("INSERT INTO benchmark (process_name, time) VALUES (?, ?)", ("GetTickerData", time.time()-start))
+                self.connection.commit()
     
     
     #websocket data to update ticker lastprice and other relavent data
+    # Function to add data to the last price deque
     async def StoreTickerData(self, message):
         if self.settings.USE_PUBLIC_WEBSOCKET:
             if message=="":
                 return
-            self.ticker_queue.put(message)
-            #if self.settings.VERBOSE_LOGGING:
-            #    pass
-                #data = json.loads(message)
-                #cst_time = datetime.utcfromtimestamp(int(data['ts'] / 1000)) - timedelta(hours=5)
-                #logger.info(f"{cst_time.strftime('%Y-%m-%d %H:%M:%S')} - {message}")
+            data = json.loads(message)
+            if 'symbol' in data and data['ch'] in ['ticker']:
+                await self.ticker_que.put(data)
 
+    # Function to process the last price deque
     async def ProcessTickerData(self):
-        try:
-            while True:
-                message = self.ticker_queue.get()
-                if message is None:
-                    await asyncio.sleep(0)
-                    continue
-                data = json.loads(message)
-                if 'symbol' in data and data['ch'] in ['ticker']:
-                    symbol = data['symbol']
-                    ts = data['ts']
-                    last= float(data['data']['la'])
-                    highest= float(data['data']['h'])
-                    lowest= float(data['data']['l'])
-                    volume= float(data['data']['b'])
-                    volumeInCurrency= float(data['data']['q'])
-                    tickerObj = self.tickerObjects.get(symbol)
-                    if tickerObj:
-                        tickerObj.set_24hrData(highest,lowest,volume,volumeInCurrency)
-                        tickerObj.form_candle(last, ts)
-                    del tickerObj
-                    gc.collect()
-                del data  
-                gc.collect()
-        except Exception as e:
-            logger.info(f"Function: StoreTickerData, {e}, {e.args}, {type(e).__name__}")
-
-            
+        while True:
+            try:
+                batch_size = self.settings.BATCH_PROCESS_SIZE   
+                latest_data = {}
+                reversed_items = list(self.ticker_que._queue)[::-1]
+                self.ticker_que._queue.clear()
+                for i in range(min(batch_size, len(reversed_items))):
+                    data = reversed_items[i]
+                    symbol = data["symbol"]
+                    ts = data["ts"]
+                    if symbol not in latest_data or ts > latest_data[symbol]['ts']:
+                        latest_data[symbol] = {'ts': ts, 'last': float(data['data']['la'])}
+                # Convert to DataFrame
+                self.tickerdf = pd.DataFrame.from_dict(latest_data, orient="index")
+                if not self.tickerdf.empty:
+                    self.tickerdf["tickerObj"] = self.tickerdf.index.map(self.tickerObjects.get_tickerDict())
+                    self.tuples_list = list(zip(self.tickerdf["tickerObj"],  self.tickerdf["last"].astype(float), self.tickerdf["ts"]))
+                    self.tickerObjects.form_candle(self.tuples_list)
+                    self.lastTickerDataTime = time.time()
+            except Exception as e:
+                logger.info(f"Function: ProcessTickerData, {e}, {e.args}, {type(e).__name__}")
+                logger.info(traceback.print_exc())
+            await asyncio.sleep(0.5)
 
     #websocket data to update bid and ask
     async def StoreDepthData(self, message):
         if self.settings.USE_PUBLIC_WEBSOCKET:
             if message=="":
                 return
-            self.depth_queue.put(message)
-            #if self.settings.VERBOSE_LOGGING:
-            #    pass
-                #data = json.loads(message)
-                #cst_time = datetime.utcfromtimestamp(int(data['ts'] / 1000)) - timedelta(hours=5)
-                #logger.info(f"{cst_time.strftime('%Y-%m-%d %H:%M:%S')} - {message}")
+            data = json.loads(message)
+            if 'symbol' in data and data['ch'] in ['depth_book1']:
+                await self.depth_que.put(data)
 
+    # Function to process the bid, ask
     async def ProcessDepthData(self):
-        try:
-            while True:
-                message = self.depth_queue.get()
-                if message is None:
-                    await asyncio.sleep(0)
-                    continue
-                data = json.loads(message)
-                if 'symbol' in data and data['ch'] in ['depth_book1']:
-                    symbol = data['symbol']
-                    ts = data['ts']
-                    bid = float(data['data']['b'][0][0])
-                    ask = float(data['data']['a'][0][0])
-                    tickerObj = self.tickerObjects.get(symbol)
-                    if tickerObj:
-                        tickerObj.set_bid(bid)
-                        tickerObj.set_ask(ask)
-                    del tickerObj
-                    gc.collect()
-                del data
-                gc.collect()    
-        except Exception as e:
-            logger.info(f"Function: StoreDepthData, {e}, {e.args}, {type(e).__name__}")
-        
+        while True:
+            try:
+                batch_size = self.settings.BATCH_PROCESS_SIZE   
+                latest_data = {}
+                reversed_items = list(self.depth_que._queue)[::-1]
+                self.depth_que._queue.clear()
+                for i in range(min(batch_size, len(reversed_items))):
+                    data = reversed_items[i]
+                    symbol = data["symbol"]
+                    ts = data["ts"]
+                    if symbol not in latest_data or ts > latest_data[symbol]['ts']:
+                        latest_data[symbol] = {'ts': ts, 'bid': float(data['data']['b'][0][0]), 'ask': float(data['data']['a'][0][0])}
+                # Convert to DataFrame
+                self.depthdf = pd.DataFrame.from_dict(latest_data, orient="index")
+                if not self.depthdf.empty:
+                    self.depthdf["tickerObj"] = self.depthdf.index.map(self.tickerObjects.get_tickerDict())
+                    self.depthdf.apply(self.apply_depth_data2, axis=1)
+            except Exception as e:
+                logger.info(f"Function: ProcessTickerData, {e}, {e.args}, {type(e).__name__}")
+                logger.info(traceback.print_exc())
+            await asyncio.sleep(0.5)
 
+    def apply_depth_data2(self, row):
+        row["tickerObj"].set_ask(row["ask"])
+        row["tickerObj"].set_bid(row["bid"])
+        return row
+        
+    # non websocket method
     # this is called to update last price, as the websocket is lagging
     # this is only called for the tickers in the pendingpositions
     # and for first few records in the signaldf    
@@ -355,6 +361,7 @@ class BitunixSignal:
         if self.settings.VERBOSE_LOGGING:
             logger.info(f"apply_last_data: elapsed time {time.time()-start}")
         
+    # non websocket method
     # this is called to update bid and ask, 
     # as it is time consuming to call the api for each ticker, 
     # this is only called for the tickers in the pendingpositions
