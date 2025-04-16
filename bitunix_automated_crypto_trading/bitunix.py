@@ -133,7 +133,7 @@ class bitunix():
             self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("TRADE_HISTORY_API_INTERVAL","3"))
             self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("POSITION_HISTORY_API_INTERVAL","3"))
             self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("TICKER_DATA_API_INTERVAL","120"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("PUBLIC_WEBSOCKET_RESTART_INTERVAL","10800"))
+            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("BATCH_PROCESS_SIZE","1000"))
             self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("USE_PUBLIC_WEBSOCKET","True"))
             self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("VERBOSE_LOGGING","False"))
             self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("BENCHMARK","False"))

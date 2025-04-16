@@ -76,7 +76,7 @@ class Settings(BaseSettings):
     TRADE_HISTORY_API_INTERVAL: int = Field(default=3, ge=1)
     POSITION_HISTORY_API_INTERVAL: int = Field(default=3, ge=1)
     TICKER_DATA_API_INTERVAL: int = Field(default=30, ge=1)
-    PUBLIC_WEBSOCKET_RESTART_INTERVAL: int = Field(default=10_800, ge=1)
+    BATCH_PROCESS_SIZE: int = Field(default=1000, ge=1)
 
     # Use websocket or API
     USE_PUBLIC_WEBSOCKET: bool = Field(default=False)  # If there is lagging issue then use API
