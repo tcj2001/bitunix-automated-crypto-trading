@@ -259,27 +259,31 @@ class BitunixSignal:
                 self.cursor.execute("INSERT INTO benchmark (process_name, time) VALUES (?, ?)", ("GetTickerData", time.time()-start))
                 self.connection.commit()
     
-    
+    async def drain_queue(self, queue):
+        items = []
+        while not queue.empty():
+            items.append(await queue.get())
+        return deque(items[::-1][:self.settings.BATCH_PROCESS_SIZE])  # Reverse items    
+
     #websocket data to update ticker lastprice and other relavent data
     # Function to add data to the last price deque
     async def StoreTickerData(self, message):
-        if self.settings.USE_PUBLIC_WEBSOCKET:
-            if message=="":
-                return
-            data = json.loads(message)
-            if 'symbol' in data and data['ch'] in ['ticker']:
-                await self.ticker_que.put(data)
+        if self.settings.USE_PUBLIC_WEBSOCKET and message:
+            try:
+                data = json.loads(message)
+                if data.get('symbol') and data.get('ch') == 'ticker':
+                    await self.ticker_que.put(data)
+            except json.JSONDecodeError as e:
+                logger.warning(f"Failed to decode message: {message}. Error: {e}")
 
     # Function to process the last price deque
     async def ProcessTickerData(self):
         while True:
             try:
-                batch_size = self.settings.BATCH_PROCESS_SIZE   
                 latest_data = {}
-                reversed_items = list(self.ticker_que._queue)[::-1]
-                self.ticker_que._queue.clear()
-                for i in range(min(batch_size, len(reversed_items))):
-                    data = reversed_items[i]
+                reversed_items = await self.drain_queue(self.ticker_que)
+                while reversed_items:
+                    data = reversed_items.popleft()
                     symbol = data["symbol"]
                     ts = data["ts"]
                     if symbol not in latest_data or ts > latest_data[symbol]['ts']:
@@ -298,23 +302,22 @@ class BitunixSignal:
 
     #websocket data to update bid and ask
     async def StoreDepthData(self, message):
-        if self.settings.USE_PUBLIC_WEBSOCKET:
-            if message=="":
-                return
-            data = json.loads(message)
-            if 'symbol' in data and data['ch'] in ['depth_book1']:
-                await self.depth_que.put(data)
+        if self.settings.USE_PUBLIC_WEBSOCKET and message:
+            try:
+                data = json.loads(message)
+                if data.get('symbol') and data.get('ch') == 'depth_book1':
+                    await self.depth_que.put(data)
+            except json.JSONDecodeError as e:
+                logger.warning(f"Failed to decode message: {message}. Error: {e}")        
 
     # Function to process the bid, ask
     async def ProcessDepthData(self):
         while True:
             try:
-                batch_size = self.settings.BATCH_PROCESS_SIZE   
                 latest_data = {}
-                reversed_items = list(self.depth_que._queue)[::-1]
-                self.depth_que._queue.clear()
-                for i in range(min(batch_size, len(reversed_items))):
-                    data = reversed_items[i]
+                reversed_items = await self.drain_queue(self.depth_que)
+                while reversed_items:
+                    data = reversed_items.popleft()
                     symbol = data["symbol"]
                     ts = data["ts"]
                     if symbol not in latest_data or ts > latest_data[symbol]['ts']:
