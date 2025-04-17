@@ -525,16 +525,26 @@ async def wschart(websocket):
 
         queue = asyncio.Queue()
         queueTask = asyncio.create_task(send_data_queue(websocket, queue))
-
+        period=settings.OPTION_MOVING_AVERAGE
         while True:
             stime=time.time()
             try:
 
+                # Receive period changed data from the WebSocket
+                try:
+                    message = await asyncio.wait_for(websocket.receive_text(), timeout=0.01)
+                    if message!="ping" and message!="":
+                        # Decode the new period from the incoming message
+                        data = json.loads(message)
+                        if "period" in data:
+                            period = data["period"]
+                except asyncio.TimeoutError:
+                    pass
+                
                 # Handle incoming ping messages
                 await asyncio.create_task(send_pong(websocket,queue))
 
                 if ticker in bitunix.bitunixSignal.tickerObjects.symbols():
-                    period=settings.OPTION_MOVING_AVERAGE
                     bars=settings.BARS
                     chart=list(bitunix.bitunixSignal.tickerObjects.get(ticker).get_interval_ticks(period).get_data()[-bars:])
                     buysell=list(bitunix.bitunixSignal.tickerObjects.get(ticker).trades)

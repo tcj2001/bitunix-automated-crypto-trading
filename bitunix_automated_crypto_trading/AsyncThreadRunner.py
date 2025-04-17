@@ -28,7 +28,8 @@ class AsyncThreadRunner:
                             )
             self.loop.run_forever()
         except Exception as e:
-            logger.info(f"Async Thread function error: {e}")
+            logger.info(f"Async Thread function error: {e}, exiting app")
+            os._exit(1)  # Exit the program if the thread is stopped
         finally:
             pending = asyncio.all_tasks(self.loop)
             for task in pending:
