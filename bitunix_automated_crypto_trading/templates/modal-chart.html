@@ -11,8 +11,21 @@
                     <div class="label">Close</div>
                     <div id='close'></div>
                 </div>
+                <!--  add radio button to change the period -->
+                <div class="right">
+                    <div class="label">Period</div>
+                    <input type="radio" id="1m" name="period" value="1m">
+                    <label for="1m">1m</label>
+                    <input type="radio" id="5m" name="period" value="5m">
+                    <label for="5m">5m</label>
+                    <input type="radio" id="15m" name="period" value="15m">
+                    <label for="15m">15m</label>
+                    <input type="radio" id="1h" name="period" value="1h">
+                    <label for="1h">1h</label>
+                    <input type="radio" id="1d" name="period" value="1d">
+                    <label for="1d">1d</label>
+                </div>                                           
             </div>
-            
             <div id="chart" class="chart-area"> 
                 <div  id="chart-candlestick" class="chart-container"></div> 
                 <div  id="chart-macd" class="chart-container"></div> 

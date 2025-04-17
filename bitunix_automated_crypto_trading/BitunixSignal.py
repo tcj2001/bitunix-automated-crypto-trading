@@ -165,12 +165,13 @@ class BitunixSignal:
         self.AutoTradeProcessTask = AsyncThreadRunner(self.AutoTradeProcess, interval=int(self.settings.SIGNAL_CHECK_INTERVAL))
         self.AutoTradeProcessTask.start_thread(thread_name="AutoTradeProcess")
 
+        self.checkTickerAndAutotradeStatusTask = AsyncThreadRunner(self.checkTickerAndAutotradeStatus, interval=0)
+        self.checkTickerAndAutotradeStatusTask.start_thread(thread_name="checkTickerAndAutotradeStatus")
+
         if not self.settings.USE_PUBLIC_WEBSOCKET:
             self.GetTickerDataTask = AsyncThreadRunner(self.GetTickerData, interval=int(self.settings.TICKER_DATA_API_INTERVAL))
             self.GetTickerDataTask.start_thread(thread_name="GetTickerData")
 
-            self.checkPeriodicProcessTask = AsyncThreadRunner(self.checkPeriodicProcess, interval=0)
-            self.checkPeriodicProcessTask.start_thread(thread_name="checkPeriodicProcess")
 
 
     ###########################################################################################################
@@ -299,6 +300,9 @@ class BitunixSignal:
                 logger.info(f"Function: ProcessTickerData, {e}, {e.args}, {type(e).__name__}")
                 logger.info(traceback.print_exc())
             await asyncio.sleep(0.5)
+        logger.info(f"ProcessTickerData: exitied out of the loop, exiting app")
+        os._exit(1)  # Exit the program 
+            
 
     #websocket data to update bid and ask
     async def StoreDepthData(self, message):
@@ -331,6 +335,8 @@ class BitunixSignal:
                 logger.info(f"Function: ProcessTickerData, {e}, {e.args}, {type(e).__name__}")
                 logger.info(traceback.print_exc())
             await asyncio.sleep(0.5)
+        logger.info(f"ProcessDepthData: exitied out of the loop, exiting app")
+        os._exit(1)  # Exit the program 
 
     def apply_depth_data2(self, row):
         row["tickerObj"].set_ask(row["ask"])
@@ -385,7 +391,7 @@ class BitunixSignal:
         gc.collect()
                 
     ###########################################################################################################
-    async def checkPeriodicProcess(self):
+    async def checkTickerAndAutotradeStatus(self):
         while True:
             if self.lastAutoTradeTime + 300 < time.time()  or self.lastTickerDataTime + 300 < time.time():
                 self.notifications.add_notification("AutoTradeProcess or GetTickerData is not running")

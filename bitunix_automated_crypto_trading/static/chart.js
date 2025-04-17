@@ -127,7 +127,7 @@ const createOrUpdateChart = (
         backgroundColor: d.side === 'BUY' ? 'rgba(3, 735, 0, 0.9)' : 'rgba(228, 48, 48, 0.9)', // Color based on buy/sell
         borderColor: d.side === 'BUY' ? 'rgb(3, 73, 3)' : 'rgba(255, 0, 0, 1)',
         borderWidth: 2,
-        pointRadius: 5, // Increased for better visibility
+        pointRadius: 2, // Increased for better visibility
         pointStyle: 'circle' // Changed for better visibility
     }));
 
