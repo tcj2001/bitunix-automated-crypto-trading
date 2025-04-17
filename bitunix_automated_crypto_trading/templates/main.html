@@ -476,10 +476,10 @@
                 attachTableClickHandlerFunction('study', 0, handleChart);
                 attachTableClickHandlerFunction('positionHistory', 0, handleChart);
             });
-            let doitonce=true;
             // Open modal and fetch its content
             async function handleChart(symbol){
                 try {
+                    let doitonce=true;
                     // Fetch modal content
                     const modalContainerWrapper = document.getElementById('modal-container-wrapper');                    const modalResponse = await fetch('/config');
                     const modalChartResponse = await fetch(`/chart?symbol=${encodeURIComponent(symbol)}`);
