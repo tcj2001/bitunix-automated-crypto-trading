@@ -249,21 +249,19 @@ class BitunixApi:
             function_name = stack[-2].name
             logger.info(f"Function: {function_name}, {e}, {e.args}, {type(e).__name__}")           
 
-    async def GetKlineHistory(self, ticker, interval, limit):
+    async def GetKlineHistory(self, ticker, interval, limit, starttime):
         data = []
         lm=limit
-        current_unix_timestamp = int(time.time())
+        st=starttime
         try:
             while True:
-                url = f'{self.kline_Url}?symbol={ticker}&startTime={current_unix_timestamp}&interval={interval}&limit={lm}'
+                url = f'{self.kline_Url}?symbol={ticker}&startTime={st}&interval={interval}&limit={lm}'
                 resp = self.session.get(url)
                 datajs = resp.json()
-                if len(datajs['data']) > 0:
-                    current_unix_timestamp = str(int(datajs['data'][-1]['time']) + 1) # Adjust 'time' to match the appropriate key in your data
-                    data.extend(datajs['data'])
+                data.extend(datajs['data'])
+                if len(datajs['data']) < lm:
+                    st = int(datajs['data'][-1]['time']) + 1
                     lm=limit-len(data)
-                    if len(data) >= limit:
-                        break
                 else:
                     break
             return data

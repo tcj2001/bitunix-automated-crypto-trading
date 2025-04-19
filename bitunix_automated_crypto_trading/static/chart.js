@@ -45,7 +45,9 @@ const createOrUpdateChart = (
                 second: 'numeric',
                 hour12: false // Use 24-hour time format
             })
-        }));
+        }))
+        .sort((a, b) => a.x - b.x) // Sort by x value
+        ;
     };
 
     slowMA = mapOptionalData(data, 'ma_slow');
