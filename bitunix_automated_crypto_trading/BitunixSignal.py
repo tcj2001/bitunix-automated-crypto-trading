@@ -218,7 +218,7 @@ class BitunixSignal:
         intervals = self.tickerObjects.get_intervalIds()
         for ticker in self.tickerList:
             for intervalId in intervals:
-                data = await self.bitunixApi.GetKlineHistory(ticker, intervalId, self.settings.BARS)
+                data = await self.bitunixApi.GetKlineHistory(ticker, intervalId, self.settings.BARS, int(time.time()))
                 if data is not None:
                    self.tickerObjects.load_kline_history(ticker, intervalId, self.settings.BARS, data)
         if self.settings.VERBOSE_LOGGING:
