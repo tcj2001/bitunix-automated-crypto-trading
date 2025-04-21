@@ -524,6 +524,8 @@
                         const period = messageElement.period;
                         const ema_study = messageElement.ema_study;
                         const ema_chart = messageElement.ema_chart;
+                        const trendline_study = messageElement.trendline_study;
+                        const trendline_chart = messageElement.trendline_chart;
                         const macd_study = messageElement.macd_study;
                         const macd_chart = messageElement.macd_chart;
                         const bbm_study = messageElement.bbm_study;
@@ -544,11 +546,11 @@
                         }                    
 
                         if (period === '1m' || period === '5m' || period === '15m') {
-                            createOrUpdateChart(`chart`, data, buysell, ema_study, ema_chart, macd_study, macd_chart, bbm_study, bbm_chart, rsi_study, rsi_chart, 'minute'); 
+                            createOrUpdateChart(`chart`, data, buysell, ema_study, ema_chart, trendline_study, trendline_chart, macd_study, macd_chart, bbm_study, bbm_chart, rsi_study, rsi_chart, 'minute'); 
                         } else if (period === '1h') {
-                            createOrUpdateChart(`chart`, data, buysell, ema_study, ema_chart, macd_study, macd_chart, bbm_study, bbm_chart, rsi_study, rsi_chart, 'hour'); 
+                            createOrUpdateChart(`chart`, data, buysell, ema_study, ema_chart, trendline_study, trendline_chart, macd_study, macd_chart, bbm_study, bbm_chart, rsi_study, rsi_chart, 'hour'); 
                         } else if (period === '1d') {
-                            createOrUpdateChart(`chart`, data, buysell, ema_study, ema_chart, macd_study, macd_chart, bbm_study, bbm_chart, rsi_study, rsi_chart, 'day'); 
+                            createOrUpdateChart(`chart`, data, buysell, ema_study, ema_chart, trendline_study, trendline_chart, macd_study, macd_chart, bbm_study, bbm_chart, rsi_study, rsi_chart, 'day'); 
                         }
                     };
 

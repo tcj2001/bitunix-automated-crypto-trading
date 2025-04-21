@@ -59,6 +59,12 @@ class Settings(BaseSettings):
     RSI_CHECK_ON_OPEN: bool = Field(default=False)
     RSI_CHECK_ON_CLOSE: bool = Field(default=False)
 
+    TRENDLINE_CHART: bool = Field(default=True)
+    TRENDLINE_STUDY: bool = Field(default=True)
+    TRENDLINE_LOOKBACK: int = Field(default=20, ge=10, le=100)
+    TRENDLINE_CHECK_ON_OPEN: bool = Field(default=False)
+    TRENDLINE_CHECK_ON_CLOSE: bool = Field(default=False)
+
     ADX_STUDY: bool = Field(default=True)
     ADX_CHECK_ON_OPEN: bool = Field(default=False)
     ADX_CHECK_ON_CLOSE: bool = Field(default=False)
@@ -83,6 +89,9 @@ class Settings(BaseSettings):
 
     # Logger
     VERBOSE_LOGGING: bool = Field(default=False)
+
+    #use CPU
+    CPU_PROCCESING: bool = Field(default=True)
 
     # Benchmark
     BENCHMARK: bool = Field(default=False)
