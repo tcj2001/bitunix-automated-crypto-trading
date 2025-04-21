@@ -127,7 +127,7 @@ const createOrUpdateChart = (
 }));
 
     const buyselldata = buysell
-        .filter(d => parseInt(d.ctime) >= highestStartTime) // Filter data
+        .filter(d => parseInt(d.ctime) >= candlestickData[0].x) // Filter data
         .map(d => ({
         x: parseInt(d.ctime),
         y: parseFloat(d.price),
