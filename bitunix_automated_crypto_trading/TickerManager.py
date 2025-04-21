@@ -36,11 +36,57 @@ class Interval:
         return self._data
 
     def set_data(self, new_value):
-        self._data =  self.calculate_study(new_value)
-            
+        study = self.calculate_study(new_value)
+        self._data = study
+
+    def support_resistance_trend_lines(self, data, lookback=20):
+        recent_data = data[-lookback:]
+        high_prices = recent_data['high'].values
+        low_prices = recent_data['low'].values
+        candle_indices = np.arange(lookback)
+        ts = recent_data['time']
+
+        # 1. Identify highest high and lowest low candle
+        highest_high_index = np.argmax(high_prices)
+        lowest_low_index = np.argmin(low_prices)
+        highest_high_price = high_prices[highest_high_index]
+        lowest_low_price = low_prices[lowest_low_index]
+
+        # 2. Top line: Tilt down from highest high to touch a subsequent high (if any)
+        slope_top = -float('inf')  # Initialize with a very steep negative slope
+        intercept_top = highest_high_price - slope_top * highest_high_index
+
+        for i in range(highest_high_index + 1, lookback):
+            current_slope = (high_prices[i] - highest_high_price) / (i - highest_high_index) if (i - highest_high_index) != 0 else 0
+            if current_slope > slope_top:
+                slope_top = current_slope
+                intercept_top = highest_high_price - slope_top * highest_high_index
+
+        top_line = slope_top * candle_indices + intercept_top
+
+        # 3. Bottom line: Tilt up from lowest low to touch a subsequent low (if any)
+        slope_bottom = float('inf')  # Initialize with a very steep positive slope
+        intercept_bottom = lowest_low_price - slope_bottom * lowest_low_index
+
+        for i in range(lowest_low_index + 1, lookback):
+            current_slope = (low_prices[i] - lowest_low_price) / (i - lowest_low_index) if (i - lowest_low_index) != 0 else 0
+            if current_slope < slope_bottom:
+                slope_bottom = current_slope
+                intercept_bottom = lowest_low_price - slope_bottom * lowest_low_index
+
+        bottom_line = slope_bottom * candle_indices + intercept_bottom   
+      
+        results_df = pd.DataFrame({
+            'time': ts,
+            'top_line': top_line,
+            'bottom_line': bottom_line
+        })
+          
+        return results_df
+           
     def calculate_study(self, new_value):
         df = pd.DataFrame(new_value)
-        if not df.empty and df.shape[0] >= int(self.settings.BARS):
+        if not df.empty: #and df.shape[0] >= int(self.settings.BARS):
                         
             try:
                 #consecutive same color candle 
@@ -53,54 +99,56 @@ class Interval:
                 # Calculate the Moving Averages
                 if self.settings.EMA_STUDY:
                     df['ma_fast'] = talib.EMA(df['close'], timeperiod=self.settings.MA_FAST)
-                    df.dropna(subset=['ma_fast'], inplace=True)
+                    df.fillna({'ma_fast':0}, inplace=True)
                     df['ma_fast_slope'] = df['ma_fast'].diff()
                     df['ma_fast_angle'] = np.degrees(np.arctan(df['ma_fast_slope']))    
                     df.fillna({'ma_fast_slope':0}, inplace=True)
                     df.fillna({'ma_fast_angle':0}, inplace=True)  
 
                     df['ma_medium'] = talib.EMA(df['close'], timeperiod=self.settings.MA_MEDIUM)
-                    df.dropna(subset=['ma_medium'], inplace=True)
+                    df.fillna({'ma_medium':0}, inplace=True)
                     df['ma_medium_slope'] = df['ma_medium'].diff()
                     df['ma_medium_angle'] = np.degrees(np.arctan(df['ma_medium_slope']))    
                     df.fillna({'ma_medium_slope':0}, inplace=True)
                     df.fillna({'ma_medium_angle':0}, inplace=True)  
                                                       
                     df['ma_slow'] = talib.EMA(df['close'], timeperiod=self.settings.MA_SLOW)
-                    df.dropna(subset=['ma_slow'],inplace=True)
+                    df.fillna({'ma_slow':0}, inplace=True)
                     df['ma_slow_slope'] = df['ma_slow'].diff()
                     df['ma_slow_angle'] = np.degrees(np.arctan(df['ma_slow_slope']))    
                     df.fillna({'ma_slow_slope':0}, inplace=True)
                     df.fillna({'ma_slow_angle':0}, inplace=True)  
                 
                     if self.settings.EMA_CROSSING:
-                        if df['ma_medium'].iloc[-2] <= df['ma_slow'].iloc[-2] and df['ma_medium'].iloc[-1] > df['ma_slow'].iloc[-1]:
-                            self.ema_open_signal = "BUY"
-                            self.ema_close_signal = "BUY"
-                        elif df['ma_medium'].iloc[-2] >= df['ma_slow'].iloc[-2] and df['ma_medium'].iloc[-1] < df['ma_slow'].iloc[-1]:
-                            self.ema_open_signal = "SELL"
-                            self.ema_close_signal = "SELL"
-                        else:
-                            self.ema_open_signal = "HOLD"
-                            self.ema_close_signal = "HOLD"
-
-                        if self.settings.EMA_CLOSE_ON_FAST_MEDIUM:
-                            if df['ma_fast'].iloc[-2] <= df['ma_medium'].iloc[-2] and df['ma_fast'].iloc[-1] > df['ma_medium'].iloc[-1]:
+                        if df is not None and len(df) >= 2:
+                            if df['ma_medium'].iloc[-2] <= df['ma_slow'].iloc[-2] and df['ma_medium'].iloc[-1] > df['ma_slow'].iloc[-1]:
+                                self.ema_open_signal = "BUY"
                                 self.ema_close_signal = "BUY"
-                            elif df['ma_fast'].iloc[-2] >= df['ma_medium'].iloc[-2] and df['ma_fast'].iloc[-1] < df['ma_medium'].iloc[-1]:
+                            elif df['ma_medium'].iloc[-2] >= df['ma_slow'].iloc[-2] and df['ma_medium'].iloc[-1] < df['ma_slow'].iloc[-1]:
+                                self.ema_open_signal = "SELL"
                                 self.ema_close_signal = "SELL"
                             else:
+                                self.ema_open_signal = "HOLD"
                                 self.ema_close_signal = "HOLD"
+
+                            if self.settings.EMA_CLOSE_ON_FAST_MEDIUM:
+                                if df['ma_fast'].iloc[-2] <= df['ma_medium'].iloc[-2] and df['ma_fast'].iloc[-1] > df['ma_medium'].iloc[-1]:
+                                    self.ema_close_signal = "BUY"
+                                elif df['ma_fast'].iloc[-2] >= df['ma_medium'].iloc[-2] and df['ma_fast'].iloc[-1] < df['ma_medium'].iloc[-1]:
+                                    self.ema_close_signal = "SELL"
+                                else:
+                                    self.ema_close_signal = "HOLD"
                     else:
-                        if df['close'].iloc[-1] > df['ma_medium'].iloc[-1] and df['ma_medium'].iloc[-1] > df['ma_slow'].iloc[-1]:
-                            self.ema_open_signal = "BUY"
-                            self.ema_close_signal = "BUY"
-                        elif df['close'].iloc[-1] < df['ma_medium'].iloc[-1] and df['ma_medium'].iloc[-1] < df['ma_slow'].iloc[-1]:
-                            self.ema_open_signal = "SELL"
-                            self.ema_close_signal = "SELL"
-                        else:
-                            self.ema_open_signal = "HOLD"
-                            self.ema_close_signal = "HOLD"
+                        if df is not None and len(df) >= 1:
+                            if df['close'].iloc[-1] > df['ma_medium'].iloc[-1] and df['ma_medium'].iloc[-1] > df['ma_slow'].iloc[-1]:
+                                self.ema_open_signal = "BUY"
+                                self.ema_close_signal = "BUY"
+                            elif df['close'].iloc[-1] < df['ma_medium'].iloc[-1] and df['ma_medium'].iloc[-1] < df['ma_slow'].iloc[-1]:
+                                self.ema_open_signal = "SELL"
+                                self.ema_close_signal = "SELL"
+                            else:
+                                self.ema_open_signal = "HOLD"
+                                self.ema_close_signal = "HOLD"
                 else:
                     # Drop EMA columns if not used
                     df.drop(['ma_fast', 'ma_medium', 'ma_slow', 'ma_slope', 'ma_angle'], axis=1, inplace=True, errors='ignore')
@@ -111,7 +159,7 @@ class Interval:
                     df['MACD_Signal'] = 0.0
                     df['MACD_Histogram'] = 0.0
                     df['MACD_Line'], df['MACD_Signal'], df['MACD_Histogram'] = talib.MACD(df['close'], fastperiod=self.settings.MACD_SHORT, slowperiod=self.settings.MACD_LONG, signalperiod=self.settings.MACD_PERIOD)
-                    df.dropna(subset=['MACD_Line', 'MACD_Signal', 'MACD_Histogram'], inplace=True)
+                    df.fillna({'MACD_Line':0, 'MACD_Signal':0, 'MACD_Histogram':0}, inplace=True)
                     df['MACD_Line_slope'] = df['MACD_Line'].diff()
                     df['MACD_Line_angle'] = np.degrees(np.arctan(df['MACD_Line_slope']))                                        
                     df.fillna({'MACD_Line_slope':0}, inplace=True)
@@ -119,19 +167,21 @@ class Interval:
                                                     
                         
                     if self.settings.MACD_CROSSING:
-                        if df['MACD_Line'].iloc[-2] <= df['MACD_Signal'].iloc[-2] and df['MACD_Line'].iloc[-1] > df['MACD_Signal'].iloc[-1]: 
-                            self.macd_signal = "BUY"
-                        elif df['MACD_Line'].iloc[-2] >= df['MACD_Signal'].iloc[-2] and df['MACD_Line'].iloc[-1] < df['MACD_Signal'].iloc[-1]: 
-                            self.macd_signal = "SELL"
-                        else:
-                            self.macd_signal = "HOLD"
+                        if df is not None and len(df) >= 2:
+                            if df['MACD_Line'].iloc[-2] <= df['MACD_Signal'].iloc[-2] and df['MACD_Line'].iloc[-1] > df['MACD_Signal'].iloc[-1]: 
+                                self.macd_signal = "BUY"
+                            elif df['MACD_Line'].iloc[-2] >= df['MACD_Signal'].iloc[-2] and df['MACD_Line'].iloc[-1] < df['MACD_Signal'].iloc[-1]: 
+                                self.macd_signal = "SELL"
+                            else:
+                                self.macd_signal = "HOLD"
                     else:
-                        if df['MACD_Line'].iloc[-1] > df['MACD_Signal'].iloc[-1]: 
-                            self.macd_signal = "BUY"
-                        elif df['MACD_Line'].iloc[-1] < df['MACD_Signal'].iloc[-1]:
-                            self.macd_signal = "SELL"
-                        else:
-                            self.macd_signal = "HOLD"
+                        if df is not None and len(df) >= 1:
+                            if df['MACD_Line'].iloc[-1] > df['MACD_Signal'].iloc[-1]: 
+                                self.macd_signal = "BUY"
+                            elif df['MACD_Line'].iloc[-1] < df['MACD_Signal'].iloc[-1]:
+                                self.macd_signal = "SELL"
+                            else:
+                                self.macd_signal = "HOLD"
                 else:
                     # Drop MACD columns if not used
                     df.drop(['MACD_Line', 'MACD_Signal', 'MACD_Histogram', 'MACD_slope', 'MACD_angle'], axis=1, inplace=True, errors='ignore')
@@ -142,7 +192,7 @@ class Interval:
                     df['BBM'] = 0.0
                     df['BBU'] = 0.0
                     df['BBU'], df['BBM'], df['BBL'] = talib.BBANDS(df['close'], timeperiod=self.settings.BBM_PERIOD, nbdevup=self.settings.BBM_STD, nbdevdn=self.settings.BBM_STD, )
-                    df.dropna(subset=['BBM', 'BBU', 'BBL'], inplace=True)
+                    df.fillna({'BBM':0, 'BBU':0, 'BBL':0}, inplace=True)
 
                     df['BBM_slope'] = df['BBM'].diff()
                     df['BBM_angle'] = np.degrees(np.arctan(df['BBM_slope']))                                        
@@ -150,19 +200,21 @@ class Interval:
                     df.fillna({'BBM_angle':0}, inplace=True)                                    
 
                     if self.settings.BBM_CROSSING:
-                        if df['close'].iloc[-2] <= df['BBM'].iloc[-2] and df['close'].iloc[-1] > df['BBM'].iloc[-1]:
-                            self.bbm_signal = "BUY"
-                        elif df['close'].iloc[-2] >= df['BBM'].iloc[-2] and df['close'].iloc[-1] < df['BBM'].iloc[-1]:
-                            self.bbm_signal = "SELL"
-                        else:
-                            self.bbm_signal = "HOLD"
+                        if df is not None and len(df) >= 2:
+                            if df['close'].iloc[-2] <= df['BBM'].iloc[-2] and df['close'].iloc[-1] > df['BBM'].iloc[-1]:
+                                self.bbm_signal = "BUY"
+                            elif df['close'].iloc[-2] >= df['BBM'].iloc[-2] and df['close'].iloc[-1] < df['BBM'].iloc[-1]:
+                                self.bbm_signal = "SELL"
+                            else:
+                                self.bbm_signal = "HOLD"
                     else:
-                        if df['close'].iloc[-1] > df['BBM'].iloc[-1] and df['close'].iloc[-2] > df['BBM'].iloc[-2]:
-                            self.bbm_signal = "BUY"
-                        elif df['close'].iloc[-1] < df['BBM'].iloc[-1] and df['close'].iloc[-2] < df['BBM'].iloc[-2]:
-                            self.bbm_signal = "SELL"
-                        else:
-                            self.bbm_signal = "HOLD"
+                        if df is not None and len(df) >= 1:
+                            if df['close'].iloc[-1] > df['BBM'].iloc[-1]:
+                                self.bbm_signal = "BUY"
+                            elif df['close'].iloc[-1] < df['BBM'].iloc[-1]:
+                                self.bbm_signal = "SELL"
+                            else:
+                                self.bbm_signal = "HOLD"
                 else:
                     # Drop BBM columns if not used
                     df.drop(['BBL', 'BBM', 'BBU', 'BBM_slope', 'BBM_angle'], axis=1, inplace=True, errors='ignore') 
@@ -170,14 +222,14 @@ class Interval:
                 # Calculate the RSI
                 if self.settings.RSI_STUDY:
                     df['rsi_fast'] = talib.RSI(df['close'],timeperiod=self.settings.RSI_FAST)
-                    df.dropna(subset=['rsi_fast'], inplace=True)
+                    df.fillna({'rsi_fast':0}, inplace=True)
                     df['rsi_fast_slope'] = df['rsi_fast'].diff()
                     df['rsi_fast_angle'] = np.degrees(np.arctan(df['rsi_fast_slope']))                                        
                     df.fillna({'rsi_fast_slope':0}, inplace=True)
                     df.fillna({'rsi_fast_angle':0}, inplace=True)                                    
                     
                     df['rsi_slow'] = talib.RSI(df['close'],timeperiod=self.settings.RSI_SLOW)
-                    df.dropna(subset=['rsi_slow'], inplace=True)
+                    df.fillna({'rsi_slow':0}, inplace=True)
                     df['rsi_slow_slope'] = df['rsi_slow'].diff()
                     df['rsi_slow_angle'] = np.degrees(np.arctan(df['rsi_slow_slope']))                                        
                     df.fillna({'rsi_slow_slope':0}, inplace=True)
@@ -185,54 +237,69 @@ class Interval:
                 
 
                     if self.settings.RSI_CROSSING:
-                        if df['rsi_fast'].iloc[-2] <= df['rsi_slow'].iloc[-2] and df['rsi_fast'].iloc[-1] > df['rsi_slow'].iloc[-1]:
-                            self.rsi_signal = "BUY"
-                        elif df['rsi_fast'].iloc[-2] >= df['rsi_slow'].iloc[-2] and df['rsi_fast'].iloc[-1] < df['rsi_slow'].iloc[-1]:
-                            self.rsi_signal = "SELL"
-                        else:
-                            self.rsi_signal = "HOLD"
+                        if df is not None and len(df) >= 2:
+                            if df['rsi_fast'].iloc[-2] <= df['rsi_slow'].iloc[-2] and df['rsi_fast'].iloc[-1] > df['rsi_slow'].iloc[-1]:
+                                self.rsi_signal = "BUY"
+                            elif df['rsi_fast'].iloc[-2] >= df['rsi_slow'].iloc[-2] and df['rsi_fast'].iloc[-1] < df['rsi_slow'].iloc[-1]:
+                                self.rsi_signal = "SELL"
+                            else:
+                                self.rsi_signal = "HOLD"
                     else:
-                        if df['rsi_fast'].iloc[-1] > df['rsi_slow'].iloc[-1]:
-                            self.rsi_signal = "BUY"
-                        elif df['rsi_fast'].iloc[-1] < df['rsi_slow'].iloc[-1]:
-                            self.rsi_signal = "SELL"
-                        else:
-                            self.rsi_signal = "HOLD"
+                        if df is not None and len(df) >= 1:
+                            if df['rsi_fast'].iloc[-1] > df['rsi_slow'].iloc[-1]:
+                                self.rsi_signal = "BUY"
+                            elif df['rsi_fast'].iloc[-1] < df['rsi_slow'].iloc[-1]:
+                                self.rsi_signal = "SELL"
+                            else:
+                                self.rsi_signal = "HOLD"
                 else:
                     # Drop RSI columns if not used
                     df.drop(['rsi_fast', 'rsi_slow', 'rsi_slope', 'rsi_angle'], axis=1, inplace=True, errors='ignore')  
 
+                #Trendline
+                if self.settings.TRENDLINE_STUDY:
+                    lookback = self.settings.TRENDLINE_LOOKBACK
+                    trend_df = self.support_resistance_trend_lines(df, lookback)
+                   
+                    df['support_line'] = trend_df['top_line']
+                    df.fillna({'support_line':0}, inplace=True)
+
+                    df['resistance_line'] = trend_df['bottom_line']
+                    df.fillna({'resistance_line':0}, inplace=True)
+ 
                 # Calculate the ADX
                 if self.settings.ADX_STUDY:
-                    df['ADX'] = talib.ADX(df['high'], df['low'], df['close'], timeperiod=self.settings.ADX_PERIOD)
-                    df.fillna({'ADX':0}, inplace=True)
-                    if df['ADX'].iloc[-1] > 25:
-                        self.adx_signal = "STRONG"
-                    else:
-                        self.adx_signal = "WEAK"  
+                    if df is not None and len(df) >= 1:
+                        df['ADX'] = talib.ADX(df['high'], df['low'], df['close'], timeperiod=self.settings.ADX_PERIOD)
+                        df.fillna({'ADX':0}, inplace=True)
+                        if df['ADX'].iloc[-1] > 25:
+                            self.adx_signal = "STRONG"
+                        else:
+                            self.adx_signal = "WEAK"  
                 else:
                     # Drop ADX columns if not used
                     df.drop(['ADX'], axis=1, inplace=True, errors='ignore')
                         
                 # Calculate the close proximity
                 if self.settings.CANDLE_TREND_STUDY:                
-                    df['range'] = df['high'] - df['low']
-                    df['candle_trend'] = ((df['close'] - df['low'])/df['range'])*100
-                    df.fillna({'candle_trend':0}, inplace=True)
-                    df.fillna({'range':0}, inplace=True)
+                    if df is not None and len(df) >= 1:
+                        df['range'] = df['high'] - df['low']
+                        df['candle_trend'] = ((df['close'] - df['low'])/df['range'])*100
+                        df.fillna({'candle_trend':0}, inplace=True)
+                        df.fillna({'range':0}, inplace=True)
 
-                    #open and close criteria
-                    if df['candle_trend'].iloc[-1] > 70:
-                        self.candle_trend = 'BULLISH'
-                    elif df['candle_trend'].iloc[-1] < 30:
-                        self.candle_trend = 'BEARISH'
-                    else:
-                        self.candle_trend = 'HOLD'      
+                        #open and close criteria
+                        if df['candle_trend'].iloc[-1] > 70:
+                            self.candle_trend = 'BULLISH'
+                        elif df['candle_trend'].iloc[-1] < 30:
+                            self.candle_trend = 'BEARISH'
+                        else:
+                            self.candle_trend = 'HOLD'      
                 else:
                     # Drop candle trend columns if not used
                     df.drop(['candle_trend', 'range'], axis=1, inplace=True, errors='ignore')
 
-                    
+                
                 #replace infinity   
                 df.replace([np.inf, -np.inf], 0, inplace=True)
                 
@@ -404,7 +471,8 @@ class Ticker:
         self._intervals = intervals
 
     def get_interval_ticks(self, intervalId):
-        return self._intervals.get(intervalId, None)
+        interval = self._intervals.get(intervalId, None)
+        return interval
 
     def set_interval_ticks(self, intervalId, new_value):
         self._intervals[intervalId] = new_value
@@ -443,6 +511,7 @@ class Ticker:
             ticks_interval=intervalObj.get_data()
             if ticks_interval is None:
                 return
+            #print('create_bar_with_last_and_ts', self.symbol, intervalId, len(ticks_interval))
             if len(ticks_interval)==0 or self._ts - ticks_interval[-1]['time'] >= intervalObj.delta:
                 ticks_interval.append(new_item)
                 current_bar = ticks_interval[-1]
@@ -457,6 +526,7 @@ class Ticker:
                 current_bar['barcolor'] = self.red if current_bar['close'] <= current_bar['open'] else self.green
                 #print(f'{self.symbol} {self._last}, {self._ts} {intervalId} {ticks_interval[-1]['time']} c' )
 
+            #print ('create_bar_with_last_and_ts', ticks_interval[-1])
             intervalObj.set_data(ticks_interval)
 
         except Exception as e:
@@ -560,24 +630,29 @@ class Tickers:
     # since the calulation is done at a different thread and uses a different memory space, 
     # the caluated value has to be reassigned to the original ticker class instance from the caluated ticker instance
     def form_candle(self, tuples_list):
-        with ProcessPoolExecutor() as executor:
-            results = executor.map(self.process_ticker_candle, tuples_list, chunksize=10)
-            for args, result in zip(tuples_list, results):
-                for intervalId, interval in result[3].items():
-                    if not interval._data is None:
-                        args[0].get_interval_ticks(intervalId)._data = interval._data
-                        args[0].get_interval_ticks(intervalId).current_signal = interval.current_signal                        
-                        args[0].get_interval_ticks(intervalId).ema_open_signal = interval.ema_open_signal
-                        args[0].get_interval_ticks(intervalId).ema_close_signal = interval.ema_close_signal
-                        args[0].get_interval_ticks(intervalId).macd_signal = interval.macd_signal
-                        args[0].get_interval_ticks(intervalId).bbm_signal = interval.bbm_signal                        
-                        args[0].get_interval_ticks(intervalId).rsi_signal = interval.rsi_signal
-                        args[0].get_interval_ticks(intervalId).candle_trend = interval.candle_trend
-                        args[0].get_interval_ticks(intervalId).adx_signal = interval.adx_signal
-                        args[0].get_interval_ticks(intervalId).signal_strength = interval.signal_strength 
-                        args[0]._last = result[0]
-                        args[0].lastcolor = result[1]
-                        args[0]._ts = result[2]
+        if not self.settings.CPU_PROCCESING:
+            for args in tuples_list:
+                ticker_obj, last, ts = args
+                result = self.process_ticker_candle(args)
+        else:
+            with ProcessPoolExecutor() as executor:
+                results = executor.map(self.process_ticker_candle, tuples_list, chunksize=10)
+                for args, result in zip(tuples_list, results):
+                    for intervalId, interval in result[3].items():
+                        if not interval._data is None:
+                            args[0].get_interval_ticks(intervalId)._data = interval._data
+                            args[0].get_interval_ticks(intervalId).current_signal = interval.current_signal                        
+                            args[0].get_interval_ticks(intervalId).ema_open_signal = interval.ema_open_signal
+                            args[0].get_interval_ticks(intervalId).ema_close_signal = interval.ema_close_signal
+                            args[0].get_interval_ticks(intervalId).macd_signal = interval.macd_signal
+                            args[0].get_interval_ticks(intervalId).bbm_signal = interval.bbm_signal                        
+                            args[0].get_interval_ticks(intervalId).rsi_signal = interval.rsi_signal
+                            args[0].get_interval_ticks(intervalId).candle_trend = interval.candle_trend
+                            args[0].get_interval_ticks(intervalId).adx_signal = interval.adx_signal
+                            args[0].get_interval_ticks(intervalId).signal_strength = interval.signal_strength 
+                            args[0]._last = result[0]
+                            args[0].lastcolor = result[1]
+                            args[0]._ts = result[2]
                                     
     def getCurrentData(self, period):
         current_data = []
@@ -596,33 +671,32 @@ class Tickers:
                     ticks = intervalObj.get_data()
                     if not ticks:
                         continue
-                    if len(ticks)>=int(self.settings.BARS):
-                        lastcandle = intervalObj.get_data()[-1]
-                        if len(lastcandle) >= 20:
-                            new_row = {
-                                'symbol' : symbol,
-                                f"{period}_trend": intervalObj.current_signal,
-                                f"{period}_cb": intervalObj.signal_strength,
-                                f"{period}_barcolor": lastcandle['barcolor'],
-                                f"{period}_ema_open": intervalObj.ema_open_signal,
-                                f"{period}_ema_close": intervalObj.ema_close_signal,
-                                f"{period}_macd":intervalObj.macd_signal,
-                                f"{period}_bbm":intervalObj.bbm_signal,
-                                f"{period}_rsi":intervalObj.rsi_signal,
-                                f"{period}_adx":intervalObj.adx_signal,                                       
-                                f"{period}_candle_trend":intervalObj.candle_trend, 
-                                'bid' : bid,
-                                'bidcolor' : bidcolor,
-                                'last' : last,
-                                'lastcolor' : lastcolor,
-                                'ask' : ask,
-                                'askcolor' : askcolor,
-                                f"{period}_open": lastcandle['open'],
-                                f"{period}_close": lastcandle['close'],
-                                f"{period}_high": lastcandle['high'],
-                                f"{period}_low": lastcandle['low'],
-                            }
-                            current_data.append(new_row)
+                    lastcandle = intervalObj.get_data()[-1]
+                    if len(lastcandle) >= 20:
+                        new_row = {
+                            'symbol' : symbol,
+                            f"{period}_trend": intervalObj.current_signal,
+                            f"{period}_cb": intervalObj.signal_strength,
+                            f"{period}_barcolor": lastcandle['barcolor'],
+                            f"{period}_ema_open": intervalObj.ema_open_signal,
+                            f"{period}_ema_close": intervalObj.ema_close_signal,
+                            f"{period}_macd":intervalObj.macd_signal,
+                            f"{period}_bbm":intervalObj.bbm_signal,
+                            f"{period}_rsi":intervalObj.rsi_signal,
+                            f"{period}_adx":intervalObj.adx_signal,                                       
+                            f"{period}_candle_trend":intervalObj.candle_trend, 
+                            'bid' : bid,
+                            'bidcolor' : bidcolor,
+                            'last' : last,
+                            'lastcolor' : lastcolor,
+                            'ask' : ask,
+                            'askcolor' : askcolor,
+                            f"{period}_open": lastcandle['open'],
+                            f"{period}_close": lastcandle['close'],
+                            f"{period}_high": lastcandle['high'],
+                            f"{period}_low": lastcandle['low'],
+                        }
+                        current_data.append(new_row)
                         
             df = pd.DataFrame(current_data)
             if not df.empty:

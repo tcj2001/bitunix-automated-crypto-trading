@@ -258,6 +258,8 @@ class BitunixApi:
                 url = f'{self.kline_Url}?symbol={ticker}&startTime={st}&interval={interval}&limit={lm}'
                 resp = self.session.get(url)
                 datajs = resp.json()
+                if datajs['data'] == []:
+                    break
                 data.extend(datajs['data'])
                 if len(datajs['data']) < lm:
                     st = int(datajs['data'][-1]['time']) + 1

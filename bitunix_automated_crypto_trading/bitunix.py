@@ -70,76 +70,6 @@ class bitunix():
         #create benchmark table
         self.cursor.execute("CREATE TABLE IF NOT EXISTS benchmark (id INTEGER PRIMARY KEY, process_name TEXT, time INTEGER)")
         
-        #create settings table        
-        self.cursor.execute("CREATE TABLE IF NOT EXISTS settings (param TEXT PRIMARY KEY, value TEXT)")
-        self.cursor.execute(f"SELECT param, value FROM settings")
-        rows = self.cursor.fetchall()
-        if len(rows) == 0:
-            # fille value from confix.txt file to db
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("AUTOTRADE","True"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("OPTION_MOVING_AVERAGE","1h"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("MAX_AUTO_TRADES","10"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("PROFIT_AMOUNT","3"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("LOSS_AMOUNT","0"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("LEVERAGE","20"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("THRESHOLD","5"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("MIN_VOLUME","10000000"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("ORDER_AMOUNT_PERCENTAGE","5"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("BARS","100"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("MA_FAST","10"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("MA_MEDIUM","20"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("MA_SLOW","50"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("RSI_FAST","6"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("RSI_SLOW","24"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("BBM_PERIOD","20"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("BBM_STD","2"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("MACD_PERIOD","9"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("MACD_SHORT","12"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("MACD_LONG","26"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("ADX_PERIOD","14"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("OPEN_ON_ANY_SIGNAL","True"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("EMA_STUDY","True"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("EMA_CHART","True"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("EMA_CROSSING","True"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("EMA_CHECK_ON_OPEN","True"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("EMA_CHECK_ON_CLOSE","True"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("EMA_CLOSE_ON_FAST_MEDIUM","True"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("MACD_STUDY","True"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("MACD_CHART","True"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("MACD_CROSSING","True"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("MACD_CHECK_ON_OPEN","True"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("MACD_CHECK_ON_CLOSE","True"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("BBM_STUDY","True"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("BBM_CHART","False"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("BBM_CROSSING","False"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("BBM_CHECK_ON_OPEN","False"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("BBM_CHECK_ON_CLOSE","False"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("RSI_STUDY","True"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("RSI_CHART","True"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("RSI_CROSSING","False"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("RSI_CHECK_ON_OPEN","False"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("RSI_CHECK_ON_CLOSE","False"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("ADX_STUDY","True"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("ADX_CHECK_ON_OPEN","True"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("ADX_CHECK_ON_CLOSE","False"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("CANDLE_TREND_STUDY","False"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("CANDLE_TREND_CHECK_ON_OPEN","False"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("CANDLE_TREND_CHECK_ON_CLOSE","False"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("SCREEN_REFRESH_INTERVAL","1"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("SIGNAL_CHECK_INTERVAL","15"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("PORTFOLIO_API_INTERVAL","3"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("PENDING_POSITIONS_API_INTERVAL","3"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("PENDING_ORDERS_API_INTERVAL","3"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("TRADE_HISTORY_API_INTERVAL","3"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("POSITION_HISTORY_API_INTERVAL","3"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("TICKER_DATA_API_INTERVAL","120"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("BATCH_PROCESS_SIZE","1000"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("USE_PUBLIC_WEBSOCKET","True"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("VERBOSE_LOGGING","False"))
-            self.cursor.execute("INSERT INTO settings (param, value) VALUES (?, ?)", ("BENCHMARK","False"))
-            self.connection.commit() 
-        
-
     async def update_settings(self, settings):
         self.settings = settings
         await self.bitunixSignal.update_settings(settings)
@@ -470,6 +400,8 @@ async def wscharts(websocket):
                         "buysell": buysell,
                         "ema_study": settings.EMA_STUDY,
                         "ema_chart": settings.EMA_CHART,
+                        "trendline_study": settings.TRENDLINE_STUDY,
+                        "trendline_chart": settings.TRENDLINE_CHART,
                         "macd_study": settings.MACD_STUDY,
                         "macd_chart": settings.MACD_CHART,
                         "bbm_study": settings.BBM_STUDY,
@@ -557,6 +489,8 @@ async def wschart(websocket):
                         "period": period,
                         "ema_study": settings.EMA_STUDY,
                         "ema_chart": settings.EMA_CHART,
+                        "trendline_study": settings.TRENDLINE_STUDY,
+                        "trendline_chart": settings.TRENDLINE_CHART,
                         "macd_study": settings.MACD_STUDY,
                         "macd_chart": settings.MACD_CHART,
                         "bbm_study": settings.BBM_STUDY,

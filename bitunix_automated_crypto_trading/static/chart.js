@@ -6,6 +6,8 @@ const studyColors = {
     ema_slow: 'rgba(0, 123, 255, 0.7)',    // Blue for EMA Slow
     ema_medium: 'rgba(255, 123, 0, 0.7)',  // Orange for EMA Medium
     ema_fast: 'rgba(0, 255, 123, 0.7)',    // Green for EMA Fast
+    trendline_support: 'rgba(255, 0, 0, 0.7)', 
+    trendline_resistance: 'rgba(0, 0, 255, 0.7)',
     macd_line: 'rgba(255, 0, 0, 0.7)',     // Red for MACD Line
     macd_signal: 'rgba(123, 0, 255, 0.7)', // Purple for MACD Signal
     macd_histogram: 'rgba(123, 123, 123, 0.7)', // Gray for Histogram
@@ -25,8 +27,11 @@ const timeSettings = {
 
 
 const createOrUpdateChart = (
-    chartId, data, buysell, ema_study, ema_display, macd_study, macd_display, bbm_study, bbm_display, rsi_study, rsi_display, timeUnit
+    chartId, data, buysell, ema_study, ema_display, trendline_study, trendline_display, macd_study, macd_display, bbm_study, bbm_display, rsi_study, rsi_display, timeUnit
 ) => {
+    if (data.length === 0) {
+        return
+    }
     const candlestickChartId=`${chartId}-candlestick`;
     const timeConfig = timeSettings[timeUnit] || timeSettings['second'];
 
@@ -53,6 +58,8 @@ const createOrUpdateChart = (
     slowMA = mapOptionalData(data, 'ma_slow');
     mediumMA = mapOptionalData(data, 'ma_medium', 'ma_medium_slope');
     fastMA = mapOptionalData(data, 'ma_fast');
+    trendline_support = mapOptionalData(data, 'support_line');
+    trendline_resistance = mapOptionalData(data, 'resistance_line');
     macdLine = mapOptionalData(data, 'MACD_Line');
     signalLine = mapOptionalData(data, 'MACD_Signal');
     macdHistogram = mapOptionalData(data, 'MACD_Histogram');
@@ -61,8 +68,7 @@ const createOrUpdateChart = (
     BBU = mapOptionalData(data, 'BBU');
     rsi_slow = mapOptionalData(data, 'rsi_slow');
     rsi_fast = mapOptionalData(data, 'rsi_fast');
-
-
+    
     function findHighestStartTime(dataArrays) {
         let highestStartTime = 0;
         dataArrays.forEach(dataArray => {
@@ -77,7 +83,7 @@ const createOrUpdateChart = (
     }
     
     const allDataArrays = [
-        slowMA, mediumMA, fastMA, macdLine, signalLine, macdHistogram,
+        slowMA, mediumMA, fastMA, trendline_support, trendline_resistance, macdLine, signalLine, macdHistogram,
         BBL, BBM, BBU, rsi_slow, rsi_fast
     ];
 
@@ -88,6 +94,8 @@ const createOrUpdateChart = (
     slowMA = slowMA.filter(d => parseInt(d.x) >= highestStartTime)
     mediumMA = mediumMA.filter(d => parseInt(d.x) >= highestStartTime)
     fastMA = fastMA.filter(d => parseInt(d.x) >= highestStartTime)
+    trendline_support = trendline_support.filter(d => parseInt(d.x) >= highestStartTime)
+    trendline_resistance = trendline_resistance.filter(d => parseInt(d.x) >= highestStartTime)
     macdLine = macdLine.filter(d => parseInt(d.x) >= highestStartTime)
     signalLine = signalLine.filter(d => parseInt(d.x) >= highestStartTime)
     macdHistogram = macdHistogram.filter(d => parseInt(d.x) >= highestStartTime)
@@ -199,6 +207,34 @@ const createOrUpdateChart = (
             pointRadius: 0,
             yAxisID: 'y-axis-candlestick',
             hidden: !ema_display // Hide if not displayed
+        });
+    }
+
+    if (trendline_study){
+            datasets.push({
+            label: 'TrendLine Support',
+            data: trendline_support,
+            backgroundColor: studyColors.trendline_support,
+            borderColor: studyColors.trendline_support,
+            borderWidth: 1,
+            fill: false,
+            type: 'line',
+            pointRadius: 0,
+            yAxisID: 'y-axis-candlestick',
+            hidden: !trendline_display
+        });
+
+        datasets.push({
+            label: 'TrendLine Resistance',
+            data: trendline_resistance,
+            backgroundColor: studyColors.trendline_resistance,
+            borderColor: studyColors.trendline_resistance,
+            borderWidth: 1,
+            fill: false,
+            type: 'line',
+            pointRadius: 0,
+            yAxisID: 'y-axis-candlestick',
+            hidden: !trendline_display
         });
     }
 

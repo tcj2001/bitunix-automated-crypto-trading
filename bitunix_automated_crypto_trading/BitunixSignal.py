@@ -110,7 +110,8 @@ class BitunixSignal:
             olist = [entry['symbol'] for entry in self.pendingOrders['orderList']]
         newlist=olist+plist+list(set(symbols))
         self.tickerList=newlist[:300]
-        #self.tickerList=['IMXUSDT']
+        self.tickerList.remove("STMXUSDT")
+        #self.tickerList=['PIXELUSDT']
 
         [await self.add_ticker_to_tickerObjects(sym) for sym in self.tickerList]
         self.notifications.add_notification(f"{len(self.tickerList)} ticker list loaded") 
@@ -397,7 +398,7 @@ class BitunixSignal:
                 self.notifications.add_notification("AutoTradeProcess or GetTickerData is not running")
                 os._exit(1) 
                 break
-            await asyncio.sleep(300)
+            await asyncio.sleep(60*30)
 
     async def GetportfolioData(self):
         start=time.time()
