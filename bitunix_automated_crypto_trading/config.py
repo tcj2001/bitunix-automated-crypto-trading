@@ -61,7 +61,7 @@ class Settings(BaseSettings):
 
     TRENDLINE_CHART: bool = Field(default=True)
     TRENDLINE_STUDY: bool = Field(default=True)
-    TRENDLINE_LOOKBACK: int = Field(default=20, ge=10, le=100)
+    TRENDLINE_LOOKBACK: int = Field(default=20, ge=10, le=200)
     TRENDLINE_CHECK_ON_OPEN: bool = Field(default=False)
     TRENDLINE_CHECK_ON_CLOSE: bool = Field(default=False)
 

@@ -1,5 +1,7 @@
 import pandas as pd
-#pd.set_option('future.no_silent_downcasting', True)
+pd.set_option('future.no_silent_downcasting', True)
+import warnings
+warnings.filterwarnings("ignore", category=RuntimeWarning)
 import numpy as np
 import asyncio
 import talib
@@ -21,6 +23,7 @@ class Interval:
         self.current_signal="HOLD"
         self.ema_open_signal="HOLD"
         self.ema_close_signal="HOLD"
+        self.trendline_signal = "HOLD"
         self.macd_signal="HOLD"
         self.bbm_signal="HOLD"
         self.rsi_signal="HOLD"
@@ -39,50 +42,6 @@ class Interval:
         study = self.calculate_study(new_value)
         self._data = study
 
-    def support_resistance_trend_lines(self, data, lookback=20):
-        recent_data = data[-lookback:]
-        high_prices = recent_data['high'].values
-        low_prices = recent_data['low'].values
-        candle_indices = np.arange(lookback)
-        ts = recent_data['time']
-
-        # 1. Identify highest high and lowest low candle
-        highest_high_index = np.argmax(high_prices)
-        lowest_low_index = np.argmin(low_prices)
-        highest_high_price = high_prices[highest_high_index]
-        lowest_low_price = low_prices[lowest_low_index]
-
-        # 2. Top line: Tilt down from highest high to touch a subsequent high (if any)
-        slope_top = -float('inf')  # Initialize with a very steep negative slope
-        intercept_top = highest_high_price - slope_top * highest_high_index
-
-        for i in range(highest_high_index + 1, lookback):
-            current_slope = (high_prices[i] - highest_high_price) / (i - highest_high_index) if (i - highest_high_index) != 0 else 0
-            if current_slope > slope_top:
-                slope_top = current_slope
-                intercept_top = highest_high_price - slope_top * highest_high_index
-
-        top_line = slope_top * candle_indices + intercept_top
-
-        # 3. Bottom line: Tilt up from lowest low to touch a subsequent low (if any)
-        slope_bottom = float('inf')  # Initialize with a very steep positive slope
-        intercept_bottom = lowest_low_price - slope_bottom * lowest_low_index
-
-        for i in range(lowest_low_index + 1, lookback):
-            current_slope = (low_prices[i] - lowest_low_price) / (i - lowest_low_index) if (i - lowest_low_index) != 0 else 0
-            if current_slope < slope_bottom:
-                slope_bottom = current_slope
-                intercept_bottom = lowest_low_price - slope_bottom * lowest_low_index
-
-        bottom_line = slope_bottom * candle_indices + intercept_bottom   
-      
-        results_df = pd.DataFrame({
-            'time': ts,
-            'top_line': top_line,
-            'bottom_line': bottom_line
-        })
-          
-        return results_df
            
     def calculate_study(self, new_value):
         df = pd.DataFrame(new_value)
@@ -259,13 +218,54 @@ class Interval:
                 #Trendline
                 if self.settings.TRENDLINE_STUDY:
                     lookback = self.settings.TRENDLINE_LOOKBACK
-                    trend_df = self.support_resistance_trend_lines(df, lookback)
-                   
-                    df['support_line'] = trend_df['top_line']
-                    df.fillna({'support_line':0}, inplace=True)
+                    totallength=len(df)
+                    self.recent_data = df[['high', 'low', 'time']].iloc[-lookback:]
+                    if self.recent_data is not None and len(self.recent_data) >= lookback:
+                        self.high_prices = self.recent_data['high'].values
+                        self.low_prices = self.recent_data['low'].values
+                        self.candle_indices = np.arange(lookback) 
+                        self.timestamps = self.recent_data['time'].values  # Get the time values
 
-                    df['resistance_line'] = trend_df['bottom_line']
-                    df.fillna({'resistance_line':0}, inplace=True)
+                        # 1. Identify highest high and lowest low candle
+                        highest_high_index = np.where(self.high_prices == np.max(self.high_prices))[0][-1]
+                        lowest_low_index = np.where(self.low_prices == np.min(self.low_prices))[0][-1]
+                        highest_high_price = self.high_prices[highest_high_index]
+                        lowest_low_price = self.low_prices[lowest_low_index]
+
+                        # 2. Top line: Tilt down from highest high to touch a subsequent high (if any)
+                        slope_top = -float('inf')  # Initialize with a very steep negative slope
+                        intercept_top = highest_high_price - slope_top * highest_high_index
+
+                        for i in range(highest_high_index + 1, lookback):
+                            current_slope = (self.high_prices[i] - highest_high_price) / (i - highest_high_index) if (i - highest_high_index) != 0 else 0
+                            if current_slope > slope_top:
+                                slope_top = current_slope
+                                intercept_top = highest_high_price - slope_top * highest_high_index
+
+                        df['support_line'] = np.concatenate((np.zeros(totallength- lookback), np.array(slope_top * self.candle_indices + intercept_top)))
+
+                        # 3. Bottom line: Tilt up from lowest low to touch a subsequent low (if any)
+                        slope_bottom = float('inf')  # Initialize with a very steep positive slope
+                        intercept_bottom = lowest_low_price - slope_bottom * lowest_low_index
+
+                        for i in range(lowest_low_index + 1, lookback):
+                            current_slope = (self.low_prices[i] - lowest_low_price) / (i - lowest_low_index) if (i - lowest_low_index) != 0 else 0
+                            if current_slope < slope_bottom:
+                                slope_bottom = current_slope
+                                intercept_bottom = lowest_low_price - slope_bottom * lowest_low_index
+
+                        df['resistance_line'] = np.concatenate((np.zeros(totallength- lookback), np.array(slope_bottom * self.candle_indices + intercept_bottom)))
+
+                        df.fillna({'support_line':0}, inplace=True)
+                        df.fillna({'resistance_line':0}, inplace=True)
+                        threshold= np.abs(df['close'].iloc[-1] - df['close'].iloc[-2])
+                        if df is not None and len(df) >= 2:
+                            if np.abs(df['close'].iloc[-1] - df['support_line'].iloc[-1]) < threshold:
+                                self.trendline_signal = "SELL"
+                            elif np.abs(df['close'].iloc[-1] - df['resistance_line'].iloc[-1]) < threshold:
+                                self.trendline_signal = "BUY"
+                            else:
+                                self.trendline_signal = "HOLD"
  
                 # Calculate the ADX
                 if self.settings.ADX_STUDY:
@@ -314,7 +314,8 @@ class Interval:
                         (self.settings.EMA_STUDY and self.settings.EMA_CHECK_ON_OPEN and self.ema_open_signal == "BUY") or
                         (self.settings.MACD_STUDY and self.settings.MACD_CHECK_ON_OPEN and self.macd_signal == "BUY") or
                         (self.settings.BBM_STUDY and self.settings.BBM_CHECK_ON_OPEN and self.bbm_signal == "BUY") or
-                        (self.settings.RSI_STUDY and self.settings.RSI_CHECK_ON_OPEN and self.rsi_signal == "BUY")
+                        (self.settings.RSI_STUDY and self.settings.RSI_CHECK_ON_OPEN and self.rsi_signal == "BUY") or
+                        (self.settings.TRENDLINE_STUDY and self.settings.TRENDLINE_CHECK_ON_OPEN and self.trendline_signal == "BUY")
                     )
                     additional_buy_conditions = (
                         (not self.settings.ADX_STUDY or not self.settings.ADX_CHECK_ON_OPEN or self.adx_signal == "STRONG") or
@@ -326,7 +327,8 @@ class Interval:
                         (self.settings.EMA_STUDY and self.settings.EMA_CHECK_ON_OPEN and self.ema_open_signal == "SELL") or
                         (self.settings.MACD_STUDY and self.settings.MACD_CHECK_ON_OPEN and self.macd_signal == "SELL") or
                         (self.settings.BBM_STUDY and self.settings.BBM_CHECK_ON_OPEN and self.bbm_signal == "SELL") or
-                        (self.settings.RSI_STUDY and self.settings.RSI_CHECK_ON_OPEN and self.rsi_signal == "SELL")
+                        (self.settings.RSI_STUDY and self.settings.RSI_CHECK_ON_OPEN and self.rsi_signal == "SELL") or
+                        (self.settings.TRENDLINE_STUDY and self.settings.TRENDLINE_CHECK_ON_OPEN and self.trendline_signal == "SELL")
                     )
                     additional_sell_conditions = (
                         (self.settings.ADX_STUDY and self.settings.ADX_CHECK_ON_OPEN and self.adx_signal == "STRONG") or
@@ -349,7 +351,8 @@ class Interval:
                         (not self.settings.EMA_STUDY or not self.settings.EMA_CHECK_ON_OPEN or self.ema_open_signal == "BUY") and
                         (not self.settings.MACD_STUDY or not self.settings.MACD_CHECK_ON_OPEN or self.macd_signal == "BUY") and
                         (not self.settings.BBM_STUDY or not self.settings.BBM_CHECK_ON_OPEN or self.bbm_signal == "BUY") and
-                        (not self.settings.RSI_STUDY or not self.settings.RSI_CHECK_ON_OPEN or self.rsi_signal == "BUY")
+                        (not self.settings.RSI_STUDY or not self.settings.RSI_CHECK_ON_OPEN or self.rsi_signal == "BUY") and
+                        (not self.settings.TRENDLINE_STUDY or not self.settings.TRENDLINE_CHECK_ON_OPEN or self.trendline_signal == "BUY")
                     )
                     additional_buy_conditions = (
                         (not self.settings.ADX_STUDY or not self.settings.ADX_CHECK_ON_OPEN or self.adx_signal == "STRONG") and
@@ -361,7 +364,8 @@ class Interval:
                         (not self.settings.EMA_STUDY or not self.settings.EMA_CHECK_ON_OPEN or self.ema_open_signal == "SELL") and
                         (not self.settings.MACD_STUDY or not self.settings.MACD_CHECK_ON_OPEN or self.macd_signal == "SELL") and
                         (not self.settings.BBM_STUDY or not self.settings.BBM_CHECK_ON_OPEN or self.bbm_signal == "SELL") and
-                        (not self.settings.RSI_STUDY or not self.settings.RSI_CHECK_ON_OPEN or self.rsi_signal == "SELL")
+                        (not self.settings.RSI_STUDY or not self.settings.RSI_CHECK_ON_OPEN or self.rsi_signal == "SELL") and
+                        (not self.settings.TRENDLINE_STUDY or not self.settings.TRENDLINE_CHECK_ON_OPEN or self.trendline_signal == "SELL")
                     )
                     additional_sell_conditions = (
                         (not self.settings.ADX_STUDY or not self.settings.ADX_CHECK_ON_OPEN or self.adx_signal == "STRONG") and
@@ -379,7 +383,7 @@ class Interval:
                    
             except Exception as e:
                 logger.info(f"Function: calculate_study, {e}, {e.args}, {type(e).__name__}")
-                logger.info(traceback.logger.info_exc())
+                logger.info(traceback.print_exc())
             retval =  df.to_dict('records')
             del df
             gc.collect()            
@@ -531,7 +535,7 @@ class Ticker:
 
         except Exception as e:
             logger.info(f"Function: create_bar_with_last_and_ts, {e}, {e.args}, {type(e).__name__}")
-            logger.info(traceback.logger.info_exc())
+            logger.info(traceback.print_exc())
 
               
 class Tickers:
@@ -647,6 +651,7 @@ class Tickers:
                             args[0].get_interval_ticks(intervalId).macd_signal = interval.macd_signal
                             args[0].get_interval_ticks(intervalId).bbm_signal = interval.bbm_signal                        
                             args[0].get_interval_ticks(intervalId).rsi_signal = interval.rsi_signal
+                            args[0].get_interval_ticks(intervalId).trendline_signal, = interval.trendline_signal,
                             args[0].get_interval_ticks(intervalId).candle_trend = interval.candle_trend
                             args[0].get_interval_ticks(intervalId).adx_signal = interval.adx_signal
                             args[0].get_interval_ticks(intervalId).signal_strength = interval.signal_strength 
@@ -683,6 +688,7 @@ class Tickers:
                             f"{period}_macd":intervalObj.macd_signal,
                             f"{period}_bbm":intervalObj.bbm_signal,
                             f"{period}_rsi":intervalObj.rsi_signal,
+                            f"{period}_trendline": intervalObj.trendline_signal,
                             f"{period}_adx":intervalObj.adx_signal,                                       
                             f"{period}_candle_trend":intervalObj.candle_trend, 
                             'bid' : bid,
@@ -704,7 +710,7 @@ class Tickers:
                     'lastcolor': "", 'bidcolor': "", 'askcolor': "", 'bid': 0.0, 'ask': 0.0, 'last': 0.0,
                     f"{period}_cb":0, f"{period}_barcolor": "", f"{period}_trend": "",
                     f"{period}_open": 0.0, f"{period}_close": 0.0, f"{period}_high": 0.0, f"{period}_low": 0.0,
-                    f"{period}_ema": "", f"{period}_macd": "", f"{period}_bbm": "", f"{period}_rsi": "", f"{period}_candle_trend": "", f"{period}_adx": ""
+                    f"{period}_ema": "", f"{period}_macd": "", f"{period}_bbm": "", f"{period}_rsi": "", f"{period}_trendline": "", f"{period}_candle_trend": "", f"{period}_adx": ""
                 }
                 df.fillna(fill_values, inplace=True)
                 df.set_index("symbol", inplace=True, drop=False) 
@@ -725,7 +731,7 @@ class Tickers:
                 self.signaldf_filtered = df[np.any(trending_conditions, axis=0)].copy()
         except Exception as e:
             logger.info(f"Function: getCurrentData, {e}, {e.args}, {type(e).__name__}")
-            logger.info(traceback.logger.info_exc())
+            logger.info(traceback.print_exc())
         finally:
             del df, current_data
             gc.collect()       
