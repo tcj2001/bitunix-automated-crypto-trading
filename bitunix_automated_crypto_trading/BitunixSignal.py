@@ -111,7 +111,7 @@ class BitunixSignal:
         newlist=olist+plist+list(set(symbols))
         self.tickerList=newlist[:300]
         self.tickerList.remove("STMXUSDT")
-        #self.tickerList=['PIXELUSDT']
+        #self.tickerList=['DYDXUSDT']
 
         [await self.add_ticker_to_tickerObjects(sym) for sym in self.tickerList]
         self.notifications.add_notification(f"{len(self.tickerList)} ticker list loaded") 
@@ -271,12 +271,7 @@ class BitunixSignal:
     # Function to add data to the last price deque
     async def StoreTickerData(self, message):
         if self.settings.USE_PUBLIC_WEBSOCKET and message:
-            try:
-                data = json.loads(message)
-                if data.get('symbol') and data.get('ch') == 'ticker':
-                    await self.ticker_que.put(data)
-            except json.JSONDecodeError as e:
-                logger.warning(f"Failed to decode message: {message}. Error: {e}")
+            await self.ticker_que.put(message)
 
     # Function to process the last price deque
     async def ProcessTickerData(self):
@@ -285,11 +280,14 @@ class BitunixSignal:
                 latest_data = {}
                 reversed_items = await self.drain_queue(self.ticker_que)
                 while reversed_items:
-                    data = reversed_items.popleft()
-                    symbol = data["symbol"]
-                    ts = data["ts"]
-                    if symbol not in latest_data or ts > latest_data[symbol]['ts']:
-                        latest_data[symbol] = {'ts': ts, 'last': float(data['data']['la'])}
+                    message = reversed_items.popleft()
+                    data = json.loads(message)
+                    if data.get('symbol') and data.get('ch') == 'ticker':
+                        symbol = data["symbol"]
+                        ts = data["ts"]
+                        if symbol not in latest_data or ts > latest_data[symbol]['ts']:
+                            latest_data[symbol] = {'ts': ts, 'last': float(data['data']['la'])}
+                    await asyncio.sleep(0.01)
                 # Convert to DataFrame
                 self.tickerdf = pd.DataFrame.from_dict(latest_data, orient="index")
                 if not self.tickerdf.empty:
@@ -300,7 +298,7 @@ class BitunixSignal:
             except Exception as e:
                 logger.info(f"Function: ProcessTickerData, {e}, {e.args}, {type(e).__name__}")
                 logger.info(traceback.print_exc())
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.01)
         logger.info(f"ProcessTickerData: exitied out of the loop, exiting app")
         os._exit(1)  # Exit the program 
             
@@ -308,13 +306,8 @@ class BitunixSignal:
     #websocket data to update bid and ask
     async def StoreDepthData(self, message):
         if self.settings.USE_PUBLIC_WEBSOCKET and message:
-            try:
-                data = json.loads(message)
-                if data.get('symbol') and data.get('ch') == 'depth_book1':
-                    await self.depth_que.put(data)
-            except json.JSONDecodeError as e:
-                logger.warning(f"Failed to decode message: {message}. Error: {e}")        
-
+            await self.depth_que.put(message)
+ 
     # Function to process the bid, ask
     async def ProcessDepthData(self):
         while True:
@@ -322,11 +315,14 @@ class BitunixSignal:
                 latest_data = {}
                 reversed_items = await self.drain_queue(self.depth_que)
                 while reversed_items:
-                    data = reversed_items.popleft()
-                    symbol = data["symbol"]
-                    ts = data["ts"]
-                    if symbol not in latest_data or ts > latest_data[symbol]['ts']:
-                        latest_data[symbol] = {'ts': ts, 'bid': float(data['data']['b'][0][0]), 'ask': float(data['data']['a'][0][0])}
+                    message = reversed_items.popleft()
+                    data = json.loads(message)
+                    if data.get('symbol') and data.get('ch') == 'depth_book1':
+                        symbol = data["symbol"]
+                        ts = data["ts"]
+                        if symbol not in latest_data or ts > latest_data[symbol]['ts']:
+                            latest_data[symbol] = {'ts': ts, 'bid': float(data['data']['b'][0][0]), 'ask': float(data['data']['a'][0][0])}
+                    await asyncio.sleep(0.01)
                 # Convert to DataFrame
                 self.depthdf = pd.DataFrame.from_dict(latest_data, orient="index")
                 if not self.depthdf.empty:
@@ -335,7 +331,7 @@ class BitunixSignal:
             except Exception as e:
                 logger.info(f"Function: ProcessTickerData, {e}, {e.args}, {type(e).__name__}")
                 logger.info(traceback.print_exc())
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.01)
         logger.info(f"ProcessDepthData: exitied out of the loop, exiting app")
         os._exit(1)  # Exit the program 
 
@@ -563,12 +559,12 @@ class BitunixSignal:
             self.signaldf_filtered = self.tickerObjects.signaldf_filtered
 
             if not self.positiondf.empty and not self.signaldf_full.empty:
-                    columns=['symbol', f"{period}_trend", f"{period}_cb", f"{period}_barcolor", f"{period}_ema_open", f"{period}_ema_close", f"{period}_macd", f"{period}_bbm", f"{period}_rsi", f"{period}_candle_trend", f"{period}_open", f"{period}_close", f"{period}_high", f"{period}_low"]
+                    columns=['symbol', f"{period}_trend", f"{period}_cb", f"{period}_barcolor", f"{period}_ema_open", f"{period}_ema_close", f"{period}_macd", f"{period}_bbm", f"{period}_rsi", f"{period}_trendline", f"{period}_candle_trend", f"{period}_open", f"{period}_close", f"{period}_high", f"{period}_low"]
                     columns2=["qty", "side", "unrealizedPNL", "realizedPNL", "ctime", "avgOpenPrice", "bid", "bidcolor", "last", "lastcolor", "ask", "askcolor", "charts", "bitunix", "action", "add", "reduce"]
                     if set(columns).issubset(self.signaldf_full.columns) and set(columns2).issubset(self.positiondf.columns):
-                        columnOrder= ['symbol', "side",  "unrealizedPNL", "realizedPNL", f"{period}_trend", f"{period}_cb", f"{period}_barcolor", f"{period}_ema_open", f"{period}_ema_close", f"{period}_macd", f"{period}_bbm", f"{period}_rsi", f"{period}_adx", f"{period}_candle_trend", f"{period}_open", f"{period}_close", f"{period}_high", f"{period}_low", "qty", "ctime", "avgOpenPrice", "bid", "bidcolor", "last", "lastcolor", "ask", "askcolor", "charts", "bitunix", "action", "add", "reduce"]                
+                        columnOrder= ['symbol', "side",  "unrealizedPNL", "realizedPNL", f"{period}_trend", f"{period}_cb", f"{period}_barcolor", f"{period}_ema_open", f"{period}_ema_close", f"{period}_macd", f"{period}_bbm", f"{period}_rsi", f"{period}_trendline", f"{period}_adx", f"{period}_candle_trend", f"{period}_open", f"{period}_close", f"{period}_high", f"{period}_low", "qty", "ctime", "avgOpenPrice", "bid", "bidcolor", "last", "lastcolor", "ask", "askcolor", "charts", "bitunix", "action", "add", "reduce"]                
                         self.positiondf2 = pd.merge(self.positiondf, self.signaldf_full[["symbol", f"{period}_open", f"{period}_close", f"{period}_high", f"{period}_low", 
-                                f"{period}_ema_open", f"{period}_ema_close", f"{period}_macd", f"{period}_bbm", f"{period}_rsi", f"{period}_adx", f"{period}_candle_trend",
+                                f"{period}_ema_open", f"{period}_ema_close", f"{period}_macd", f"{period}_bbm", f"{period}_rsi", f"{period}_trendline", f"{period}_adx", f"{period}_candle_trend",
                                 f"{period}_trend",f"{period}_cb", f"{period}_barcolor"]], left_on="symbol", right_index=True, how="left")[columnOrder]    
                         self.positiondfStyle= self.positiondfrenderer.render_html(self.positiondf2)
             else:
@@ -582,7 +578,7 @@ class BitunixSignal:
                     # Assign to self.signaldf for HTML rendering
                     self.signaldf = self.signaldf_filtered[[
                         "symbol", f"{period}_trend",f"{period}_cb", f"{period}_barcolor",
-                        f"{period}_ema_open", f"{period}_ema_close", f"{period}_macd", f"{period}_bbm", f"{period}_rsi",f"{period}_adx",f"{period}_candle_trend",
+                        f"{period}_ema_open", f"{period}_ema_close", f"{period}_macd", f"{period}_bbm", f"{period}_rsi", f"{period}_trendline",f"{period}_adx",f"{period}_candle_trend",
                         'lastcolor', 'bidcolor', 'askcolor', 'bid', 'last', 'ask',
                         f"{period}_open", f"{period}_close", f"{period}_high", f"{period}_low", 
                     ]].sort_values(by=[f'{period}_cb'], ascending=[False])
@@ -693,7 +689,7 @@ class BitunixSignal:
                     total_pnl = unrealized_pnl + realized_pnl
                     side=row['side']
 
-                    requiredCols=[f'{period}_open', f'{period}_close', f'{period}_high', f'{period}_low', f'{period}_ema_open', f"{period}_ema_close", f'{period}_macd', f'{period}_bbm', f'{period}_rsi', f'{period}_candle_trend', f'{period}_trend', f'{period}_cb', f'{period}_barcolor']    
+                    requiredCols=[f'{period}_open', f'{period}_close', f'{period}_high', f'{period}_low', f'{period}_ema_open', f"{period}_ema_close", f'{period}_macd', f'{period}_bbm', f'{period}_rsi', f'{period}_trendline', f'{period}_candle_trend', f'{period}_trend', f'{period}_cb', f'{period}_barcolor']    
                     required_cols = set(requiredCols)
 
                     # Close position that fall the below criteria
@@ -868,6 +864,41 @@ class BitunixSignal:
                                     price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
                                     self.notifications.add_notification(
                                         f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to RSI {period} crossover for {row.symbol} with {row.qty} qty @ {price})'
+                                    )
+                                    datajs = await self.bitunixApi.PlaceOrder(
+                                        positionId=row.positionId,
+                                        ticker=row.symbol,
+                                        qty=row.qty,
+                                        price=price,
+                                        side=row.side,
+                                        tradeSide="CLOSE"
+                                    )
+                                    continue
+
+                            # TrendLine
+                            if self.settings.TRENDLINE_STUDY and self.settings.TRENDLINE_CHECK_ON_CLOSE: 
+                                if row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_trendline'] == "SELL":
+                                    last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
+                                    price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
+
+                                    self.notifications.add_notification(
+                                        f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to {period} trendline for {row.symbol} with {row.qty} qty @ {price})'
+                                    )
+                                    datajs = await self.bitunixApi.PlaceOrder(
+                                        positionId=row.positionId,
+                                        ticker=row.symbol,
+                                        qty=row.qty,
+                                        price=price,
+                                        side=row.side,
+                                        tradeSide="CLOSE"
+                                    )
+                                    continue
+
+                                if row.side == 'SELL' and self.signaldf_full.at[row.symbol, f'{period}_trendline'] == "BUY":
+                                    last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
+                                    price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
+                                    self.notifications.add_notification(
+                                        f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to {period} trendline for {row.symbol} with {row.qty} qty @ {price})'
                                     )
                                     datajs = await self.bitunixApi.PlaceOrder(
                                         positionId=row.positionId,

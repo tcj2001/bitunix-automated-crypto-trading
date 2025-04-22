@@ -73,25 +73,36 @@ The platform can be configured through the `config.py` file or `config.txt`. Key
     
   - `Study Parameters`:
     - `EMA_STUDY`: Enable EMA study
+    - `EMA_CHART`: Display EMA chart
+    - `EMA_STUDY`: Enable EMA study
     - `EMA_CROSSING`: Check EMA crossing or crossed, COMPARING MEDIUM AND SLOW MOVING AVERAGE 
     - `EMA_CHECK_ON_OPEN`: Check EMA on open
     - `EMA_CHECK_ON_CLOSE`: Check EMA on close
     - `EMA_CLOSE_ON_FAST_MEDIUM`: Check EMA close comparing fast and medium
 
     - `MACD_STUDY`: Enable MACD study
+    - `MACD_CHART`: Display MACD chart
     - `MACD_CROSSING`: Check MACD crossing or crossed, comparing MACD line and signal line
     - `MACD_CHECK_ON_OPEN`: Check MACD on open
     - `MACD_CHECK_ON_CLOSE`: Check MACD on close
 
     - `BBM_STUDY`: Enable Bollinger Band study
+    - `BBM_CHART`: Display Bollinger Band chart
     - `BBM_CROSSING`: Check Bollinger Band crossing or crossed, comparing close and middle line
     - `BBM_CHECK_ON_OPEN`: Check Bollinger Band on open
     - `BBM_CHECK_ON_CLOSE`: Check Bollinger Band on close
 
     - `RSI_STUDY`: Enable RSI study
+    - `RSI_CHART`: Display RSI chart
     - `RSI_CROSSING`: Check RSI crossing or crossed, comparing fast and slow RSI
     - `RSI_CHECK_ON_OPEN`: Check RSI on open
     - `RSI_CHECK_ON_CLOSE`: Check RSI on close
+
+    - `TRENDLINE_STUDY`: Enable Trendline support and resistance study
+    - `TRENDLINE_CHART`: Display Trendline chart
+    - `TRENDLINE_LOOKBACK`: Lookback period for trendline study
+    - `TRENDLINE_CHECK_ON_OPEN`: Check Trendline support and resistance on open
+    - `TRENDLINE_CHECK_ON_CLOSE`: Check Trendline support and resistance on close
 
     - `ADX_STUDY`: Enable ADX study
     - `ADX_CHECK_ON_OPEN`: Check ADX on open
@@ -110,7 +121,7 @@ The platform can be configured through the `config.py` file or `config.txt`. Key
     - `TRADE_HISTORY_API_INTERVAL`: Trade history API interval
     - `POSITION_HISTORY_API_INTERVAL`: Position history API interval
     - `TICKER_DATA_API_INTERVAL`: Ticker data API interval
-    - `PUBLIC_WEBSOCKET_RESTART_INTERVAL`: Public WebSocket restart interval
+    - `BATCH_PROCESS_SIZE`=2500 # Number of tick or bid/ask to process in a batch
     
   - Currently not using public websocket for depth and ticker data as the data is lagging or missing sometime
     - `USE_PUBLIC_WEBSOCKET`: True or False
@@ -118,6 +129,9 @@ The platform can be configured through the `config.py` file or `config.txt`. Key
 - Logging Parameters:
   -   `VERBOSE_LOGGING`: True or False
 
+- CPU processing parameters:
+  -   `CPU_PROCESSING`: True or False
+  
 ## User Interface
 
 - Access the web interface:

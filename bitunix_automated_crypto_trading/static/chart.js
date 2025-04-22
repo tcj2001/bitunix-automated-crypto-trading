@@ -83,7 +83,7 @@ const createOrUpdateChart = (
     }
     
     const allDataArrays = [
-        slowMA, mediumMA, fastMA, trendline_support, trendline_resistance, macdLine, signalLine, macdHistogram,
+        slowMA, mediumMA, fastMA, macdLine, signalLine, macdHistogram,
         BBL, BBM, BBU, rsi_slow, rsi_fast
     ];
 
@@ -94,8 +94,6 @@ const createOrUpdateChart = (
     slowMA = slowMA.filter(d => parseInt(d.x) >= highestStartTime)
     mediumMA = mediumMA.filter(d => parseInt(d.x) >= highestStartTime)
     fastMA = fastMA.filter(d => parseInt(d.x) >= highestStartTime)
-    trendline_support = trendline_support.filter(d => parseInt(d.x) >= highestStartTime)
-    trendline_resistance = trendline_resistance.filter(d => parseInt(d.x) >= highestStartTime)
     macdLine = macdLine.filter(d => parseInt(d.x) >= highestStartTime)
     signalLine = signalLine.filter(d => parseInt(d.x) >= highestStartTime)
     macdHistogram = macdHistogram.filter(d => parseInt(d.x) >= highestStartTime)
