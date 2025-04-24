@@ -877,7 +877,7 @@ class BitunixSignal:
 
                             # TrendLine
                             if self.settings.TRENDLINE_STUDY and self.settings.TRENDLINE_CHECK_ON_CLOSE: 
-                                if row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_trendline'] == "SELL":
+                                if row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_trendline'] == "SELL" and total_pnl>0:
                                     last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                     price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
 
@@ -894,7 +894,7 @@ class BitunixSignal:
                                     )
                                     continue
 
-                                if row.side == 'SELL' and self.signaldf_full.at[row.symbol, f'{period}_trendline'] == "BUY":
+                                if row.side == 'SELL' and self.signaldf_full.at[row.symbol, f'{period}_trendline'] == "BUY" and total_pnl>0:
                                     last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                     price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
                                     self.notifications.add_notification(
