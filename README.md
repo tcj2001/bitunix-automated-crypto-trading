@@ -26,6 +26,7 @@ A real-time cryptocurrency trading platform built with FastAPI and WebSocket tec
   - MACD
   - Bollinger Bands
   - RSI
+  - Support and Resistance levels
   - Brearish or bullish candle based on the close near high or low of the current candle
   - strength based on consecutive colored candles count
   - ADX
@@ -100,6 +101,7 @@ The platform can be configured through the `config.py` file or `config.txt`. Key
 
     - `TRENDLINE_STUDY`: Enable Trendline support and resistance study
     - `TRENDLINE_CHART`: Display Trendline chart
+    - `TRENDLINE_PEAK_DISTANCE` : distance between peaks or troughs
     - `TRENDLINE_LOOKBACK`: Lookback period for trendline study
     - `TRENDLINE_CHECK_ON_OPEN`: Check Trendline support and resistance on open
     - `TRENDLINE_CHECK_ON_CLOSE`: Check Trendline support and resistance on close
