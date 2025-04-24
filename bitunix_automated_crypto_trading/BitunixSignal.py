@@ -111,7 +111,7 @@ class BitunixSignal:
         newlist=olist+plist+list(set(symbols))
         self.tickerList=newlist[:300]
         self.tickerList.remove("STMXUSDT")
-        #self.tickerList=['DYDXUSDT']
+        #self.tickerList=['POLUSDT']
 
         [await self.add_ticker_to_tickerObjects(sym) for sym in self.tickerList]
         self.notifications.add_notification(f"{len(self.tickerList)} ticker list loaded") 

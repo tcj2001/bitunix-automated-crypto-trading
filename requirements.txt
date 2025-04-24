@@ -26,8 +26,8 @@ cryptography
 # Utilities
 colorama
 
-
 # Data Processing
 #TA-LIB
 pandas
 numpy
+scipy

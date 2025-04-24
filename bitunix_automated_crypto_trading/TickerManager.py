@@ -10,6 +10,8 @@ from logger import Logger
 logger = Logger(__name__).get_logger()
 import gc
 from concurrent.futures import ProcessPoolExecutor
+from SupportResistance import SupportResistance
+sr = SupportResistance()
 
 class Interval:
     def __init__(self, symbol, intervalId, delta, data, settings):
@@ -42,7 +44,13 @@ class Interval:
         study = self.calculate_study(new_value)
         self._data = study
 
-           
+    def get_line(self, lookback, candle_indices, index1, price1, index2, price2):
+        if index1 == index2:
+            return np.full(lookback, price1)  # Horizontal line
+        slope = (price2 - price1) / (index2 - index1)
+        intercept = price1 - slope * index1
+        return slope * candle_indices + intercept
+                
     def calculate_study(self, new_value):
         df = pd.DataFrame(new_value)
         if not df.empty: #and df.shape[0] >= int(self.settings.BARS):
@@ -217,55 +225,24 @@ class Interval:
 
                 #Trendline
                 if self.settings.TRENDLINE_STUDY:
-                    lookback = self.settings.TRENDLINE_LOOKBACK
-                    totallength=len(df)
-                    self.recent_data = df[['high', 'low', 'time']].iloc[-lookback:]
-                    if self.recent_data is not None and len(self.recent_data) >= lookback:
-                        self.high_prices = self.recent_data['high'].values
-                        self.low_prices = self.recent_data['low'].values
-                        self.candle_indices = np.arange(lookback) 
-                        self.timestamps = self.recent_data['time'].values  # Get the time values
-
-                        # 1. Identify highest high and lowest low candle
-                        highest_high_index = np.where(self.high_prices == np.max(self.high_prices))[0][-1]
-                        lowest_low_index = np.where(self.low_prices == np.min(self.low_prices))[0][-1]
-                        highest_high_price = self.high_prices[highest_high_index]
-                        lowest_low_price = self.low_prices[lowest_low_index]
-
-                        # 2. Top line: Tilt down from highest high to touch a subsequent high (if any)
-                        slope_top = -float('inf')  # Initialize with a very steep negative slope
-                        intercept_top = highest_high_price - slope_top * highest_high_index
-
-                        for i in range(highest_high_index + 1, lookback):
-                            current_slope = (self.high_prices[i] - highest_high_price) / (i - highest_high_index) if (i - highest_high_index) != 0 else 0
-                            if current_slope > slope_top:
-                                slope_top = current_slope
-                                intercept_top = highest_high_price - slope_top * highest_high_index
-
-                        df['support_line'] = np.concatenate((np.zeros(totallength- lookback), np.array(slope_top * self.candle_indices + intercept_top)))
-
-                        # 3. Bottom line: Tilt up from lowest low to touch a subsequent low (if any)
-                        slope_bottom = float('inf')  # Initialize with a very steep positive slope
-                        intercept_bottom = lowest_low_price - slope_bottom * lowest_low_index
-
-                        for i in range(lowest_low_index + 1, lookback):
-                            current_slope = (self.low_prices[i] - lowest_low_price) / (i - lowest_low_index) if (i - lowest_low_index) != 0 else 0
-                            if current_slope < slope_bottom:
-                                slope_bottom = current_slope
-                                intercept_bottom = lowest_low_price - slope_bottom * lowest_low_index
-
-                        df['resistance_line'] = np.concatenate((np.zeros(totallength- lookback), np.array(slope_bottom * self.candle_indices + intercept_bottom)))
-
+                    loopback = len(df) 
+                    df_sr= sr.support_resistance_trend_lines(df[['time','open', 'high', 'low', 'close']], loopback, prominence=None, distance=None if self.settings.TRENDLINE_PEAK_DISTANCE==0 else self.settings.TRENDLINE_PEAK_DISTANCE)
+                    if df_sr is not None and len(df_sr) >= 1:
+                        df['support_line'] = df_sr['support_line']
+                        df['resistance_line'] = df_sr['resistance_line']
                         df.fillna({'support_line':0}, inplace=True)
                         df.fillna({'resistance_line':0}, inplace=True)
-                        threshold= np.abs(df['close'].iloc[-1] - df['close'].iloc[-2])
                         if df is not None and len(df) >= 2:
-                            if np.abs(df['close'].iloc[-1] - df['support_line'].iloc[-1]) < threshold:
+                            if df['high'].iloc[-3] >= df['support_line'].iloc[-3] and df['close'].iloc[-2] < df['support_line'].iloc[-2] and df['close'].iloc[-1] < df['open'].iloc[-1]:
                                 self.trendline_signal = "SELL"
-                            elif np.abs(df['close'].iloc[-1] - df['resistance_line'].iloc[-1]) < threshold:
+                            elif df['low'].iloc[-3] <= df['resistance_line'].iloc[-3] and df['close'].iloc[-2] > df['resistance_line'].iloc[-2] and df['close'].iloc[-1] > df['open'].iloc[-1]:
                                 self.trendline_signal = "BUY"
+                            elif df['close'].iloc[-3] > df['support_line'].iloc[-3] and df['close'].iloc[-2] > df['support_line'].iloc[-2] and df['close'].iloc[-1] > df['open'].iloc[-1]:     
+                                    self.trendline_signal = "BUY"
+                            elif df['close'].iloc[-3] < df['resistance_line'].iloc[-3] and df['close'].iloc[-2] < df['resistance_line'].iloc[-2] and df['close'].iloc[-1] < df['open'].iloc[-1]:     
+                                    self.trendline_signal = "SELL"
                             else:
-                                self.trendline_signal = "HOLD"
+                                 self.trendline_signal = "HOLD"
  
                 # Calculate the ADX
                 if self.settings.ADX_STUDY:
@@ -643,7 +620,7 @@ class Tickers:
                 results = executor.map(self.process_ticker_candle, tuples_list, chunksize=10)
                 for args, result in zip(tuples_list, results):
                     for intervalId, interval in result[3].items():
-                        if not interval._data is None:
+                        if not interval._data is None and len(interval._data) >= self.settings.BARS:
                             args[0].get_interval_ticks(intervalId)._data = interval._data
                             args[0].get_interval_ticks(intervalId).current_signal = interval.current_signal                        
                             args[0].get_interval_ticks(intervalId).ema_open_signal = interval.ema_open_signal
