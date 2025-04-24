@@ -719,13 +719,15 @@ class Tickers:
                 trending_conditions = [
                     (
                         (df[f'{period}_trend']=='BUY') &
-                        (df[f'{period}_cb']>1) &
-                        (df[f'{period}_barcolor']==self.green) 
+                        (df[f'{period}_cb']>1) 
+                        #&
+                        #(df[f'{period}_barcolor']==self.green) 
                     ),
                     (
                         (df[f'{period}_trend']=='SELL') &
-                        (df[f'{period}_cb']>1) &
-                        (df[f'{period}_barcolor']==self.red) 
+                        (df[f'{period}_cb']>1) 
+                        #&
+                        #(df[f'{period}_barcolor']==self.red) 
                     )
                 ]
                 self.signaldf_filtered = df[np.any(trending_conditions, axis=0)].copy()
