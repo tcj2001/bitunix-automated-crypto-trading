@@ -99,10 +99,11 @@ The platform can be configured through the `config.py` file or `config.txt`. Key
     - `RSI_CHECK_ON_OPEN`: Check RSI on open
     - `RSI_CHECK_ON_CLOSE`: Check RSI on close
 
+    - `TRENDLINE_PEAK_DISTANCE` : distance between peaks or troughs
     - `TRENDLINE_STUDY`: Enable Trendline support and resistance study
     - `TRENDLINE_CHART`: Display Trendline chart
-    - `TRENDLINE_PEAK_DISTANCE` : distance between peaks or troughs
     - `TRENDLINE_LOOKBACK`: Lookback period for trendline study
+    - `TRENDLINE_BREAKOUT`: Check if breakout from support or resistance line
     - `TRENDLINE_CHECK_ON_OPEN`: Check Trendline support and resistance on open
     - `TRENDLINE_CHECK_ON_CLOSE`: Check Trendline support and resistance on close
 
