@@ -59,9 +59,10 @@ class Settings(BaseSettings):
     RSI_CHECK_ON_OPEN: bool = Field(default=False)
     RSI_CHECK_ON_CLOSE: bool = Field(default=False)
 
+    TRENDLINE_PEAK_DISTANCE: int = Field(default=1, ge=0, le=30)
     TRENDLINE_CHART: bool = Field(default=True)
     TRENDLINE_STUDY: bool = Field(default=True)
-    TRENDLINE_PEAK_DISTANCE: int = Field(default=1, ge=0, le=30)
+    TRENDLINE_BREAKOUT: bool = Field(default=False)
     TRENDLINE_CHECK_ON_OPEN: bool = Field(default=False)
     TRENDLINE_CHECK_ON_CLOSE: bool = Field(default=False)
 
