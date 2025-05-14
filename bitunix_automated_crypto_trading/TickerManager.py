@@ -116,6 +116,14 @@ class Interval:
                             else:
                                 self.ema_open_signal = "HOLD"
                                 self.ema_close_signal = "HOLD"
+
+                            if self.settings.EMA_CLOSE_ON_FAST_MEDIUM:
+                                if df['close'].iloc[-1] > df['ma_fast'].iloc[-1] and df['ma_fast'].iloc[-1] > df['ma_medium'].iloc[-1]:
+                                    self.ema_close_signal = "BUY"
+                                elif df['close'].iloc[-1] < df['ma_fast'].iloc[-1] and df['ma_fast'].iloc[-1] < df['ma_medium'].iloc[-1]:
+                                    self.ema_close_signal = "SELL"
+                                else:
+                                    self.ema_close_signal = "HOLD"
                 else:
                     # Drop EMA columns if not used
                     df.drop(['ma_fast', 'ma_medium', 'ma_slow', 'ma_slope', 'ma_angle'], axis=1, inplace=True, errors='ignore')
