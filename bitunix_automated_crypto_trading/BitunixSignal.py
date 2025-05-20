@@ -640,7 +640,7 @@ class BitunixSignal:
                     #open position upto a max of max_auto_trades from the signal list
                     df=self.signaldf.copy(deep=False)
                     for index, row in df.iterrows():
-                        side = "BUY" if row[f'{period}_barcolor'] == self.green else "SELL" if row[f'{period}_barcolor'] == self.red else ""
+                        side = "BUY" if row[f'{period}_barcolor'] == self.green and row[f'{period}_trend'] == "BUY"  else "SELL" if row[f'{period}_barcolor'] == self.red and row[f'{period}_trend'] == "SELL" else ""
                         if side != "":
                             select = True
                             self.pendingPositions = await self.bitunixApi.GetPendingPositionData({'symbol': row.symbol})
