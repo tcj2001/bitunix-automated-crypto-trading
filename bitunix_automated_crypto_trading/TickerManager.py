@@ -388,6 +388,11 @@ class Interval:
                     ]):
                         sell_conditions = False
 
+                    additional_sell_conditions = (
+                        (self.settings.ADX_STUDY and self.settings.ADX_CHECK_ON_OPEN and self.adx_signal == "STRONG") or
+                        (self.settings.CANDLE_TREND_STUDY and self.settings.CANDLE_TREND_CHECK_ON_OPEN or self.candle_trend == "BEARISH")
+                    )
+
                     # Determine current signal
                     if buy_conditions and additional_buy_conditions:
                         self.current_signal = "BUY"
