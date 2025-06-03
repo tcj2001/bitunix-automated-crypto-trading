@@ -6,11 +6,14 @@ import sqlite3
 class Settings(BaseSettings):
     # Start autotrading on start
     AUTOTRADE: bool = Field(default=False)
+    
+    #Ticker list
+    TICKERS:str = Field(default="")
+    THRESHOLD: float = Field(default=5.0, ge=0.0)
+    MIN_VOLUME: int = Field(default=10_000_000, ge=0)
 
     # Trading Parameters
     LEVERAGE: int = Field(default=20, ge=1, le=100)
-    THRESHOLD: float = Field(default=5.0, ge=0.0)
-    MIN_VOLUME: int = Field(default=10_000_000, ge=0)
     ORDER_AMOUNT_PERCENTAGE: float = Field(default=0.01, ge=0.0, le=100)
     MAX_AUTO_TRADES: int = Field(default=10, ge=0)
     PROFIT_AMOUNT: float = Field(default=0.25, ge=0.0)
@@ -34,6 +37,7 @@ class Settings(BaseSettings):
     # Technical Indicators
     OPEN_ON_ANY_SIGNAL: bool = Field(default=True)
 
+    BOS_STUDY: bool = Field(default=True)
     EMA_CHART: bool = Field(default=True)
     EMA_STUDY: bool = Field(default=True)
     EMA_CROSSING: bool = Field(default=False)
@@ -72,7 +76,7 @@ class Settings(BaseSettings):
 
     CANDLE_TREND_STUDY: bool = Field(default=True)
     CANDLE_TREND_CHECK_ON_OPEN: bool = Field(default=False)
-    CANDLE_TREND_CHECK_ON_CLOSE: bool = Field(default=False)
+    CANDLE_TREND_REVERSAL_CHECK_ON_CLOSE: bool = Field(default=False)
 
     # Time Intervals
     SCREEN_REFRESH_INTERVAL: int = Field(default=1, ge=1)
@@ -101,6 +105,7 @@ class Settings(BaseSettings):
         # Specify the file name for loading environment variables
         env_file = os.path.dirname(os.path.abspath(__file__))+"/config.txt"
 
+   
     @classmethod
     def load_from_db(cls, db_path: str, table_name: str = "settings"):
         # Connect to SQLite database

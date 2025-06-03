@@ -49,6 +49,7 @@ A real-time cryptocurrency trading platform built with FastAPI and WebSocket tec
 The platform can be configured through the `config.py` file or `config.txt`. Key configuration parameters include:
 - Trading Parameters:
   - `AUTOTRADE` : True or False
+  - `TICKERS`: supply a list of tickers seperated by comma to trade, e.g., "BTCUSDT,ETHUSDT" or "" to auto select based on MIN_VOLUME and THRESHOLD
   - `LEVERAGE`: Trading leverage (1-100)
   - `THRESHOLD`: Ticker selection based close near high or low of the day
   - `MIN_VOLUME`: Ticker selection based on Minimum trading volume
@@ -73,6 +74,7 @@ The platform can be configured through the `config.py` file or `config.txt`. Key
     - `ADX_PERIOD`: ADX period
     
   - `Study Parameters`:
+    - `BOS_STUDY`: Enable Break Of Structure study
     - `EMA_STUDY`: Enable EMA study
     - `EMA_CHART`: Display EMA chart
     - `EMA_STUDY`: Enable EMA study
@@ -158,6 +160,7 @@ The platform can be configured through the `config.py` file or `config.txt`. Key
       - Max auto trades
       - Take Profit amount
       - Accept Loss amount
+    - BOS study is basically when the price breakout from the previous high or low
     - You can control the study like Moving Average, MACD, Bollinger Band, RSI or close proximity to high or low of the candle using the env file
     - You can control the trading strategy using the CalculateStudy function in TickerManager.py and AutoTradeProcess function in BitunixSignal.py
     - Changes are activated by unchecking and checking the AutoTrade checkbox
