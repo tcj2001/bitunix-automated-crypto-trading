@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     BARS: int = Field(default=100, ge=1)
 
     # Technical Indicators Parameters
+    BOS_PERIOD: int = Field(default=20, ge=1)
     MA_FAST: int = Field(default=10, ge=1)
     MA_MEDIUM: int = Field(default=20, ge=1)
     MA_SLOW: int = Field(default=50, ge=1)

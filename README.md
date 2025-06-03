@@ -61,6 +61,7 @@ The platform can be configured through the `config.py` file or `config.txt`. Key
   - `BARS`: Number of bars to use for study and charting
     
   - `Technical Indicators Parameters`:
+    - `BOS_PERIOD`: Break of structure period, number of bars to look back to determine the previous high or low
     - `MA_FAST`: Fast moving average period
     - `MA_MEDIUM`: Medium moving average period
     - `MA_SLOW`: Slow moving average period
