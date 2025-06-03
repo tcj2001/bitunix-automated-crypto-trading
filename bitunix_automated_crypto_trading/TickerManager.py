@@ -65,13 +65,16 @@ class Interval:
 
                 # Break of Strcuture
                 if self.settings.BOS_STUDY:
-                    high = df.iloc[:-1]['high'].max()
-                    low = df.iloc[:-1]['low'].min()
-                    close = df['close'].iloc[-1]
-                    if close > high:
-                        self.bos_signal = "BUY"
-                    elif close < low:
-                        self.bos_signal = "SELL"
+                    if df['high'].size > 1 and df['low'].size > 1 and df['close'].size > 1:
+                        high = talib.MAX(df.iloc[:-1]['high'].values, timeperiod=self.settings.BOS_PERIOD)[-1]
+                        low = talib.MIN(df.iloc[:-1]['low'].values, timeperiod=self.settings.BOS_PERIOD)[-1]
+                        close = df['close'].iloc[-1]
+                        if close > high:
+                            self.bos_signal = "BUY"
+                        elif close < low:
+                            self.bos_signal = "SELL"
+                        else:
+                            self.bos_signal = "HOLD"
                     else:
                         self.bos_signal = "HOLD"
                 else:
