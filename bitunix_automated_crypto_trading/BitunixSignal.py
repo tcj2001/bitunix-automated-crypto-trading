@@ -99,19 +99,23 @@ class BitunixSignal:
         self.tickerObjects.update_settings(settings)
         
     async def load_tickers(self):
-        symbols = await self.bitunixApi.GetTickerList(float(self.settings.THRESHOLD), float(self.settings.MIN_VOLUME))
-        self.pendingPositions= await self.bitunixApi.GetPendingPositionData()
-        self.pendingOrders= await self.bitunixApi.GetPendingOrderData()
-        olist=[]
-        plist=[]
-        if self.pendingPositions:
-            plist = [entry['symbol'] for entry in self.pendingPositions]
-        if self.pendingOrders['orderList']:
-            olist = [entry['symbol'] for entry in self.pendingOrders['orderList']]
-        newlist=olist+plist+list(set(symbols))
-        self.tickerList=newlist[:300]
-        self.tickerList.remove("STMXUSDT")
-        #self.tickerList=['POLUSDT']
+        if self.settings.TICKERS=="":
+            symbols = await self.bitunixApi.GetTickerList(float(self.settings.THRESHOLD), float(self.settings.MIN_VOLUME))
+            self.pendingPositions= await self.bitunixApi.GetPendingPositionData()
+            self.pendingOrders= await self.bitunixApi.GetPendingOrderData()
+            olist=[]
+            plist=[]
+            if self.pendingPositions:
+                plist = [entry['symbol'] for entry in self.pendingPositions]
+            if self.pendingOrders['orderList']:
+                olist = [entry['symbol'] for entry in self.pendingOrders['orderList']]
+            newlist=olist+plist+list(set(symbols))
+            self.tickerList=newlist[:300]
+            self.tickerList.remove("STMXUSDT")
+            #self.tickerList=['POLUSDT']
+        else:
+            self.tickerList = self.settings.TICKERS.split(",")
+            self.tickerList = [sym.strip().upper() for sym in self.tickerList if sym.strip()]
 
         [await self.add_ticker_to_tickerObjects(sym) for sym in self.tickerList]
         self.notifications.add_notification(f"{len(self.tickerList)} ticker list loaded") 
@@ -559,11 +563,16 @@ class BitunixSignal:
             self.signaldf_filtered = self.tickerObjects.signaldf_filtered
 
             if not self.positiondf.empty and not self.signaldf_full.empty:
-                    columns=['symbol', f"{period}_trend", f"{period}_cb", f"{period}_barcolor", f"{period}_ema_open", f"{period}_ema_close", f"{period}_macd", f"{period}_bbm", f"{period}_rsi", f"{period}_trendline", f"{period}_candle_trend", f"{period}_open", f"{period}_close", f"{period}_high", f"{period}_low"]
+                    columns=['symbol', f"{period}_trend", f"{period}_cb", f"{period}_barcolor", 
+                             f"{period}_bos",
+                             f"{period}_ema_open", f"{period}_ema_close", f"{period}_macd", f"{period}_bbm", f"{period}_rsi", f"{period}_trendline", f"{period}_candle_trend", f"{period}_open", f"{period}_close", f"{period}_high", f"{period}_low"]
                     columns2=["qty", "side", "unrealizedPNL", "realizedPNL", "ctime", "avgOpenPrice", "bid", "bidcolor", "last", "lastcolor", "ask", "askcolor", "charts", "bitunix", "action", "add", "reduce"]
                     if set(columns).issubset(self.signaldf_full.columns) and set(columns2).issubset(self.positiondf.columns):
-                        columnOrder= ['symbol', "side",  "unrealizedPNL", "realizedPNL", f"{period}_trend", f"{period}_cb", f"{period}_barcolor", f"{period}_ema_open", f"{period}_ema_close", f"{period}_macd", f"{period}_bbm", f"{period}_rsi", f"{period}_trendline", f"{period}_adx", f"{period}_candle_trend", f"{period}_open", f"{period}_close", f"{period}_high", f"{period}_low", "qty", "ctime", "avgOpenPrice", "bid", "bidcolor", "last", "lastcolor", "ask", "askcolor", "charts", "bitunix", "action", "add", "reduce"]                
+                        columnOrder= ['symbol', "side",  "unrealizedPNL", "realizedPNL", f"{period}_trend", f"{period}_cb", f"{period}_barcolor", 
+                                      f"{period}_bos",
+                                      f"{period}_ema_open", f"{period}_ema_close", f"{period}_macd", f"{period}_bbm", f"{period}_rsi", f"{period}_trendline", f"{period}_adx", f"{period}_candle_trend", f"{period}_open", f"{period}_close", f"{period}_high", f"{period}_low", "qty", "ctime", "avgOpenPrice", "bid", "bidcolor", "last", "lastcolor", "ask", "askcolor", "charts", "bitunix", "action", "add", "reduce"]                
                         self.positiondf2 = pd.merge(self.positiondf, self.signaldf_full[["symbol", f"{period}_open", f"{period}_close", f"{period}_high", f"{period}_low", 
+                                f"{period}_bos",                                                               
                                 f"{period}_ema_open", f"{period}_ema_close", f"{period}_macd", f"{period}_bbm", f"{period}_rsi", f"{period}_trendline", f"{period}_adx", f"{period}_candle_trend",
                                 f"{period}_trend",f"{period}_cb", f"{period}_barcolor"]], left_on="symbol", right_index=True, how="left")[columnOrder]    
                         self.positiondfStyle= self.positiondfrenderer.render_html(self.positiondf2)
@@ -578,6 +587,7 @@ class BitunixSignal:
                     # Assign to self.signaldf for HTML rendering
                     self.signaldf = self.signaldf_filtered[[
                         "symbol", f"{period}_trend",f"{period}_cb", f"{period}_barcolor",
+                        f"{period}_bos",
                         f"{period}_ema_open", f"{period}_ema_close", f"{period}_macd", f"{period}_bbm", f"{period}_rsi", f"{period}_trendline",f"{period}_adx",f"{period}_candle_trend",
                         'lastcolor', 'bidcolor', 'askcolor', 'bid', 'last', 'ask',
                         f"{period}_open", f"{period}_close", f"{period}_high", f"{period}_low", 
@@ -945,8 +955,8 @@ class BitunixSignal:
                                     continue
 
                             # candle reversed
-                            if self.settings.CANDLE_TREND_STUDY and self.settings.CANDLE_TREND_CHECK_ON_CLOSE:
-                                if row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_barcolor'] == self.red and self.signaldf_full.at[row.symbol, f'{period}_candle_trend'] == "BEARISH":
+                            if self.settings.CANDLE_TREND_STUDY and self.settings.CANDLE_TREND_REVERSAL_CHECK_ON_CLOSE:
+                                if row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_barcolor'] == self.red and self.signaldf_full.at[row.symbol, f'{period}_cb'] > 1 and self.signaldf_full.at[row.symbol, f'{period}_candle_trend'] == "BULLISH":
                                     last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                     price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
 
@@ -963,7 +973,7 @@ class BitunixSignal:
                                     )
                                     continue
 
-                                if row.side == 'SELL' and self.signaldf_full.at[row.symbol, f'{period}_barcolor'] == self.green  and self.signaldf_full.at[row.symbol, f'{period}_candle_trend'] == "BULLISH":
+                                if row.side == 'SELL' and self.signaldf_full.at[row.symbol, f'{period}_barcolor'] == self.green and self.signaldf_full.at[row.symbol, f'{period}_cb'] > 1 and self.signaldf_full.at[row.symbol, f'{period}_candle_trend'] == "BULLISH":
                                     last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                     price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
 
@@ -982,7 +992,7 @@ class BitunixSignal:
 
                     await asyncio.sleep(0)
             
-                self.lastAutoTradeTime = time.time()
+            self.lastAutoTradeTime = time.time()
         except Exception as e:
             stack = traceback.extract_stack()
             function_name = stack[-1].name

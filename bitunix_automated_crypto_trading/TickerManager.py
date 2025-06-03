@@ -63,6 +63,20 @@ class Interval:
                 # Get the last color and its consecutive count
                 self.signal_strength = df['Consecutive'].iloc[-1]
 
+                # Break of Strcuture
+                if self.settings.BOS_STUDY:
+                    high = df.iloc[:-1]['high'].max()
+                    low = df.iloc[:-1]['low'].min()
+                    close = df['close'].iloc[-1]
+                    if close > high:
+                        self.bos_signal = "BUY"
+                    elif close < low:
+                        self.bos_signal = "SELL"
+                    else:
+                        self.bos_signal = "HOLD"
+                else:
+                    self.bos_signal = "HOLD"
+
                 # Calculate the Moving Averages
                 if self.settings.EMA_STUDY:
                     df['ma_fast'] = talib.EMA(df['close'], timeperiod=self.settings.MA_FAST)
@@ -300,6 +314,7 @@ class Interval:
 
                     # Check for BUY signal
                     buy_conditions = (
+                        (self.settings.BOS_STUDY and self.bos_signal == "BUY") or
                         (self.settings.EMA_STUDY and self.settings.EMA_CHECK_ON_OPEN and self.ema_open_signal == "BUY") or
                         (self.settings.MACD_STUDY and self.settings.MACD_CHECK_ON_OPEN and self.macd_signal == "BUY") or
                         (self.settings.BBM_STUDY and self.settings.BBM_CHECK_ON_OPEN and self.bbm_signal == "BUY") or
@@ -313,6 +328,7 @@ class Interval:
 
                     # Check for SELL signal
                     sell_conditions = (
+                        (self.settings.BOS_STUDY and self.bos_signal == "SELL") or
                         (self.settings.EMA_STUDY and self.settings.EMA_CHECK_ON_OPEN and self.ema_open_signal == "SELL") or
                         (self.settings.MACD_STUDY and self.settings.MACD_CHECK_ON_OPEN and self.macd_signal == "SELL") or
                         (self.settings.BBM_STUDY and self.settings.BBM_CHECK_ON_OPEN and self.bbm_signal == "SELL") or
@@ -333,6 +349,9 @@ class Interval:
                         self.current_signal = "HOLD"
                 else:
                     buy_conditions = (
+                        (self.settings.BOS_STUDY and self.bos_signal == "BUY")
+                        or not self.settings.BOS_STUDY
+                    ) and (
                         (self.settings.EMA_STUDY and self.settings.EMA_CHECK_ON_OPEN and self.ema_open_signal == "BUY")
                         or not self.settings.EMA_STUDY or not self.settings.EMA_CHECK_ON_OPEN
                     ) and (
@@ -364,6 +383,9 @@ class Interval:
 
                     # Check for SELL signal
                     sell_conditions = (
+                        (self.settings.BOS_STUDY and self.bos_signal == "SELL")
+                        or not self.settings.BOS_STUDY
+                    ) and (
                         (self.settings.EMA_STUDY and self.settings.EMA_CHECK_ON_OPEN and self.ema_open_signal == "SELL")
                         or not self.settings.EMA_STUDY or not self.settings.EMA_CHECK_ON_OPEN
                     ) and (
@@ -667,6 +689,7 @@ class Tickers:
                         if not interval._data is None and len(interval._data) >= self.settings.BARS:
                             args[0].get_interval_ticks(intervalId)._data = interval._data
                             args[0].get_interval_ticks(intervalId).current_signal = interval.current_signal                        
+                            args[0].get_interval_ticks(intervalId).bos_signal = interval.bos_signal
                             args[0].get_interval_ticks(intervalId).ema_open_signal = interval.ema_open_signal
                             args[0].get_interval_ticks(intervalId).ema_close_signal = interval.ema_close_signal
                             args[0].get_interval_ticks(intervalId).macd_signal = interval.macd_signal
@@ -704,6 +727,8 @@ class Tickers:
                             f"{period}_trend": intervalObj.current_signal,
                             f"{period}_cb": intervalObj.signal_strength,
                             f"{period}_barcolor": lastcandle['barcolor'],
+                            f"{period}_bos": intervalObj.bos_signal,
+                            f"{period}_ema_open": intervalObj.ema_open_signal,
                             f"{period}_ema_open": intervalObj.ema_open_signal,
                             f"{period}_ema_close": intervalObj.ema_close_signal,
                             f"{period}_macd":intervalObj.macd_signal,
@@ -731,6 +756,7 @@ class Tickers:
                     'lastcolor': "", 'bidcolor': "", 'askcolor': "", 'bid': 0.0, 'ask': 0.0, 'last': 0.0,
                     f"{period}_cb":0, f"{period}_barcolor": "", f"{period}_trend": "",
                     f"{period}_open": 0.0, f"{period}_close": 0.0, f"{period}_high": 0.0, f"{period}_low": 0.0,
+                    f"{period}_bos": "", 
                     f"{period}_ema": "", f"{period}_macd": "", f"{period}_bbm": "", f"{period}_rsi": "", f"{period}_trendline": "", f"{period}_candle_trend": "", f"{period}_adx": ""
                 }
                 df.fillna(fill_values, inplace=True)
