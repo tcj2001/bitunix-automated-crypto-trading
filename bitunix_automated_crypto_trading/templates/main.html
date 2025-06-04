@@ -511,7 +511,7 @@
                     configModal.open()
 
                     // Open WebSocket connection
-                    const websocket_c2 = new WebSocket(`ws://${host}:${port}wschart?ticker=${symbol}`);
+                    const websocket_c2 = new WebSocket(`ws://${host}:${port}/wschart?ticker=${symbol}`);
 
                     websocket_c2.onopen = () => {
                         console.log("chart WebSocket connection opened.");

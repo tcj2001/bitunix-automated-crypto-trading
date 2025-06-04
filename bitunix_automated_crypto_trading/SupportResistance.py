@@ -94,13 +94,13 @@ class SupportResistance:
 
             # Find all local peaks and troughs and its highest and lowest values
             peak_indices_all = self._find_peaks(high_prices)
-            if len(peak_indices_all) == 0:
+            if len(peak_indices_all) > 0:
                 highest_peak_index = peak_indices_all[np.argmax(high_prices[peak_indices_all])]
                 highest_peak_value = high_prices[highest_peak_index]
                 resistance_line[highest_peak_index:] = high_prices[highest_peak_index] # Horizontal line from the highest point onwards
 
             trough_indices_all = self._find_troughs(low_prices)
-            if len(trough_indices_all) == 0:
+            if len(trough_indices_all) > 0:
                 lowest_peak_index = trough_indices_all[np.argmin(low_prices[trough_indices_all])]
                 lowest_peak_value = low_prices[lowest_peak_index]
                 support_line[lowest_peak_index:] = low_prices[lowest_peak_index] # Horizontal line from the lowset point onwards
