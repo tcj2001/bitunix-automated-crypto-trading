@@ -1,10 +1,7 @@
 import pandas as pd
 import numpy as np
 from scipy.signal import find_peaks
-
-class SupportResistance:
-    import pandas as pd
-import numpy as np
+import talib
 
 class SupportResistance:
     def _find_peaks(self, prices, prominence=None, distance=None):
@@ -33,7 +30,7 @@ class SupportResistance:
         intercept = price1 - slope * index1
         return slope * np.arange(length) + intercept
 
-    def support_resistance_trend_lines(self, data, lookback=20, prominence=None, distance=None):
+    def support_resistance_trend_lines(self, data, lookback=24, prominence=None, distance=None):
         if data is None or len(data) < lookback:
             return pd.DataFrame()
         try:
@@ -44,39 +41,28 @@ class SupportResistance:
 
             # Find all local peaks and troughs
             peak_indices_all = self._find_peaks(high_prices, prominence=prominence, distance=distance)
-            if len(peak_indices_all) > 0 and peak_indices_all[-1] < lookback - 2 and high_prices[-2] >  high_prices[lookback - peak_indices_all[-1]]:
-                peak_indices_all = np.append(peak_indices_all,lookback - 2)
             trough_indices_all = self._find_troughs(low_prices, prominence=prominence, distance=distance)
-            if len(trough_indices_all) > 0 and trough_indices_all[-1] < lookback - 2 and low_prices[-2] < low_prices[lookback - trough_indices_all[-1]]:
-                trough_indices_all = np.append(trough_indices_all, lookback - 2)
-            # Get the two most recent prominent peaks
-            most_recent_peaks_indices = self._get_n_most_recent_prominent(peak_indices_all, high_prices, n=2)
-
-            # Get the two most recent prominent troughs
-            most_recent_troughs_indices = self._get_n_most_recent_prominent(trough_indices_all, low_prices, n=2)
 
             support_line = np.full(lookback, np.nan)
             resistance_line = np.full(lookback, np.nan)
 
-            if len(most_recent_peaks_indices) >= 2:
-                # Sort by index (time) to ensure correct order
-                sorted_peak_indices = most_recent_peaks_indices #np.sort(most_recent_peaks_indices)
-                resistance_line_full = self._get_line(sorted_peak_indices[0], high_prices[sorted_peak_indices[0]],
-                                                      sorted_peak_indices[1], high_prices[sorted_peak_indices[1]], lookback)
-                # Set values before the second peak to NaN
-                resistance_line[sorted_peak_indices[1]:] = resistance_line_full[sorted_peak_indices[1]:]
-            elif len(most_recent_peaks_indices) == 1:
-                resistance_line[most_recent_peaks_indices[0]:] = high_prices[most_recent_peaks_indices[0]] # Horizontal line from the peak onwards
+            if len(peak_indices_all) > 0:
+                if len(peak_indices_all) >= 2:
+                    resistance_line_full = self._get_line(peak_indices_all[-1], high_prices[peak_indices_all[-1]],
+                                                        peak_indices_all[-2], high_prices[peak_indices_all[-2]], lookback)
+                    # Set values before the second peak to NaN
+                    resistance_line[peak_indices_all[-2]:] = resistance_line_full[peak_indices_all[-2]:]
+                elif len(peak_indices_all) == 1:
+                    resistance_line[peak_indices_all[-1]:] = high_prices[peak_indices_all[-1]] # Horizontal line from the peak onwards
 
-            if len(most_recent_troughs_indices) >= 2:
-                # Sort by index (time) to ensure correct order
-                sorted_trough_indices = most_recent_troughs_indices #np.sort(most_recent_troughs_indices)
-                support_line_full = self._get_line(sorted_trough_indices[0], low_prices[sorted_trough_indices[0]],
-                                                   sorted_trough_indices[1], low_prices[sorted_trough_indices[1]], lookback)
-                # Set values before the second trough to NaN
-                support_line[sorted_trough_indices[1]:] = support_line_full[sorted_trough_indices[1]:]
-            elif len(most_recent_troughs_indices) == 1:
-                support_line[most_recent_troughs_indices[0]:] = low_prices[most_recent_troughs_indices[0]] # Horizontal line from the trough onwards
+            if len(trough_indices_all) > 0:
+                if len(trough_indices_all) >= 2:
+                    support_line_full = self._get_line(trough_indices_all[-1], low_prices[trough_indices_all[-1]],
+                                                    trough_indices_all[-2], low_prices[trough_indices_all[-2]], lookback)
+                    # Set values before the second trough to NaN
+                    support_line[trough_indices_all[-2]:] = support_line_full[trough_indices_all[-2]:]
+                elif len(trough_indices_all) == 1:
+                    support_line[trough_indices_all[-1]:] = low_prices[trough_indices_all[-1]] # Horizontal line from the trough onwards
 
             results_df = pd.DataFrame({
                 'time': ts,
@@ -85,5 +71,47 @@ class SupportResistance:
             })
             return results_df
         except Exception as e:
-            print(f"An error occurred: {e}")
+            print(f"trendline error occurred: {e}")
             return pd.DataFrame()
+        
+    def support_resistance_bos_lines(self, data, length, lookback=24):
+        if data is None or len(data) < lookback:
+            return pd.DataFrame()
+        try:
+            recent_data = data.iloc[-length:].copy()
+            highs = recent_data['high'].values
+            high_prices = np.full_like(highs, np.nan, dtype=np.float64)
+            high_prices[-lookback:] = highs[-lookback:]
+            
+            lows = recent_data['low'].values
+            low_prices = np.full_like(lows, np.nan, dtype=np.float64)
+            low_prices[-lookback:] = lows[-lookback:]
+
+            ts = recent_data['time'].values
+
+            support_line = np.full(length, np.nan)
+            resistance_line = np.full(length, np.nan)
+
+            # Find all local peaks and troughs and its highest and lowest values
+            peak_indices_all = self._find_peaks(high_prices)
+            if len(peak_indices_all) == 0:
+                highest_peak_index = peak_indices_all[np.argmax(high_prices[peak_indices_all])]
+                highest_peak_value = high_prices[highest_peak_index]
+                resistance_line[highest_peak_index:] = high_prices[highest_peak_index] # Horizontal line from the highest point onwards
+
+            trough_indices_all = self._find_troughs(low_prices)
+            if len(trough_indices_all) == 0:
+                lowest_peak_index = trough_indices_all[np.argmin(low_prices[trough_indices_all])]
+                lowest_peak_value = low_prices[lowest_peak_index]
+                support_line[lowest_peak_index:] = low_prices[lowest_peak_index] # Horizontal line from the lowset point onwards
+
+            results_df = pd.DataFrame({
+                'time': ts,
+                'support_line': support_line,
+                'resistance_line': resistance_line
+            })
+            return results_df
+        except Exception as e:
+            print(f"bos error occurred: {e}")
+            return pd.DataFrame()
+

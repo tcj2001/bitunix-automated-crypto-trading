@@ -9,6 +9,7 @@
             "type": "debugpy",
             "request": "launch",
             "program": "${file}",
+            //"args": [".env", "bot1.txt", "8001"],
             "console": "integratedTerminal"
         }
     ]

@@ -87,6 +87,8 @@
             const ema_chart = messageElement.ema_chart;
             const trendline_study = messageElement.trendline_study;
             const trendline_chart = messageElement.trendline_chart;
+            const bos_study = messageElement.bos_study;
+            const bos_chart = messageElement.bos_chart;
             const macd_study = messageElement.macd_study;
             const macd_chart = messageElement.macd_chart;
             const bbm_study = messageElement.bbm_study;
@@ -95,11 +97,11 @@
             const rsi_chart = messageElement.rsi_chart;
 
 
-            createOrUpdateChart('chart1m', data1m, buysell, ema_study, ema_chart, trendline_study, trendline_chart, macd_study, macd_chart, bbm_study, bbm_chart, rsi_study, rsi_chart, 'minute'); 
-            createOrUpdateChart('chart5m', data5m, buysell, ema_study, ema_chart, trendline_study, trendline_chart, macd_study, macd_chart, bbm_study, bbm_chart, rsi_study, rsi_chart, 'minute'); 
-            createOrUpdateChart('chart15m', data15m, buysell, ema_study, ema_chart, trendline_study, trendline_chart, macd_study, macd_chart, bbm_study, bbm_chart, rsi_study, rsi_chart, 'minute'); 
-            createOrUpdateChart('chart1h', data1h, buysell, ema_study, ema_chart, trendline_study, trendline_chart, macd_study, macd_chart, bbm_study, bbm_chart, rsi_study, rsi_chart, 'hour'); 
-            createOrUpdateChart('chart1d', data1d, buysell, ema_study, ema_chart, trendline_study, trendline_chart, macd_study, macd_chart, bbm_study, bbm_chart, rsi_study, rsi_chart, 'day');
+            createOrUpdateChart('chart1m', data1m, buysell, ema_study, ema_chart, trendline_study, trendline_chart, bos_study, bos_chart, macd_study, macd_chart, bbm_study, bbm_chart, rsi_study, rsi_chart, 'minute'); 
+            createOrUpdateChart('chart5m', data5m, buysell, ema_study, ema_chart, trendline_study, trendline_chart, bos_study, bos_chart, macd_study, macd_chart, bbm_study, bbm_chart, rsi_study, rsi_chart, 'minute'); 
+            createOrUpdateChart('chart15m', data15m, buysell, ema_study, ema_chart, trendline_study, trendline_chart, bos_study, bos_chart, macd_study, macd_chart, bbm_study, bbm_chart, rsi_study, rsi_chart, 'minute'); 
+            createOrUpdateChart('chart1h', data1h, buysell, ema_study, ema_chart, trendline_study, trendline_chart, bos_study, bos_chart, macd_study, macd_chart, bbm_study, bbm_chart, rsi_study, rsi_chart, 'hour'); 
+            createOrUpdateChart('chart1d', data1d, buysell, ema_study, ema_chart, trendline_study, trendline_chart, bos_study, bos_chart, macd_study, macd_chart, bbm_study, bbm_chart, rsi_study, rsi_chart, 'day');
         };
 
         websocket.onerror = function(error) {

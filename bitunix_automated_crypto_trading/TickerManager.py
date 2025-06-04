@@ -7,25 +7,27 @@ import asyncio
 import talib
 import traceback
 from logger import Logger
-logger = Logger(__name__).get_logger()
 import gc
 from concurrent.futures import ProcessPoolExecutor
 from SupportResistance import SupportResistance
 sr = SupportResistance()
 
 class Interval:
-    def __init__(self, symbol, intervalId, delta, data, settings):
+    def __init__(self, symbol, intervalId, delta, data, settings, logger):
         self.symbol = symbol
         self.intervalId = intervalId
         self.delta = delta
         self.settings=settings
         self._data = data
+        self.logger = logger
+        
         
         #these signals are used to list stocks in the signals sections on the main page
         self.current_signal="HOLD"
         self.ema_open_signal="HOLD"
         self.ema_close_signal="HOLD"
         self.trendline_signal = "HOLD"
+        self.bos_signal = "HOLD"
         self.macd_signal="HOLD"
         self.bbm_signal="HOLD"
         self.rsi_signal="HOLD"
@@ -62,23 +64,6 @@ class Interval:
                 
                 # Get the last color and its consecutive count
                 self.signal_strength = df['Consecutive'].iloc[-1]
-
-                # Break of Strcuture
-                if self.settings.BOS_STUDY:
-                    if df['high'].size > 1 and df['low'].size > 1 and df['close'].size > 1:
-                        high = talib.MAX(df.iloc[:-1]['high'].values, timeperiod=self.settings.BOS_PERIOD)[-1]
-                        low = talib.MIN(df.iloc[:-1]['low'].values, timeperiod=self.settings.BOS_PERIOD)[-1]
-                        close = df['close'].iloc[-1]
-                        if close > high:
-                            self.bos_signal = "BUY"
-                        elif close < low:
-                            self.bos_signal = "SELL"
-                        else:
-                            self.bos_signal = "HOLD"
-                    else:
-                        self.bos_signal = "HOLD"
-                else:
-                    self.bos_signal = "HOLD"
 
                 # Calculate the Moving Averages
                 if self.settings.EMA_STUDY:
@@ -248,27 +233,47 @@ class Interval:
                     # Drop RSI columns if not used
                     df.drop(['rsi_fast', 'rsi_slow', 'rsi_slope', 'rsi_angle'], axis=1, inplace=True, errors='ignore')  
 
+                # Break of Strcuture
+                if self.settings.BOS_STUDY:
+                    df_sr= sr.support_resistance_bos_lines(df[['time','open', 'high', 'low', 'close']], len(df), self.settings.BOS_PERIOD)
+                    if df_sr is not None and len(df_sr) >= 1:
+                        df['bos_support_line'] = df_sr['support_line']
+                        df['bos_resistance_line'] = df_sr['resistance_line']
+                        df.fillna({'bos_support_line':0}, inplace=True)
+                        df.fillna({'bos_resistance_line':0}, inplace=True)
+
+                        if df['high'].size > 1 and df['low'].size > 1 and df['close'].size > 1:
+                            if df['close'].iloc[-1] > df['bos_resistance_line'].iloc[-1]:    
+                                self.bos_signal = "BUY"
+                            elif df['close'].iloc[-1] < df['bos_support_line'].iloc[-1]:
+                                self.bos_signal = "SELL"
+                            else:
+                                self.bos_signal = "HOLD"
+                        else:
+                            self.bos_signal = "HOLD"
+
                 #Trendline
                 if self.settings.TRENDLINE_STUDY:
                     loopback = len(df) 
                     df_sr= sr.support_resistance_trend_lines(df[['time','open', 'high', 'low', 'close']], loopback, prominence=None, distance=None if self.settings.TRENDLINE_PEAK_DISTANCE==0 else self.settings.TRENDLINE_PEAK_DISTANCE)
                     if df_sr is not None and len(df_sr) >= 1:
-                        df['support_line'] = df_sr['support_line']
-                        df['resistance_line'] = df_sr['resistance_line']
-                        df.fillna({'support_line':0}, inplace=True)
-                        df.fillna({'resistance_line':0}, inplace=True)
+                        df['trend_support_line'] = df_sr['support_line']
+                        df['trend_resistance_line'] = df_sr['resistance_line']
+                        df.fillna({'trend_support_line':0}, inplace=True)
+                        df.fillna({'trend_resistance_line':0}, inplace=True)
+                        
                         if df is not None and len(df) >= 2:
                             if self.settings.TRENDLINE_BREAKOUT:
-                                if df['close'].iloc[-2] > df['support_line'].iloc[-2] and df['open'].iloc[-1] > df['support_line'].iloc[-1] and df['close'].iloc[-1] > df['open'].iloc[-1]:     
+                                if df['close'].iloc[-1] > df['trend_resistance_line'].iloc[-1]:     
                                         self.trendline_signal = "BUY"
-                                elif df['close'].iloc[-2] < df['resistance_line'].iloc[-2] and df['open'].iloc[-1] < df['resistance_line'].iloc[-1] and df['close'].iloc[-1] < df['open'].iloc[-1]:     
+                                elif df['close'].iloc[-1] < df['trend_support_line'].iloc[-1]:     
                                         self.trendline_signal = "SELL"
                                 else:
                                     self.trendline_signal = "HOLD"
                             else:
-                                if df['high'].iloc[-3] >= df['support_line'].iloc[-3] and df['close'].iloc[-2] < df['support_line'].iloc[-2] and df['close'].iloc[-1] < df['open'].iloc[-1]:
+                                if df['close'].iloc[-1] < df['trend_resistance_line'].iloc[-1]  and df['close'].iloc[-2] < df['open'].iloc[-2] and df['close'].iloc[-1] < df['open'].iloc[-1]:
                                     self.trendline_signal = "SELL"
-                                elif df['low'].iloc[-3] <= df['resistance_line'].iloc[-3] and df['close'].iloc[-2] > df['resistance_line'].iloc[-2] and df['close'].iloc[-1] > df['open'].iloc[-1]:
+                                elif df['close'].iloc[-1] > df['trend_support_line'].iloc[-1] and df['close'].iloc[-2] > df['open'].iloc[-2] and df['close'].iloc[-1] > df['open'].iloc[-1]:
                                     self.trendline_signal = "BUY"
                                 else:
                                     self.trendline_signal = "HOLD"
@@ -317,7 +322,7 @@ class Interval:
 
                     # Check for BUY signal
                     buy_conditions = (
-                        (self.settings.BOS_STUDY and self.bos_signal == "BUY") or
+                        (self.settings.BOS_STUDY and self.settings.BOS_CHECK_ON_OPEN and self.bos_signal == "BUY") or
                         (self.settings.EMA_STUDY and self.settings.EMA_CHECK_ON_OPEN and self.ema_open_signal == "BUY") or
                         (self.settings.MACD_STUDY and self.settings.MACD_CHECK_ON_OPEN and self.macd_signal == "BUY") or
                         (self.settings.BBM_STUDY and self.settings.BBM_CHECK_ON_OPEN and self.bbm_signal == "BUY") or
@@ -331,7 +336,7 @@ class Interval:
 
                     # Check for SELL signal
                     sell_conditions = (
-                        (self.settings.BOS_STUDY and self.bos_signal == "SELL") or
+                        (self.settings.BOS_STUDY and self.settings.BOS_CHECK_ON_OPEN and self.bos_signal == "SELL") or
                         (self.settings.EMA_STUDY and self.settings.EMA_CHECK_ON_OPEN and self.ema_open_signal == "SELL") or
                         (self.settings.MACD_STUDY and self.settings.MACD_CHECK_ON_OPEN and self.macd_signal == "SELL") or
                         (self.settings.BBM_STUDY and self.settings.BBM_CHECK_ON_OPEN and self.bbm_signal == "SELL") or
@@ -352,7 +357,7 @@ class Interval:
                         self.current_signal = "HOLD"
                 else:
                     buy_conditions = (
-                        (self.settings.BOS_STUDY and self.bos_signal == "BUY")
+                        (self.settings.BOS_STUDY and self.settings.BOS_CHECK_ON_OPEN and self.bos_signal == "BUY")
                         or not self.settings.BOS_STUDY
                     ) and (
                         (self.settings.EMA_STUDY and self.settings.EMA_CHECK_ON_OPEN and self.ema_open_signal == "BUY")
@@ -386,7 +391,7 @@ class Interval:
 
                     # Check for SELL signal
                     sell_conditions = (
-                        (self.settings.BOS_STUDY and self.bos_signal == "SELL")
+                        (self.settings.BOS_STUDY and self.settings.BOS_CHECK_ON_OPEN and self.bos_signal == "SELL")
                         or not self.settings.BOS_STUDY
                     ) and (
                         (self.settings.EMA_STUDY and self.settings.EMA_CHECK_ON_OPEN and self.ema_open_signal == "SELL")
@@ -428,8 +433,8 @@ class Interval:
                     
                    
             except Exception as e:
-                logger.info(f"Function: calculate_study, {e}, {e.args}, {type(e).__name__}")
-                logger.info(traceback.print_exc())
+                self.logger.info(f"Function: calculate_study, {e}, {e.args}, {type(e).__name__}")
+                self.logger.info(traceback.print_exc())
             retval =  df.to_dict('records')
             del df
             gc.collect()            
@@ -437,10 +442,10 @@ class Interval:
     
 class Ticker:
     
-    def __init__(self, symbol, intervalIds, settings):
+    def __init__(self, symbol, intervalIds, settings, logger):
         self.symbol=symbol
         self.settings=settings
-        
+        self.logger=logger
         self._ts=0
         self._bid = 0.0
         self.bidcolor = ""
@@ -451,17 +456,19 @@ class Ticker:
         self._mtv=0.0
         self.intervalIds=intervalIds
         self._intervals = {
-            '1m' : Interval(self.symbol, '1m', 60000,    [], self.settings),
-            '5m' : Interval(self.symbol, '5m', 300000,   [], self.settings),
-            '15m': Interval(self.symbol, '15m', 900000,  [], self.settings),
-            '1h' : Interval(self.symbol, '1h', 3600000,  [], self.settings),
-            '1d' : Interval(self.symbol, '1d', 86400000, [], self.settings),
+            '1m' : Interval(self.symbol, '1m', 60000,    [], self.settings, self.logger),
+            '5m' : Interval(self.symbol, '5m', 300000,   [], self.settings, self.logger),
+            '15m': Interval(self.symbol, '15m', 900000,  [], self.settings, self.logger),
+            '1h' : Interval(self.symbol, '1h', 3600000,  [], self.settings, self.logger),
+            '1d' : Interval(self.symbol, '1d', 86400000, [], self.settings, self.logger),
         }
         self.current_data={}
         self.trades = []
 
         self.green="#A5DFDF"
         self.red="#FFB1C1"
+        
+        self.logger = logger
         
     def update_settings(self, settings):
         self.settings=settings
@@ -580,12 +587,12 @@ class Ticker:
             intervalObj.set_data(ticks_interval)
 
         except Exception as e:
-            logger.info(f"Function: create_bar_with_last_and_ts, {e}, {e.args}, {type(e).__name__}")
-            logger.info(traceback.print_exc())
+            self.logger.info(f"Function: create_bar_with_last_and_ts, {e}, {e.args}, {type(e).__name__}")
+            self.logger.info(traceback.print_exc())
 
               
 class Tickers:
-    def __init__(self, settings):
+    def __init__(self, settings, logger):
         self.settings=settings
         
         self._tickerObjects={}
@@ -598,13 +605,15 @@ class Tickers:
         
         self.intervalIds=['1m','5m','15m','1h','1d']
         
+        self.logger = logger
+        
     def update_settings(self, settings):
         self.settings=settings
         for symbol in self._tickerObjects:
             self._tickerObjects[symbol].update_settings(settings)        
         
     def add(self, symbol):
-        ticker = Ticker(symbol, self.intervalIds, self.settings)
+        ticker = Ticker(symbol, self.intervalIds, self.settings, self.logger)
         self._tickerObjects[symbol]=ticker
 
     def get_tickerDict(self):
@@ -730,13 +739,13 @@ class Tickers:
                             f"{period}_trend": intervalObj.current_signal,
                             f"{period}_cb": intervalObj.signal_strength,
                             f"{period}_barcolor": lastcandle['barcolor'],
-                            f"{period}_bos": intervalObj.bos_signal,
                             f"{period}_ema_open": intervalObj.ema_open_signal,
                             f"{period}_ema_open": intervalObj.ema_open_signal,
                             f"{period}_ema_close": intervalObj.ema_close_signal,
                             f"{period}_macd":intervalObj.macd_signal,
                             f"{period}_bbm":intervalObj.bbm_signal,
                             f"{period}_rsi":intervalObj.rsi_signal,
+                            f"{period}_bos": intervalObj.bos_signal,
                             f"{period}_trendline": intervalObj.trendline_signal,
                             f"{period}_adx":intervalObj.adx_signal,                                       
                             f"{period}_candle_trend":intervalObj.candle_trend, 
@@ -782,8 +791,8 @@ class Tickers:
                 ]
                 self.signaldf_filtered = df[np.any(trending_conditions, axis=0)].copy()
         except Exception as e:
-            logger.info(f"Function: getCurrentData, {e}, {e.args}, {type(e).__name__}")
-            logger.info(traceback.print_exc())
+            self.logger.info(f"Function: getCurrentData, {e}, {e.args}, {type(e).__name__}")
+            self.logger.info(traceback.print_exc())
         finally:
             del df, current_data
             gc.collect()       

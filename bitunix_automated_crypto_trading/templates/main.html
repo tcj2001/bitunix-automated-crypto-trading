@@ -119,7 +119,8 @@
             ///////////////////////////////////////////////////////////////////////////////////////////
 
             const host = window.location.hostname;
-            const websocket_m = new WebSocket(`ws://${host}:8000/wsmain`);
+            const port = window.location.port; // Use 80 if no port is specified
+            const websocket_m = new WebSocket(`ws://${host}:${port}/wsmain`);
             websocket_m.onopen = function() {
                 document.getElementById('message').innerHTML = "main page webSocket connection opened" 
                 //Send a ping every 30 seconds
@@ -142,11 +143,13 @@
                 document.getElementById("signals").innerHTML = messageElement.dataframes.signals;                
                 document.getElementById("study").innerHTML = messageElement.dataframes.study;
                 document.getElementById("positionHistory").innerHTML = messageElement.dataframes.positionHistory;
+                document.getElementById("positionHistory").innerHTML = messageElement.dataframes.positionHistory;
                 document.getElementById('message').innerHTML = messageElement.status_messages;
 
                 document.getElementById('totalProfit').innerText = messageElement.profit;
                 document.getElementById("autoTradeCycleTime").innerText = messageElement.atctime;
                 document.getElementById("tickerDataCycleTime").innerText = messageElement.tdctime;
+                //const port  = messageElement.port;
                 const messages = messageElement.status_messages;
                 displayNotifications(messages)
             
@@ -444,7 +447,7 @@
                     logContainer.innerText = '';  
                     
                     // Open WebSocket connection
-                    const websocket_l = new WebSocket(`ws://${host}:8000/wslogs`);
+                    const websocket_l = new WebSocket(`ws://${host}:${port}/wslogs`);
 
                     websocket_l.onopen = () => {
                         console.log("log WebSocket connection opened.");
@@ -508,7 +511,7 @@
                     configModal.open()
 
                     // Open WebSocket connection
-                    const websocket_c2 = new WebSocket(`ws://${host}:8000/wschart?ticker=${symbol}`);
+                    const websocket_c2 = new WebSocket(`ws://${host}:${port}wschart?ticker=${symbol}`);
 
                     websocket_c2.onopen = () => {
                         console.log("chart WebSocket connection opened.");
@@ -526,6 +529,8 @@
                         const ema_chart = messageElement.ema_chart;
                         const trendline_study = messageElement.trendline_study;
                         const trendline_chart = messageElement.trendline_chart;
+                        const bos_study = messageElement.bos_study;
+                        const bos_chart = messageElement.bos_chart;
                         const macd_study = messageElement.macd_study;
                         const macd_chart = messageElement.macd_chart;
                         const bbm_study = messageElement.bbm_study;
@@ -546,11 +551,11 @@
                         }                    
 
                         if (period === '1m' || period === '5m' || period === '15m') {
-                            createOrUpdateChart(`chart`, data, buysell, ema_study, ema_chart, trendline_study, trendline_chart, macd_study, macd_chart, bbm_study, bbm_chart, rsi_study, rsi_chart, 'minute'); 
+                            createOrUpdateChart(`chart`, data, buysell, ema_study, ema_chart, trendline_study, trendline_chart, bos_study, bos_chart, macd_study, macd_chart, bbm_study, bbm_chart, rsi_study, rsi_chart, 'minute'); 
                         } else if (period === '1h') {
-                            createOrUpdateChart(`chart`, data, buysell, ema_study, ema_chart, trendline_study, trendline_chart, macd_study, macd_chart, bbm_study, bbm_chart, rsi_study, rsi_chart, 'hour'); 
+                            createOrUpdateChart(`chart`, data, buysell, ema_study, ema_chart, trendline_study, trendline_chart, bos_study, bos_chart, macd_study, macd_chart, bbm_study, bbm_chart, rsi_study, rsi_chart, 'hour'); 
                         } else if (period === '1d') {
-                            createOrUpdateChart(`chart`, data, buysell, ema_study, ema_chart, trendline_study, trendline_chart, macd_study, macd_chart, bbm_study, bbm_chart, rsi_study, rsi_chart, 'day'); 
+                            createOrUpdateChart(`chart`, data, buysell, ema_study, ema_chart, trendline_study, trendline_chart, bos_study, bos_chart, macd_study, macd_chart, bbm_study, bbm_chart, rsi_study, rsi_chart, 'day'); 
                         }
                     };
 

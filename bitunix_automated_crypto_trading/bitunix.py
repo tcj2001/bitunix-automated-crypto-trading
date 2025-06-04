@@ -1,5 +1,6 @@
 import asyncio
 import os
+import sys
 import uvicorn
 import numpy as np
 import pandas as pd
@@ -17,7 +18,6 @@ from NotificationManager import NotificationManager
 from DataFrameHtmlRenderer import DataFrameHtmlRenderer
 from config import Settings
 from logger import Logger
-logger = Logger(__name__).get_logger()
 
 from fastapi import FastAPI, Request, Form, WebSocket, WebSocketDisconnect, Depends, Query
 from fastapi.responses import HTMLResponse , JSONResponse, RedirectResponse, StreamingResponse
@@ -34,9 +34,24 @@ from pydantic import ValidationError
 
 import sqlite3
 
-ENV_FILE = ".env"
-CONFIG_FILE = os.path.dirname(os.path.abspath(__file__))+"/config.txt"
-LOG_FILE = "app.log"
+
+global LOG_FILE
+global ENV_FILE
+global CONFIG_FILE
+global API_KEY
+global SECRET_KEY
+global SECRET
+global PASSWORD
+global HOST
+global port
+
+env_file = sys.argv[1] if len(sys.argv) > 1 else ".env"
+config_file=sys.argv[2] if len(sys.argv) > 2 else "config.txt"
+port = sys.argv[3] if len(sys.argv) > 3 else "8000"
+
+ENV_FILE = os.path.dirname(os.path.abspath(__file__))+"/"+env_file
+CONFIG_FILE = os.path.dirname(os.path.abspath(__file__))+"/"+config_file
+LOG_FILE = os.path.dirname(os.path.abspath(__file__))+"/"+config_file.replace(".txt", ".log")
 
 #load environment variables
 load_dotenv(ENV_FILE)
@@ -46,23 +61,24 @@ SECRET = os.getenv('SECRET')
 PASSWORD = os.getenv('PASSWORD')
 HOST = os.getenv('HOST')
 
-#load config variables using setting class in config.py validating using pydantic
-settings = Settings()
+logger = Logger(__name__, LOG_FILE).get_logger()
+
+#logger.info(f"secret: {SECRET}, api_key: {API_KEY}, secret_key: {SECRET_KEY}, password: {PASSWORD}, host: {HOST}, port: {port}, config_file: {config_file}")
 
 class bitunix():
-    def __init__(self, password, api_key, secret_key, settings):
+    def __init__(self, password, api_key, secret_key, settings, logger):
         self.screen_refresh_interval =settings.SCREEN_REFRESH_INTERVAL
-
+        self.logger=logger
         self.autoTrade=settings.AUTOTRADE
 
         self.threadManager = ThreadManager()
-        self.notifications = NotificationManager()
-        self.bitunixApi = BitunixApi(api_key, secret_key, settings)
-        self.bitunixSignal = BitunixSignal(api_key, secret_key, settings, self.threadManager, self.notifications, self.bitunixApi)
+        self.notifications = NotificationManager(logger)
+        self.bitunixApi = BitunixApi(api_key, secret_key, settings, self.logger)
+        self.bitunixSignal = BitunixSignal(api_key, secret_key, settings, self.threadManager, self.notifications, self.bitunixApi, self.logger)
 
         self.websocket_connections = set()
         self.DB = {"admin": {"password": password}}
-        
+
         #sqllite database connection
         self.connection = sqlite3.connect("bitunix.db") 
         #create table if not exist
@@ -104,7 +120,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 templates = Jinja2Templates(directory=os.path.dirname(os.path.abspath(__file__))+"/templates")
-SECRET=os.getenv('SECRET')
+#SECRET=os.getenv('SECRET')
 login_manager = LoginManager(SECRET, token_url="/auth/login", use_cookie=True)
 login_manager.cookie_name = "auth_token"
 
@@ -242,6 +258,7 @@ async def wsmain(websocket):
                     "profit" : bitunix.bitunixSignal.profit,
                     "atctime": atctime,
                     "tdctime": tdctime,
+                    "port" : port,
                     "status_messages": [] if len(notifications)==0 else notifications
                 }
 
@@ -402,6 +419,8 @@ async def wscharts(websocket):
                         "ema_chart": settings.EMA_CHART,
                         "trendline_study": settings.TRENDLINE_STUDY,
                         "trendline_chart": settings.TRENDLINE_CHART,
+                        "bos_study": settings.BOS_STUDY,
+                        "bos_chart": settings.BOS_CHART,
                         "macd_study": settings.MACD_STUDY,
                         "macd_chart": settings.MACD_CHART,
                         "bbm_study": settings.BBM_STUDY,
@@ -491,6 +510,8 @@ async def wschart(websocket):
                         "ema_chart": settings.EMA_CHART,
                         "trendline_study": settings.TRENDLINE_STUDY,
                         "trendline_chart": settings.TRENDLINE_CHART,
+                        "bos_study": settings.BOS_STUDY,
+                        "bos_chart": settings.BOS_CHART,
                         "macd_study": settings.MACD_STUDY,
                         "macd_chart": settings.MACD_CHART,
                         "bbm_study": settings.BBM_STUDY,
@@ -604,14 +625,19 @@ async def stream_log_file(websocket: WebSocket):
 
 def main():
     global bitunix
-    bitunix = bitunix(PASSWORD, API_KEY, SECRET_KEY, settings)
-    bitunix.bitunixSignal.notifications.add_notification(f"Starting....................")
+    global settings
+    
+    #load config variables using setting class in config.py validating using pydantic
+    settings = Settings()
+
+    bitunix = bitunix(PASSWORD, API_KEY, SECRET_KEY, settings, logger)
+    bitunix.bitunixSignal.notifications.add_notification(f"Starting auto trade on port {port} using {env_file} and {config_file} ....................")
     import uvicorn
     if settings.VERBOSE_LOGGING:
         llevel = "debug"
     else:
         llevel = "error"
-    config1 = uvicorn.Config(app, host=HOST, port=8000, log_level=llevel, reload=False)
+    config1 = uvicorn.Config(app, host=HOST, port=port, log_level=llevel, reload=False)
     server = uvicorn.Server(config1)
     server.run()
 

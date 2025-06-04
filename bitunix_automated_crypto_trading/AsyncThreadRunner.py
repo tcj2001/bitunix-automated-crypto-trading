@@ -2,10 +2,9 @@ import asyncio
 import threading
 from logger import Logger
 import os
-logger = Logger(__name__).get_logger()
 
 class AsyncThreadRunner:
-    def __init__(self, async_func, interval, *args, **kwargs):
+    def __init__(self, async_func, logger, interval, *args, **kwargs):
         self.async_func = async_func
         self.interval = interval
         self.args = args
@@ -14,6 +13,7 @@ class AsyncThreadRunner:
         self._stop_event = threading.Event()
         self.thread = threading.Thread(target=self.thread_function)
         self.task = None
+        self.logger = logger 
 
     def thread_function(self):
         asyncio.set_event_loop(self.loop)
@@ -28,7 +28,7 @@ class AsyncThreadRunner:
                             )
             self.loop.run_forever()
         except Exception as e:
-            logger.info(f"Async Thread function error: {e}, exiting app")
+            self.logger.info(f"Async Thread function error: {e}, exiting app")
             os._exit(1)  # Exit the program if the thread is stopped
         finally:
             pending = asyncio.all_tasks(self.loop)
@@ -47,10 +47,10 @@ class AsyncThreadRunner:
                 try:
                     await self.async_func(*self.args, **self.kwargs)
                 except Exception as e:
-                    logger.info(f"error in periodic_run async thread {self.thread.name} {e}")
+                    self.logger.info(f"error in periodic_run async thread {self.thread.name} {e}")
                     os._exit(1)  # Exit the program if the thread is stopped
                 await asyncio.sleep(self.interval)
-            logger.info(f"periodic {self.thread.name} Thread stopped, exiting app.")
+            self.logger.info(f"periodic {self.thread.name} Thread stopped, exiting app.")
             os._exit(1)  # Exit the program if the thread is stopped
         except asyncio.CancelledError:
             pass
@@ -70,13 +70,13 @@ class AsyncThreadRunner:
             try:
                 await asyncio.wrap_future(self.task)  # Wait for the cancellation to propagate
             except asyncio.CancelledError:
-                logger.info(f"{self.thread.name} Task cancelled successfully.")
+                self.logger.info(f"{self.thread.name} Task cancelled successfully.")
             except Exception as e:
-                logger.error(f"Unexpected error while cancelling the task {self.thread.name}: {e}")
+                self.logger.error(f"Unexpected error while cancelling the task {self.thread.name}: {e}")
 
         # Stop the event loop safely
         self.loop.call_soon_threadsafe(self.loop.stop)
 
         # Wait for the thread to join
         self.thread.join()
-        logger.info(f"{self.thread.name} Thread stopped and event loop cleaned up.")
+        self.logger.info(f"{self.thread.name} Thread stopped and event loop cleaned up.")

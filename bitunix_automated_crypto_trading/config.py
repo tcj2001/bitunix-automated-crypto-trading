@@ -1,6 +1,7 @@
 from pydantic import Field, SecretStr, validator
 from pydantic_settings import BaseSettings
 import os
+import sys
 import sqlite3
 
 class Settings(BaseSettings):
@@ -22,7 +23,6 @@ class Settings(BaseSettings):
     BARS: int = Field(default=100, ge=1)
 
     # Technical Indicators Parameters
-    BOS_PERIOD: int = Field(default=20, ge=1)
     MA_FAST: int = Field(default=10, ge=1)
     MA_MEDIUM: int = Field(default=20, ge=1)
     MA_SLOW: int = Field(default=50, ge=1)
@@ -38,7 +38,12 @@ class Settings(BaseSettings):
     # Technical Indicators
     OPEN_ON_ANY_SIGNAL: bool = Field(default=True)
 
+    BOS_PERIOD: int = Field(default=20, ge=1)
     BOS_STUDY: bool = Field(default=True)
+    BOS_CHART: bool = Field(default=True)
+    BOS_CHECK_ON_OPEN: bool = Field(default=False)
+    BOS_CHECK_ON_CLOSE: bool = Field(default=False)
+
     EMA_CHART: bool = Field(default=True)
     EMA_STUDY: bool = Field(default=True)
     EMA_CROSSING: bool = Field(default=False)
@@ -104,7 +109,8 @@ class Settings(BaseSettings):
 
     class Config:
         # Specify the file name for loading environment variables
-        env_file = os.path.dirname(os.path.abspath(__file__))+"/config.txt"
+        config_file=sys.argv[2] if len(sys.argv) > 1 else "config.txt"
+        env_file = os.path.dirname(os.path.abspath(__file__))+"/"+config_file
 
    
     @classmethod

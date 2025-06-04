@@ -10,7 +10,7 @@
 import time
 import threading
 from logger import Logger
-logger = Logger(__name__).get_logger()
+global LOG_FILE
 
 def job_func(*args, **kwargs):
     print(f"Job running with arguments: {args}, {kwargs}")        
@@ -20,13 +20,14 @@ def run_threaded(job_func, args):
     job_thread.start()
 
 class ManagedThread(threading.Thread):
-    def __init__(self, interval, target, *args, **kwargs):
+    def __init__(self, interval, target, logger, *args, **kwargs):
         super().__init__()
         self.target = target
         self.interval = interval
         self.args = args
         self.kwargs = kwargs
         self._stop_event = threading.Event()
+        self.logger = logger
 
     def run(self):
         while not self._stop_event.is_set():
@@ -34,7 +35,7 @@ class ManagedThread(threading.Thread):
             try:
                 self.target(self, *self.args, **self.kwargs)
             except Exception as e:
-                logger.info(f"error in thread {self.name}, {e}, {e.args}, {type(e).__name__}")  
+                self.logger.info(f"error in thread {self.name}, {e}, {e.args}, {type(e).__name__}")  
             elapsed_time = time.time() - stime
             if self.interval==0:
                 break

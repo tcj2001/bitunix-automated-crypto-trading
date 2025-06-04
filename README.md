@@ -2,6 +2,8 @@
 
 A real-time cryptocurrency trading platform built with FastAPI and WebSocket technology using Bitunix API and websockets for Futures. The platform provides automated trading capabilities, real-time market data visualization, and portfolio management features.
 
+Supports running the app in multiple instances (bots) with each instance having its own configuration file and env file containing the API keys and other parameters. 
+
 ## Features
 - Real-time private account/new postion/new order data streaming via WebSocket
 - Real-time public depth/kline for bid, ask and last streaming via WebSocket or thru api calls, configurable in the config file
@@ -61,7 +63,6 @@ The platform can be configured through the `config.py` file or `config.txt`. Key
   - `BARS`: Number of bars to use for study and charting
     
   - `Technical Indicators Parameters`:
-    - `BOS_PERIOD`: Break of structure period, number of bars to look back to determine the previous high or low
     - `MA_FAST`: Fast moving average period
     - `MA_MEDIUM`: Medium moving average period
     - `MA_SLOW`: Slow moving average period
@@ -75,7 +76,6 @@ The platform can be configured through the `config.py` file or `config.txt`. Key
     - `ADX_PERIOD`: ADX period
     
   - `Study Parameters`:
-    - `BOS_STUDY`: Enable Break Of Structure study
     - `EMA_STUDY`: Enable EMA study
     - `EMA_CHART`: Display EMA chart
     - `EMA_STUDY`: Enable EMA study
@@ -101,6 +101,12 @@ The platform can be configured through the `config.py` file or `config.txt`. Key
     - `RSI_CROSSING`: Check RSI crossing or crossed, comparing fast and slow RSI
     - `RSI_CHECK_ON_OPEN`: Check RSI on open
     - `RSI_CHECK_ON_CLOSE`: Check RSI on close
+
+    - `BOS_PERIOD`: Break of structure period, number of bars to look back to determine the previous high or low
+    - `BOS_STUDY`: Enable Break Of Structure study
+    - `BOS_CHART`: Display Break Of Structure chart
+    - `BOS_CHECK_ON_OPEN`: Check bos support and resistance on open
+    - `BOS_CHECK_ON_CLOSE`: Check bos support and resistance on close
 
     - `TRENDLINE_PEAK_DISTANCE` : distance between peaks or troughs
     - `TRENDLINE_STUDY`: Enable Trendline support and resistance study
@@ -162,6 +168,7 @@ The platform can be configured through the `config.py` file or `config.txt`. Key
       - Take Profit amount
       - Accept Loss amount
     - BOS study is basically when the price breakout from the previous high or low
+    - Trendline study is basically when the price breakout from the trendline support or resistance
     - You can control the study like Moving Average, MACD, Bollinger Band, RSI or close proximity to high or low of the candle using the env file
     - You can control the trading strategy using the CalculateStudy function in TickerManager.py and AutoTradeProcess function in BitunixSignal.py
     - Changes are activated by unchecking and checking the AutoTrade checkbox
@@ -193,7 +200,7 @@ The platform can be configured through the `config.py` file or `config.txt`. Key
     apt-get install -y python3-pip wget unzip dos2unix && \
     python3 -m pip install --upgrade pip && \
     mkdir bitunix && cd bitunix && \
-    wget https://github.com/tcj2001/bitunix-automated-crypto-trading/archive/refs/tags/2.0.tar.gz -O bitunix.tar.gz && \
+    wget https://github.com/tcj2001/bitunix-automated-crypto-trading/archive/refs/tags/v3.1.8.tar.gz -O bitunix.tar.gz && \
     mkdir code && \
     tar --strip-components=1 -xvzf bitunix.tar.gz -C code && \
     cd code && \
@@ -201,7 +208,12 @@ The platform can be configured through the `config.py` file or `config.txt`. Key
     cp sampleenv.txt .env"
   - The package will be installed in the bitunix/code directory
   - cd bitunix/code
-  - python3 bitunix.py 
+  - python3 bitunix.py .env config.txt 8000 (This is the default even if you dont pass these)
+  
+  For multiple instance or bots
+  - python3 bitunix.py .env1 bot1.txt 8001
+  - python3 bitunix.py .env2 bot2.txt 8002
+  
 
 - Windows
   - mkdir c:\bitunix
