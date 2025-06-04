@@ -45,7 +45,7 @@ class CSTFormatter(logging.Formatter):
             return cst_time.isoformat()
 
 class Logger:
-    def __init__(self, logger_name, log_file='app.log', level=logging.DEBUG, max_bytes=50 * 1024 * 1024, backup_count=100):
+    def __init__(self, logger_name, log_file, level=logging.DEBUG, max_bytes=50 * 1024 * 1024, backup_count=100):
         """
         Initialize the logger.
 

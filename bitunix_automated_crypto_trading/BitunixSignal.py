@@ -13,7 +13,6 @@ from AsyncThreadRunner import AsyncThreadRunner
 from TickerManager import Tickers, Ticker, Interval
 from DataFrameHtmlRenderer import DataFrameHtmlRenderer
 from logger import Logger, Colors
-logger = Logger(__name__).get_logger()
 colors = Colors()
 import gc
 import os
@@ -27,16 +26,17 @@ import threading
 cst = pytz.timezone('US/Central')
 
 class BitunixSignal:
-    def __init__(self, api_key, secret_key, settings, threadManager, notifications, bitunixApi):
+    def __init__(self, api_key, secret_key, settings, threadManager, notifications, bitunixApi, logger):
         self.api_key = api_key
         self.secret_key = secret_key
         self.settings=settings
         self.threadManager = threadManager
         self.notifications = notifications
         self.bitunixApi = bitunixApi
+        self.logger = logger
               
         #Ticker object
-        self.tickerObjects = Tickers(self.settings)
+        self.tickerObjects = Tickers(self.settings, self.logger)
         
         #these are used for html rendering as well as storing
         self.signaldf= pd.DataFrame()
@@ -78,8 +78,8 @@ class BitunixSignal:
         self.bitunixPrivateWebSocketClient = BitunixPrivateWebSocketClient(self.api_key, self.secret_key)
         
         if self.settings.USE_PUBLIC_WEBSOCKET:
-            self.bitunixPublicDepthWebSocketClient = BitunixPublicWebSocketClient(self.api_key, self.secret_key, "depth")
-            self.bitunixPublicTickerWebSocketClient = BitunixPublicWebSocketClient(self.api_key, self.secret_key, "ticker")
+            self.bitunixPublicDepthWebSocketClient = BitunixPublicWebSocketClient(self.api_key, self.secret_key, "depth", logger)
+            self.bitunixPublicTickerWebSocketClient = BitunixPublicWebSocketClient(self.api_key, self.secret_key, "ticker", logger)
 
         self.tickerList=[]
 
@@ -129,52 +129,52 @@ class BitunixSignal:
         await asyncio.create_task(self.DefinehtmlRenderers())
 
         #async thread that runs forever jobs
-        self.GetportfolioDataTask = AsyncThreadRunner(self.GetportfolioData, interval=int(self.settings.PORTFOLIO_API_INTERVAL))
+        self.GetportfolioDataTask = AsyncThreadRunner(self.GetportfolioData, self.logger, interval=int(self.settings.PORTFOLIO_API_INTERVAL))
         self.GetportfolioDataTask.start_thread(thread_name="GetportfolioData")
 
-        self.GetPendingPositionDataTask = AsyncThreadRunner(self.GetPendingPositionData, interval=int(self.settings.PENDING_POSITIONS_API_INTERVAL))
+        self.GetPendingPositionDataTask = AsyncThreadRunner(self.GetPendingPositionData, self.logger, interval=int(self.settings.PENDING_POSITIONS_API_INTERVAL))
         self.GetPendingPositionDataTask.start_thread(thread_name="GetPendingPositionData")
 
-        self.GetPendingOrderDataTask = AsyncThreadRunner(self.GetPendingOrderData, interval=int(self.settings.PENDING_ORDERS_API_INTERVAL))
+        self.GetPendingOrderDataTask = AsyncThreadRunner(self.GetPendingOrderData, self.logger, interval=int(self.settings.PENDING_ORDERS_API_INTERVAL))
         self.GetPendingOrderDataTask.start_thread(thread_name="GetPendingOrderData")
 
-        self.GetTradeHistoryDataTask = AsyncThreadRunner(self.GetTradeHistoryData, interval=int(self.settings.TRADE_HISTORY_API_INTERVAL))
+        self.GetTradeHistoryDataTask = AsyncThreadRunner(self.GetTradeHistoryData, self.logger, interval=int(self.settings.TRADE_HISTORY_API_INTERVAL))
         self.GetTradeHistoryDataTask.start_thread(thread_name="GetTradeHistoryData")
        
-        self.GetPositionHistoryDataTask = AsyncThreadRunner(self.GetPositionHistoryData, interval=int(self.settings.POSITION_HISTORY_API_INTERVAL))
+        self.GetPositionHistoryDataTask = AsyncThreadRunner(self.GetPositionHistoryData, self.logger, interval=int(self.settings.POSITION_HISTORY_API_INTERVAL))
         self.GetPositionHistoryDataTask.start_thread(thread_name="GetPositionHistoryData")
        
-        self.ProcessPrivateDataTask = AsyncThreadRunner(self.bitunixPrivateWebSocketClient.run_websocket, 0, self.ProcessPrivateData)
+        self.ProcessPrivateDataTask = AsyncThreadRunner(self.bitunixPrivateWebSocketClient.run_websocket, self.logger, 0, self.ProcessPrivateData)
         self.ProcessPrivateDataTask.start_thread(thread_name="ProcessPrivateData")
 
         if self.settings.USE_PUBLIC_WEBSOCKET:
             self.bitunixPublicDepthWebSocketClient.tickerList = self.tickerList
-            self.StoreDepthDataTask = AsyncThreadRunner(self.bitunixPublicDepthWebSocketClient.run_websocket, 0, self.StoreDepthData)
+            self.StoreDepthDataTask = AsyncThreadRunner(self.bitunixPublicDepthWebSocketClient.run_websocket, self.logger, 0, self.StoreDepthData)
             self.StoreDepthDataTask.start_thread(thread_name="StoreDepthData")
             self.depth_que = asyncio.Queue()
-            self.ProcessDepthDataTask = AsyncThreadRunner(self.ProcessDepthData, interval=0) # run only once
+            self.ProcessDepthDataTask = AsyncThreadRunner(self.ProcessDepthData, self.logger, interval=0) # run only once
             self.ProcessDepthDataTask.start_thread(thread_name="ProcessDepthData")
 
             self.bitunixPublicTickerWebSocketClient.tickerList = self.tickerList
-            self.StoreTickerDataTask = AsyncThreadRunner(self.bitunixPublicTickerWebSocketClient.run_websocket, 0, self.StoreTickerData)
+            self.StoreTickerDataTask = AsyncThreadRunner(self.bitunixPublicTickerWebSocketClient.run_websocket, self.logger, 0, self.StoreTickerData)
             self.StoreTickerDataTask.start_thread(thread_name="StoreTickerData")
             self.ticker_que = asyncio.Queue()
-            self.ProcessTickerDataTask = AsyncThreadRunner(self.ProcessTickerData, interval=0) # run only once
+            self.ProcessTickerDataTask = AsyncThreadRunner(self.ProcessTickerData, self.logger, interval=0) # run only once
             self.ProcessTickerDataTask.start_thread(thread_name="ProcessTickerData")
             
 
         #normal processes
-        self.LoadKlineHistoryTask = AsyncThreadRunner(self.LoadKlineHistory, interval=0) # run only once
+        self.LoadKlineHistoryTask = AsyncThreadRunner(self.LoadKlineHistory, self.logger, interval=0) # run only once
         self.LoadKlineHistoryTask.start_thread(thread_name="LoadKlineHistory")
 
-        self.AutoTradeProcessTask = AsyncThreadRunner(self.AutoTradeProcess, interval=int(self.settings.SIGNAL_CHECK_INTERVAL))
+        self.AutoTradeProcessTask = AsyncThreadRunner(self.AutoTradeProcess, self.logger, interval=int(self.settings.SIGNAL_CHECK_INTERVAL))
         self.AutoTradeProcessTask.start_thread(thread_name="AutoTradeProcess")
 
-        self.checkTickerAndAutotradeStatusTask = AsyncThreadRunner(self.checkTickerAndAutotradeStatus, interval=0)
+        self.checkTickerAndAutotradeStatusTask = AsyncThreadRunner(self.checkTickerAndAutotradeStatus, self.logger, interval=0)
         self.checkTickerAndAutotradeStatusTask.start_thread(thread_name="checkTickerAndAutotradeStatus")
 
         if not self.settings.USE_PUBLIC_WEBSOCKET:
-            self.GetTickerDataTask = AsyncThreadRunner(self.GetTickerData, interval=int(self.settings.TICKER_DATA_API_INTERVAL))
+            self.GetTickerDataTask = AsyncThreadRunner(self.GetTickerData, self.logger, interval=int(self.settings.TICKER_DATA_API_INTERVAL))
             self.GetTickerDataTask.start_thread(thread_name="GetTickerData")
 
 
@@ -227,7 +227,7 @@ class BitunixSignal:
                 if data is not None:
                    self.tickerObjects.load_kline_history(ticker, intervalId, self.settings.BARS, data)
         if self.settings.VERBOSE_LOGGING:
-            logger.info(f"kline_history: elapsed time {time.time()-start}")
+            self.logger.info(f"kline_history: elapsed time {time.time()-start}")
         self.notifications.add_notification("Kline history loaded")
 
     #api data       
@@ -258,7 +258,7 @@ class BitunixSignal:
 
             self.lastTickerDataTime = time.time()
             if self.settings.VERBOSE_LOGGING:
-                logger.info(f"GetTickerData: elapsed time {time.time()-start}")
+                self.logger.info(f"GetTickerData: elapsed time {time.time()-start}")
             if self.settings.BENCHMARK:
                 self.connection = sqlite3.connect("bitunix.db") 
                 self.cursor = self.connection.cursor()
@@ -300,10 +300,10 @@ class BitunixSignal:
                     self.tickerObjects.form_candle(self.tuples_list)
                     self.lastTickerDataTime = time.time()
             except Exception as e:
-                logger.info(f"Function: ProcessTickerData, {e}, {e.args}, {type(e).__name__}")
-                logger.info(traceback.print_exc())
+                self.logger.info(f"Function: ProcessTickerData, {e}, {e.args}, {type(e).__name__}")
+                self.logger.info(traceback.print_exc())
             await asyncio.sleep(0.01)
-        logger.info(f"ProcessTickerData: exitied out of the loop, exiting app")
+        self.logger.info(f"ProcessTickerData: exitied out of the loop, exiting app")
         os._exit(1)  # Exit the program 
             
 
@@ -333,10 +333,10 @@ class BitunixSignal:
                     self.depthdf["tickerObj"] = self.depthdf.index.map(self.tickerObjects.get_tickerDict())
                     self.depthdf.apply(self.apply_depth_data2, axis=1)
             except Exception as e:
-                logger.info(f"Function: ProcessTickerData, {e}, {e.args}, {type(e).__name__}")
-                logger.info(traceback.print_exc())
+                self.logger.info(f"Function: ProcessTickerData, {e}, {e.args}, {type(e).__name__}")
+                self.logger.info(traceback.print_exc())
             await asyncio.sleep(0.01)
-        logger.info(f"ProcessDepthData: exitied out of the loop, exiting app")
+        self.logger.info(f"ProcessDepthData: exitied out of the loop, exiting app")
         os._exit(1)  # Exit the program 
 
     def apply_depth_data2(self, row):
@@ -367,9 +367,9 @@ class BitunixSignal:
             del data, tickerdf, tuples_list
             gc.collect()
         except Exception as e:
-            logger.info(e)
+            self.logger.info(e)
         if self.settings.VERBOSE_LOGGING:
-            logger.info(f"apply_last_data: elapsed time {time.time()-start}")
+            self.logger.info(f"apply_last_data: elapsed time {time.time()-start}")
         
     # non websocket method
     # this is called to update bid and ask, 
@@ -411,9 +411,9 @@ class BitunixSignal:
             self.portfoliodfStyle= self.portfoliodfrenderer.render_html(self.portfoliodf)
             
         except Exception as e:
-            logger.info(f"Function: GetportfolioData, {e}, {e.args}, {type(e).__name__}")
+            self.logger.info(f"Function: GetportfolioData, {e}, {e.args}, {type(e).__name__}")
         if self.settings.VERBOSE_LOGGING:
-            logger.info(f"GetportfolioData: elapsed time {time.time()-start}")
+            self.logger.info(f"GetportfolioData: elapsed time {time.time()-start}")
                 
     async def GetPendingPositionData(self):
         start=time.time()
@@ -470,9 +470,9 @@ class BitunixSignal:
                     
 
         except Exception as e:
-            logger.info(f"Function: GetPendingPositionData, {e}, {e.args}, {type(e).__name__}")
+            self.logger.info(f"Function: GetPendingPositionData, {e}, {e.args}, {type(e).__name__}")
         if self.settings.VERBOSE_LOGGING:
-            logger.info(f"GetPendingPositionData: elapsed time {time.time()-start}")
+            self.logger.info(f"GetPendingPositionData: elapsed time {time.time()-start}")
 
     async def GetPendingOrderData(self):
         start=time.time()
@@ -489,9 +489,9 @@ class BitunixSignal:
             self.orderdfStyle= self.orderdfrenderer.render_html(self.orderdf)                
             
         except Exception as e:
-            logger.info(f"Function: GetPendingOrderData, {e}, {e.args}, {type(e).__name__}")
+            self.logger.info(f"Function: GetPendingOrderData, {e}, {e.args}, {type(e).__name__}")
         if self.settings.VERBOSE_LOGGING:
-            logger.info(f"GetPendingOrderData: elapsed time {time.time()-start}")
+            self.logger.info(f"GetPendingOrderData: elapsed time {time.time()-start}")
 
     async def GetPositionHistoryData(self):
         start=time.time()
@@ -509,9 +509,9 @@ class BitunixSignal:
             self.positionHistorydfStyle= self.positionHistorydfrenderer.render_html(self.positionHistorydf)
             
         except Exception as e:
-            logger.info(f"Function: GetPositionHistoryData, {e}, {e.args}, {type(e).__name__}")
+            self.logger.info(f"Function: GetPositionHistoryData, {e}, {e.args}, {type(e).__name__}")
         if self.settings.VERBOSE_LOGGING:
-            logger.info(f"GetPositionHistoryData: elapsed time {time.time()-start}")
+            self.logger.info(f"GetPositionHistoryData: elapsed time {time.time()-start}")
 
     async def GetTradeHistoryData(self):
         start=time.time()
@@ -526,9 +526,9 @@ class BitunixSignal:
                         # Filter trades for the current symbol and convert them to a list of dicts
                         tickerObj.trades = grouped_trades.get_group(symbol).to_dict("records")                
         except Exception as e:
-            logger.info(f"Function: GetTradeHistoryData, {e}, {e.args}, {type(e).__name__}")
+            self.logger.info(f"Function: GetTradeHistoryData, {e}, {e.args}, {type(e).__name__}")
         if self.settings.VERBOSE_LOGGING:
-            logger.info(f"GetTradeHistoryData: elapsed time {time.time()-start}")
+            self.logger.info(f"GetTradeHistoryData: elapsed time {time.time()-start}")
 
         
     ###########################################################################################################
@@ -545,6 +545,7 @@ class BitunixSignal:
             inuseTickers = set(inuse1 + inuse2)
             
             # Extract buy/sell ticker data
+            self.signaldf_filtered = pd.DataFrame();
             self.tickerObjects.getCurrentData(period)
 
             self.signaldf_full = self.tickerObjects.signaldf_full
@@ -616,14 +617,14 @@ class BitunixSignal:
                         )  
 
         except Exception as e:
-            logger.info(f"Function: BuySellList, {e}, {e.args}, {type(e).__name__}")
-            logger.info(traceback.print_exc())
+            self.logger.info(f"Function: BuySellList, {e}, {e.args}, {type(e).__name__}")
+            self.logger.info(traceback.print_exc())
         del inuse1, inuse2, inuseTickers
         gc.collect()
 
     async def AutoTradeProcess(self):
         if self.settings.VERBOSE_LOGGING:
-            logger.info(f"AutoTradeProcess started")
+            self.logger.info(f"AutoTradeProcess started")
         start=time.time()
         
         period = self.settings.OPTION_MOVING_AVERAGE
@@ -885,6 +886,41 @@ class BitunixSignal:
                                     )
                                     continue
 
+                            # BOS
+                            if self.settings.BOS_STUDY and self.settings.BOS_CHECK_ON_CLOSE: 
+                                if row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_bos'] == "SELL" and total_pnl>0:
+                                    last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
+                                    price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
+
+                                    self.notifications.add_notification(
+                                        f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to {period} bos for {row.symbol} with {row.qty} qty @ {price})'
+                                    )
+                                    datajs = await self.bitunixApi.PlaceOrder(
+                                        positionId=row.positionId,
+                                        ticker=row.symbol,
+                                        qty=row.qty,
+                                        price=price,
+                                        side=row.side,
+                                        tradeSide="CLOSE"
+                                    )
+                                    continue
+
+                                if row.side == 'SELL' and self.signaldf_full.at[row.symbol, f'{period}_bos'] == "BUY" and total_pnl>0:
+                                    last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
+                                    price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
+                                    self.notifications.add_notification(
+                                        f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to {period} bos for {row.symbol} with {row.qty} qty @ {price})'
+                                    )
+                                    datajs = await self.bitunixApi.PlaceOrder(
+                                        positionId=row.positionId,
+                                        ticker=row.symbol,
+                                        qty=row.qty,
+                                        price=price,
+                                        side=row.side,
+                                        tradeSide="CLOSE"
+                                    )
+                                    continue
+
                             # TrendLine
                             if self.settings.TRENDLINE_STUDY and self.settings.TRENDLINE_CHECK_ON_CLOSE: 
                                 if row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_trendline'] == "SELL" and total_pnl>0:
@@ -996,11 +1032,11 @@ class BitunixSignal:
         except Exception as e:
             stack = traceback.extract_stack()
             function_name = stack[-1].name
-            logger.info(f"Function: {function_name}, {e}, {e.args}, {type(e).__name__}")
-            logger.info(traceback.print_exc())
+            self.logger.info(f"Function: {function_name}, {e}, {e.args}, {type(e).__name__}")
+            self.logger.info(traceback.print_exc())
                 
         if self.settings.VERBOSE_LOGGING:
-            logger.info(f"AutoTradeProcess: elapsed time {time.time()-start}")
+            self.logger.info(f"AutoTradeProcess: elapsed time {time.time()-start}")
         if self.settings.BENCHMARK:
             self.connection = sqlite3.connect("bitunix.db") 
             self.cursor = self.connection.cursor()
@@ -1066,7 +1102,7 @@ class BitunixSignal:
                 
                 self.available = data['available']
                 self.margin = data['margin']
-                # logger.info(feed)
+                # self.logger.info(feed)
 
             elif channel == 'position':
                 
@@ -1104,7 +1140,7 @@ class BitunixSignal:
             del feed
             gc.collect()
         except Exception as e:
-            logger.info(f"Function: ProcessPrivateData, {e}, {e.args}, {type(e).__name__}")
+            self.logger.info(f"Function: ProcessPrivateData, {e}, {e.args}, {type(e).__name__}")
             
     def color_cells(val, color):
         return f'background-color: {color}' if val else ''

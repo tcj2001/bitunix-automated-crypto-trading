@@ -9,15 +9,14 @@ from urllib.parse import urlencode
 from typing import Dict, Any
 import traceback
 from logger import Logger
-logger = Logger(__name__).get_logger()
 
 
 class BitunixApi:
     
-    def __init__(self, api_key, secret_key, settings):
+    def __init__(self, api_key, secret_key, settings, logger):
         self.api_key = api_key
         self.secret_key = secret_key
-        
+        self.logger = logger
         self.session = requests.Session()
         self.session.headers.update({
             'Content-Type': 'application/json',
@@ -115,7 +114,7 @@ class BitunixApi:
         headers["sign"] = signature
 
         response = self.session.post(endpoint, data=body_string, headers=headers)
-        logger.info(f"Response: {body_string} {response.json()}")
+        self.logger.info(f"Response: {body_string} {response.json()}")
         response.raise_for_status()
         return response.json()
 
@@ -153,28 +152,28 @@ class BitunixApi:
         if tradeHistory['code']==0:
             return tradeHistory['data']
         else:
-            logger.info(tradeHistory['msg'])
+            self.logger.info(tradeHistory['msg'])
 
     async def GetPendingOrderData(self,dictparm={}):
         orders=await self._get_authenticated(self.pending_order_url, dictparm)
         if orders['code']==0:
             return orders['data']
         else:
-            logger.info(orders['msg'])
+            self.logger.info(orders['msg'])
 
     async def GetPendingPositionData(self, dictparm={}):
         positions=await self._get_authenticated(self.pending_positions_URL, dictparm)
         if positions['code']==0:
             return positions['data']
         else:
-            logger.info(positions['msg'])
+            self.logger.info(positions['msg'])
 
     async def GetPositionHistoryData(self, dictparm={}):
         tradeHistory=await self._get_authenticated(self.position_history_Url, dictparm)
         if tradeHistory['code']==0:
             return tradeHistory['data']
         else:
-            logger.info(tradeHistory['msg'])
+            self.logger.info(tradeHistory['msg'])
 
     
     async def GetportfolioData(self):
@@ -182,7 +181,7 @@ class BitunixApi:
         if portfolio['code']==0:
             return portfolio['data']
         else:
-            logger.info(portfolio['msg'])
+            self.logger.info(portfolio['msg'])
            
 
     async def GetTickerslastPrice(self, tickersStr):
@@ -223,7 +222,7 @@ class BitunixApi:
         except Exception as e:
             stack = traceback.extract_stack()
             function_name = stack[-2].name
-            logger.info(f"Function: {function_name}, {e}, {e.args}, {type(e).__name__}")
+            self.logger.info(f"Function: {function_name}, {e}, {e.args}, {type(e).__name__}")
             
     async def GetTickerData(self):
         try:
@@ -235,7 +234,7 @@ class BitunixApi:
         except Exception as e:
             stack = traceback.extract_stack()
             function_name = stack[-2].name
-            logger.info(f"Function: {function_name}, {e}, {e.args}, {type(e).__name__}")           
+            self.logger.info(f"Function: {function_name}, {e}, {e.args}, {type(e).__name__}")           
 
     async def GetDepthData(self,symbol,limit):
         try:
@@ -247,7 +246,7 @@ class BitunixApi:
         except Exception as e:
             stack = traceback.extract_stack()
             function_name = stack[-2].name
-            logger.info(f"Function: {function_name}, {e}, {e.args}, {type(e).__name__}")           
+            self.logger.info(f"Function: {function_name}, {e}, {e.args}, {type(e).__name__}")           
 
     async def GetKlineHistory(self, ticker, interval, limit, starttime):
         data = []
@@ -270,7 +269,7 @@ class BitunixApi:
         except Exception as e:
             stack = traceback.extract_stack()
             function_name = stack[-2].name
-            logger.info(f"Function: {function_name}, {e}, {e.args}, {type(e).__name__}") 
+            self.logger.info(f"Function: {function_name}, {e}, {e.args}, {type(e).__name__}") 
 
     def __del__(self):
             """Cleanup method to close the session"""

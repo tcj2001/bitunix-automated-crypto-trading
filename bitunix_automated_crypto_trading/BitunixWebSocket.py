@@ -8,11 +8,10 @@ import string
 from typing import Callable
 import threading
 from logger import Logger
-logger = Logger(__name__).get_logger()
 import gc
 
 class BitunixPublicWebSocketClient:
-    def __init__(self, api_key, secret_key, type):
+    def __init__(self, api_key, secret_key, type, logger):
         self.api_key = api_key
         self.secret_key = secret_key
         self.type = type
@@ -22,6 +21,7 @@ class BitunixPublicWebSocketClient:
         self.loop = asyncio.new_event_loop()
         self.loop_thread = threading.Thread(target=self.start_loop)
         self.loop_thread.daemon = True  # Ensure the thread closes with the program
+        self.logger=logger
         self.loop_thread.start()
 
 
@@ -35,7 +35,7 @@ class BitunixPublicWebSocketClient:
 
         # Wait for the thread to finish
         self.loop_thread.join()
-        logger.info("Event loop stopped cleanly")
+        self.logger.info("Event loop stopped cleanly")
                             
 
     async def run_websocket(self, process_func: Callable):
@@ -44,7 +44,7 @@ class BitunixPublicWebSocketClient:
             try:
                 async with websockets.connect(self.url, ping_interval=None, open_timeout=30) as self.websocket:
                     connect_response = await self.websocket.recv()
-                    logger.info(f"{self.url} {self.type} websocket connect Response: {connect_response}")
+                    self.logger.info(f"{self.url} {self.type} websocket connect Response: {connect_response}")
 
                     self.heartbeat_task =  asyncio.create_task(self.send_heartbeat(self.websocket))
 
@@ -81,12 +81,12 @@ class BitunixPublicWebSocketClient:
                 await process_func(message)
             logger.warning(f"{self.url} {self.type}  WebSocket connection closed")
         except asyncio.CancelledError:
-            logger.info(f"{self.url} {self.type}  WebSocket receive task cancelled")
+            self.logger.info(f"{self.url} {self.type}  WebSocket receive task cancelled")
             self.running = False                        
         except websockets.exceptions.ConnectionClosedError as e:
-            logger.info(f"{self.url} {self.type}  Websocket: Connection closed: {e}")
+            self.logger.info(f"{self.url} {self.type}  Websocket: Connection closed: {e}")
         except Exception as e:
-            logger.info(f"{self.url} {self.type}  Websocket: Unexpected error: {e}")
+            self.logger.info(f"{self.url} {self.type}  Websocket: Unexpected error: {e}")
             pass
         del message, process_func
         gc.collect()
@@ -97,11 +97,11 @@ class BitunixPublicWebSocketClient:
                 await websocket.send(json.dumps({"op": "ping", "ping": int(time.time())}))
                 await asyncio.sleep(30)
         except asyncio.CancelledError:
-            logger.info(f"{self.url} {self.type}  WebSocket hearbeat task cancelled")
+            self.logger.info(f"{self.url} {self.type}  WebSocket hearbeat task cancelled")
         except websockets.exceptions.ConnectionClosed:
-            logger.info(f"{self.url} {self.type}  WebSocket connection for heartbeat is closed")
+            self.logger.info(f"{self.url} {self.type}  WebSocket connection for heartbeat is closed")
         except Exception as e:
-            logger.info(f"{self.url} {self.type}  Websocket for heartbeat: Unexpected error: {e}")
+            self.logger.info(f"{self.url} {self.type}  Websocket for heartbeat: Unexpected error: {e}")
             pass       
   
     async def stop_websocket(self):
@@ -124,7 +124,7 @@ class BitunixPublicWebSocketClient:
         finally:
             # Stop the event loop
             self.loop.call_soon_threadsafe(self.loop.stop)
-            logger.info(f"{self.url} {self.type} WebSocket thread stopped and resources cleaned up.")
+            self.logger.info(f"{self.url} {self.type} WebSocket thread stopped and resources cleaned up.")
 
 class BitunixPrivateWebSocketClient:
     def __init__(self, api_key, secret_key):
@@ -149,7 +149,7 @@ class BitunixPrivateWebSocketClient:
 
         # Wait for the thread to finish
         self.loop_thread.join()
-        logger.info("Event loop stopped cleanly")
+        self.logger.info("Event loop stopped cleanly")
 
     async def run_websocket(self, process_func: Callable):
         self.running = True
@@ -157,7 +157,7 @@ class BitunixPrivateWebSocketClient:
             try:
                 async with websockets.connect(self.url, ping_interval=None, open_timeout=30) as self.websocket:
                     connect_response = await self.websocket.recv()
-                    logger.info(f"{self.url} websocket connect Response: {connect_response}")
+                    self.logger.info(f"{self.url} websocket connect Response: {connect_response}")
 
                     self.heartbeat_task = asyncio.create_task(self.send_heartbeat(self.websocket))
 
@@ -176,7 +176,7 @@ class BitunixPrivateWebSocketClient:
                     }
                     await self.websocket.send(json.dumps(login_request))
                     login_response = await self.websocket.recv()
-                    logger.info(f"{self.url} Login Response: {login_response}")
+                    self.logger.info(f"{self.url} Login Response: {login_response}")
 
                     self.recv_task = asyncio.create_task(self.receive_messages(process_func))
                     await self.recv_task                    
@@ -195,12 +195,12 @@ class BitunixPrivateWebSocketClient:
                 await process_func(message)
             logger.warning(f"{self.type} WebSocket connection closed")
         except asyncio.CancelledError:
-            logger.info(f"{self.url} WebSocket receive task cancelled")
+            self.logger.info(f"{self.url} WebSocket receive task cancelled")
             self.running = False                        
         except websockets.exceptions.ConnectionClosedError as e:
-            logger.info(f"{self.url} Websocket: Connection closed: {e}")
+            self.logger.info(f"{self.url} Websocket: Connection closed: {e}")
         except Exception as e:
-            logger.info(f"{self.url} Websocket: Unexpected error: {e}")
+            self.logger.info(f"{self.url} Websocket: Unexpected error: {e}")
             pass
         del message, process_func
         gc.collect()
@@ -211,11 +211,11 @@ class BitunixPrivateWebSocketClient:
                 await websocket.send(json.dumps({"op": "ping", "ping": int(time.time())}))
                 await asyncio.sleep(30)
         except asyncio.CancelledError:
-            logger.info(f"{self.url} WebSocket hearbeat task cancelled")
+            self.logger.info(f"{self.url} WebSocket hearbeat task cancelled")
         except websockets.exceptions.ConnectionClosed:
-            logger.info(f"{self.url} WebSocket connection for heartbeat is closed")
+            self.logger.info(f"{self.url} WebSocket connection for heartbeat is closed")
         except Exception as e:
-            logger.info(f"{self.url} Websocket for heartbeat: Unexpected error: {e}")
+            self.logger.info(f"{self.url} Websocket for heartbeat: Unexpected error: {e}")
             pass            
 
     async def stop_websocket(self):
@@ -238,7 +238,7 @@ class BitunixPrivateWebSocketClient:
         finally:
             # Stop the event loop
             self.loop.call_soon_threadsafe(self.loop.stop)
-            logger.info(f"{self.url} WebSocket thread stopped and resources cleaned up.")
+            self.logger.info(f"{self.url} WebSocket thread stopped and resources cleaned up.")
        
 
     async def generate_signature(self, api_key, secret_key, nonce):
