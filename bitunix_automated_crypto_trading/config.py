@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     LEVERAGE: int = Field(default=20, ge=1, le=100)
     ORDER_AMOUNT_PERCENTAGE: float = Field(default=0.01, ge=0.0, le=100)
     MAX_AUTO_TRADES: int = Field(default=10, ge=0)
+    PROFIT_PERCENTAGE: float = Field(default=25, ge=0.0)
+    LOSS_PERCENTAGE: float = Field(default=50, ge=0.0)
     PROFIT_AMOUNT: float = Field(default=0.25, ge=0.0)
     LOSS_AMOUNT: float = Field(default=5.0, ge=0.0)
     OPTION_MOVING_AVERAGE: str = Field(default="1h")
@@ -106,6 +108,10 @@ class Settings(BaseSettings):
 
     # Benchmark
     BENCHMARK: bool = Field(default=False)
+    
+    #DB
+    DATABASE: str = Field(default="bitunix.db")
+    
 
     class Config:
         # Specify the file name for loading environment variables
