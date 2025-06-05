@@ -87,13 +87,15 @@ class Interval:
                     df['ma_slow_angle'] = np.degrees(np.arctan(df['ma_slow_slope']))    
                     df.fillna({'ma_slow_slope':0}, inplace=True)
                     df.fillna({'ma_slow_angle':0}, inplace=True)  
+                    
+                    df['ma_spread'] = (df['ma_fast'] - df['ma_slow']).diff()
                 
                     if self.settings.EMA_CROSSING:
                         if df is not None and len(df) >= 2:
-                            if df['ma_medium'].iloc[-2] <= df['ma_slow'].iloc[-2] and df['ma_medium'].iloc[-1] > df['ma_slow'].iloc[-1]:
+                            if df['ma_medium'].iloc[-2] <= df['ma_slow'].iloc[-2] and df['ma_medium'].iloc[-1] > df['ma_slow'].iloc[-1] and df['ma_spread'].iloc[-1] > 0:   
                                 self.ema_open_signal = "BUY"
                                 self.ema_close_signal = "BUY"
-                            elif df['ma_medium'].iloc[-2] >= df['ma_slow'].iloc[-2] and df['ma_medium'].iloc[-1] < df['ma_slow'].iloc[-1]:
+                            elif df['ma_medium'].iloc[-2] >= df['ma_slow'].iloc[-2] and df['ma_medium'].iloc[-1] < df['ma_slow'].iloc[-1] and df['ma_spread'].iloc[-1] > 0:
                                 self.ema_open_signal = "SELL"
                                 self.ema_close_signal = "SELL"
                             else:
@@ -101,18 +103,18 @@ class Interval:
                                 self.ema_close_signal = "HOLD"
 
                             if self.settings.EMA_CLOSE_ON_FAST_MEDIUM:
-                                if df['ma_fast'].iloc[-2] <= df['ma_medium'].iloc[-2] and df['ma_fast'].iloc[-1] > df['ma_medium'].iloc[-1]:
+                                if df['ma_fast'].iloc[-2] <= df['ma_medium'].iloc[-2] and df['ma_fast'].iloc[-1] > df['ma_medium'].iloc[-1] and df['ma_spread'].iloc[-1] > 0:
                                     self.ema_close_signal = "BUY"
-                                elif df['ma_fast'].iloc[-2] >= df['ma_medium'].iloc[-2] and df['ma_fast'].iloc[-1] < df['ma_medium'].iloc[-1]:
+                                elif df['ma_fast'].iloc[-2] >= df['ma_medium'].iloc[-2] and df['ma_fast'].iloc[-1] < df['ma_medium'].iloc[-1] and df['ma_spread'].iloc[-1] > 0:
                                     self.ema_close_signal = "SELL"
                                 else:
                                     self.ema_close_signal = "HOLD"
                     else:
                         if df is not None and len(df) >= 1:
-                            if df['close'].iloc[-1] > df['ma_medium'].iloc[-1] and df['ma_medium'].iloc[-1] > df['ma_slow'].iloc[-1]:
+                            if df['close'].iloc[-1] > df['ma_medium'].iloc[-1] and df['ma_medium'].iloc[-1] > df['ma_slow'].iloc[-1] and df['ma_spread'].iloc[-1] > 0:
                                 self.ema_open_signal = "BUY"
                                 self.ema_close_signal = "BUY"
-                            elif df['close'].iloc[-1] < df['ma_medium'].iloc[-1] and df['ma_medium'].iloc[-1] < df['ma_slow'].iloc[-1]:
+                            elif df['close'].iloc[-1] < df['ma_medium'].iloc[-1] and df['ma_medium'].iloc[-1] < df['ma_slow'].iloc[-1] and df['ma_spread'].iloc[-1] > 0:
                                 self.ema_open_signal = "SELL"
                                 self.ema_close_signal = "SELL"
                             else:
@@ -120,9 +122,9 @@ class Interval:
                                 self.ema_close_signal = "HOLD"
 
                             if self.settings.EMA_CLOSE_ON_FAST_MEDIUM:
-                                if df['close'].iloc[-1] > df['ma_fast'].iloc[-1] and df['ma_fast'].iloc[-1] > df['ma_medium'].iloc[-1]:
+                                if df['close'].iloc[-1] > df['ma_fast'].iloc[-1] and df['ma_fast'].iloc[-1] > df['ma_medium'].iloc[-1] and df['ma_spread'].iloc[-1] > 0:
                                     self.ema_close_signal = "BUY"
-                                elif df['close'].iloc[-1] < df['ma_fast'].iloc[-1] and df['ma_fast'].iloc[-1] < df['ma_medium'].iloc[-1]:
+                                elif df['close'].iloc[-1] < df['ma_fast'].iloc[-1] and df['ma_fast'].iloc[-1] < df['ma_medium'].iloc[-1] and df['ma_spread'].iloc[-1] > 0:
                                     self.ema_close_signal = "SELL"
                                 else:
                                     self.ema_close_signal = "HOLD"
