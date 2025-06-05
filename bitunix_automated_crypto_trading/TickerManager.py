@@ -744,7 +744,6 @@ class Tickers:
                             f"{period}_cb": intervalObj.signal_strength,
                             f"{period}_barcolor": lastcandle['barcolor'],
                             f"{period}_ema_open": intervalObj.ema_open_signal,
-                            f"{period}_ema_open": intervalObj.ema_open_signal,
                             f"{period}_ema_close": intervalObj.ema_close_signal,
                             f"{period}_macd":intervalObj.macd_signal,
                             f"{period}_bbm":intervalObj.bbm_signal,
