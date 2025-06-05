@@ -194,24 +194,24 @@ The platform can be configured through the `config.py` file or `config.txt`. Key
 
 - Linux install (ubuntu 22.04)
   - sudo su -
-  - # required for TA-Lib
-  - wget https://github.com/ta-lib/ta-lib/releases/download/v0.6.4/ta-lib_0.6.4_amd64.deb
-  - sudo dpkg -i ta-lib_0.6.4_amd64.deb
-  - # change the tags/2.0 to the latest version in the script below and run it
-  - bash -c "\
-    apt-get install -y python3-pip wget unzip dos2unix && \
-    python3 -m pip install --upgrade pip && \
-    mkdir bitunix && cd bitunix && \
-    wget https://github.com/tcj2001/bitunix-automated-crypto-trading/archive/refs/tags/v3.1.8.tar.gz -O bitunix.tar.gz && \
-    mkdir code && \
-    tar --strip-components=1 -xvzf bitunix.tar.gz -C code && \
-    cd code && \
-    pip3 install -r requirements.txt && \
-    cp sampleenv.txt .env"
-  - The package will be installed in the bitunix/code directory
-  - cd bitunix/code
-  - python3 bitunix.py .env config.txt 8000 (This is the default even if you dont pass these)
-  
+  - required for TA-Lib
+    - wget https://github.com/ta-lib/ta-lib/releases/download/v0.6.4/ta-lib_0.6.4_amd64.deb
+    - sudo dpkg -i ta-lib_0.6.4_amd64.deb
+  - change the tags/3.1.8 to the latest version in the script below and run it
+    - bash -c "\
+      apt-get install -y python3-pip wget unzip dos2unix && \
+      python3 -m pip install --upgrade pip && \
+      mkdir bitunix && cd bitunix && \
+      wget https://github.com/tcj2001/bitunix-automated-crypto-trading/archive/refs/tags/v3.1.8.tar.gz -O bitunix.tar.gz && \
+      mkdir code && \
+      tar --strip-components=1 -xvzf bitunix.tar.gz -C code && \
+      cd code && \
+      pip3 install -r requirements.txt && \
+      cp sampleenv.txt .env"
+    - The package will be installed in the bitunix/code directory
+    - cd bitunix/code
+    - python3 bitunix.py .env config.txt 8000 (This is the default even if you dont pass these)
+    
   For multiple instance or bots
   - python3 bitunix.py .env1 bot1.txt 8001
   - python3 bitunix.py .env2 bot2.txt 8002
@@ -222,16 +222,16 @@ The platform can be configured through the `config.py` file or `config.txt`. Key
   - cd c:\bitunix
   - python -m venv env
   - .\env\Scripts\activate
-  - # check python version should be 3.13 or above
-  - python3 --version
-  - python -m pip install --upgrade pip
-  - pip install https://github.com/cgohlke/talib-build/releases/download/v0.6.3/ta_lib-0.6.3-cp313-cp313-win_amd64.whl
-  - # change the tags/2.0 to the latest version in the script below and run it
-  - wget https://github.com/tcj2001/bitunix-automated-crypto-trading/archive/refs/tags/2.0.zip
-  - unzip zip file and copy the content inside C:\bitunix\Ver1.0.zip\bitunix-automated-crypto-trading-Ver1.0 to c:\bitunix
+  - check python version should be 3.13 or above
+    - python3 --version
+    - python -m pip install --upgrade pip
+    - pip install https://github.com/cgohlke/talib-build/releases/download/v0.6.3/ta_lib-0.6.3-cp313-cp313-win_amd64.whl
+  - change the tags/3.1.8 to the latest version in the script below and run it
+    - wget https://github.com/tcj2001/bitunix-automated-crypto-trading/archive/refs/tags/3.1.8.zip
+    - unzip zip file and copy the content inside C:\bitunix\Ver1.0.zip\bitunix-automated-crypto-trading-Ver1.0 to c:\bitunix
   - pip install -r requirements.txt 
-  - # Make sure ta-lib is installed
-  - python -c "import talib; print(talib.get_functions());"
+  - Make sure ta-lib is installed
+    - python -c "import talib; print(talib.get_functions());"
   - copy sampleenv.txt to .env and update the keys accordingly
   - python bitunix.py 
 
