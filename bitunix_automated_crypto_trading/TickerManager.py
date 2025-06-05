@@ -89,6 +89,8 @@ class Interval:
                     df.fillna({'ma_slow_angle':0}, inplace=True)  
                     
                     df['ma_spread'] = (df['ma_fast'] - df['ma_slow']).diff()
+                    df.fillna({'ma_spread':0}, inplace=True)
+                    df.fillna({'ma_spread':0}, inplace=True)  
                 
                     if self.settings.EMA_CROSSING:
                         if df is not None and len(df) >= 2:
