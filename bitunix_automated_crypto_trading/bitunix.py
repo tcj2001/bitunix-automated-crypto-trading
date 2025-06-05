@@ -9,6 +9,7 @@ import time
 from datetime import datetime
 import pytz
 from pathlib import Path
+import re
 
 
 from ThreadManager import ThreadManager
@@ -63,14 +64,17 @@ HOST = os.getenv('HOST')
 
 logger = Logger(__name__, LOG_FILE).get_logger()
 
-#logger.info(f"secret: {SECRET}, api_key: {API_KEY}, secret_key: {SECRET_KEY}, password: {PASSWORD}, host: {HOST}, port: {port}, config_file: {config_file}")
-
+def get_version():
+    version_file = os.path.abspath("bitunix_automated_crypto_trading/version.py")
+    with open(version_file) as f:
+        return re.search(r'__version__ = "(.*?)"', f.read()).group(1)
+    
 class bitunix():
     def __init__(self, password, api_key, secret_key, settings, logger):
         self.screen_refresh_interval =settings.SCREEN_REFRESH_INTERVAL
         self.logger=logger
         self.autoTrade=settings.AUTOTRADE
-
+        self.settings = settings
         self.threadManager = ThreadManager()
         self.notifications = NotificationManager(logger)
         self.bitunixApi = BitunixApi(api_key, secret_key, settings, self.logger)
@@ -80,7 +84,7 @@ class bitunix():
         self.DB = {"admin": {"password": password}}
 
         #sqllite database connection
-        self.connection = sqlite3.connect("bitunix.db") 
+        self.connection = sqlite3.connect(self.settings.DATABASE) 
         #create table if not exist
         self.cursor = self.connection.cursor()
         #create benchmark table
@@ -88,6 +92,7 @@ class bitunix():
         
     async def update_settings(self, settings):
         self.settings = settings
+        self.settings.DATABASE = CONFIG_FILE.replace(".txt", ".db")
         await self.bitunixSignal.update_settings(settings)
         await self.bitunixApi.update_settings(settings)
 
@@ -210,8 +215,10 @@ async def read_root(request: Request):
 
 #when main page requested
 @app.get("/main", response_class=HTMLResponse)
-async def main_page(request: Request,  user=Depends(login_manager)):
-    return templates.TemplateResponse({"request": request, "user": user}, "main.html")
+async def main_page(request: Request, user=Depends(login_manager)):
+    version = get_version()
+    return templates.TemplateResponse("main.html", {"request": request, "user": user, "version": version})
+
 
 #when main page opened
 @app.websocket("/wsmain")
@@ -629,6 +636,7 @@ def main():
     
     #load config variables using setting class in config.py validating using pydantic
     settings = Settings()
+    settings.DATABASE = CONFIG_FILE.replace(".txt", ".db")
 
     bitunix = bitunix(PASSWORD, API_KEY, SECRET_KEY, settings, logger)
     bitunix.bitunixSignal.notifications.add_notification(f"Starting auto trade on port {port} using {env_file} and {config_file} ....................")

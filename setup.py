@@ -64,9 +64,14 @@ class CustomInstall(install):
                     print("sudo dpkg -i ta-lib_0.6.4_amd64.deb")
                     print("pip install TA-Lib")
 
+def get_version():
+    version_file = os.path.abspath("bitunix_automated_crypto_trading/version.py")
+    with open(version_file) as f:
+        return re.search(r'__version__ = "(.*?)"', f.read()).group(1)
+
 setup(
     name="bitunix_automated_crypto_trading",
-    version="3.1.9",
+    version=get_version(),   #Dynamically fetch version
     license="MIT",
     author="tcj2001",
     author_email="thomsonmathews@hotmail.com",

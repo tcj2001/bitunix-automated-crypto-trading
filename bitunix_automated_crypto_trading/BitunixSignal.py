@@ -92,7 +92,7 @@ class BitunixSignal:
         self.lastTickerDataTime = time.time()
         
         #sqllite database connection
-        self.connection = sqlite3.connect("bitunix.db") 
+        self.connection = sqlite3.connect(self.settings.DATABASE) 
         
     async def update_settings(self, settings):
         self.settings = settings
@@ -260,7 +260,7 @@ class BitunixSignal:
             if self.settings.VERBOSE_LOGGING:
                 self.logger.info(f"GetTickerData: elapsed time {time.time()-start}")
             if self.settings.BENCHMARK:
-                self.connection = sqlite3.connect("bitunix.db") 
+                self.connection = sqlite3.connect(self.settings.DATABASE) 
                 self.cursor = self.connection.cursor()
                 self.cursor.execute("INSERT INTO benchmark (process_name, time) VALUES (?, ?)", ("GetTickerData", time.time()-start))
                 self.connection.commit()
@@ -398,7 +398,7 @@ class BitunixSignal:
                 self.notifications.add_notification("AutoTradeProcess or GetTickerData is not running")
                 os._exit(1) 
                 break
-            await asyncio.sleep(60*30)
+            await asyncio.sleep(300)
 
     async def GetportfolioData(self):
         start=time.time()
@@ -438,11 +438,17 @@ class BitunixSignal:
                         ask=self.positiondf['symbol'].map(lambda sym: self.tickerObjects.get(sym).get_ask()),
                         askcolor=self.positiondf['symbol'].map(lambda sym: self.tickerObjects.get(sym).askcolor)
                     )
-                    #self.positiondf['roi']= round((self.positiondf['last'].astype(float) * self.positiondf['qty'].astype(float) - \
-                    #                         self.positiondf['avgOpenPrice'].astype(float) * self.positiondf['qty'].astype(float)) / \
-                    #                         (self.positiondf['avgOpenPrice'].astype(float) * self.positiondf['qty'].astype(float) / (self.settings.LEVERAGE/100))  * 10000 , 2)   
                 except Exception as e:
                     pass
+
+                self.positiondf['markprice']= (self.positiondf['bid'] + self.positiondf['ask']) / 2
+                self.positiondf = self.positiondf.astype({"unrealizedPNL": float, "realizedPNL": float, "markprice": float, "last": float, "qty": float, "avgOpenPrice": float})
+                self.positiondf['ROI'] = self.positiondf.apply(
+                    lambda row: round((row['unrealizedPNL'] / (row['qty'] * row['avgOpenPrice'])) * 100 * self.settings.LEVERAGE,2), 
+                    axis=1
+                )
+                #print(self.positiondf[['symbol', 'ROI','markprice', 'qty', 'avgOpenPrice']].head())
+                
                 self.positiondf['charts'] = self.positiondf.apply(self.add_charts_button, axis=1)
                 self.positiondf['bitunix'] = self.positiondf.apply(self.add_bitunix_button, axis=1)
                 self.positiondf['action'] = self.positiondf.apply(self.add_close_button, axis=1)
@@ -499,6 +505,12 @@ class BitunixSignal:
             self.positionHistoryData = await self.bitunixApi.GetPositionHistoryData()
             if self.positionHistoryData and 'positionList' in self.positionHistoryData:
                 self.positionHistorydf = pd.DataFrame(self.positionHistoryData['positionList'], columns=["symbol", "side","realizedPNL", "ctime", "mtime","maxQty", "closePrice","fee", "funding"])
+                self.positionHistorydf = self.positionHistorydf.astype({"realizedPNL": float, "maxQty": float, "closePrice": float})
+                self.positionHistorydf['ROI'] = self.positionHistorydf.apply(
+                    lambda row: round((row['realizedPNL'] / (row['maxQty'] * row['closePrice'])) * 100 * self.settings.LEVERAGE,2), 
+                    axis=1
+                )
+                
                 self.positionHistorydf['ctime'] = pd.to_datetime(self.positionHistorydf['ctime'].astype(float), unit='ms').dt.tz_localize('UTC').dt.tz_convert(cst).dt.strftime('%Y-%m-%d %H:%M:%S')
                 self.positionHistorydf['mtime'] = pd.to_datetime(self.positionHistorydf['mtime'].astype(float), unit='ms').dt.tz_localize('UTC').dt.tz_convert(cst).dt.strftime('%Y-%m-%d %H:%M:%S')
                 self.positionHistorydf['charts'] = self.positionHistorydf.apply(self.add_charts_button, axis=1)
@@ -506,7 +518,7 @@ class BitunixSignal:
 
             else:
                 self.positionHistorydf = pd.DataFrame()
-            self.positionHistorydfStyle= self.positionHistorydfrenderer.render_html(self.positionHistorydf)
+            self.positionHistorydfStyle= self.positionHistorydfrenderer.render_html(self.positionHistorydf[["symbol", "side", "ROI", "realizedPNL", "ctime", "mtime", "maxQty", "closePrice", "fee", "funding",  "charts", "bitunix"]])
             
         except Exception as e:
             self.logger.info(f"Function: GetPositionHistoryData, {e}, {e.args}, {type(e).__name__}")
@@ -569,7 +581,7 @@ class BitunixSignal:
                              f"{period}_ema_open", f"{period}_ema_close", f"{period}_macd", f"{period}_bbm", f"{period}_rsi", f"{period}_trendline", f"{period}_candle_trend", f"{period}_open", f"{period}_close", f"{period}_high", f"{period}_low"]
                     columns2=["qty", "side", "unrealizedPNL", "realizedPNL", "ctime", "avgOpenPrice", "bid", "bidcolor", "last", "lastcolor", "ask", "askcolor", "charts", "bitunix", "action", "add", "reduce"]
                     if set(columns).issubset(self.signaldf_full.columns) and set(columns2).issubset(self.positiondf.columns):
-                        columnOrder= ['symbol', "side",  "unrealizedPNL", "realizedPNL", f"{period}_trend", f"{period}_cb", f"{period}_barcolor", 
+                        columnOrder= ['symbol', "side", "ROI", "unrealizedPNL", "realizedPNL", f"{period}_trend", f"{period}_cb", f"{period}_barcolor", 
                                       f"{period}_bos",
                                       f"{period}_ema_open", f"{period}_ema_close", f"{period}_macd", f"{period}_bbm", f"{period}_rsi", f"{period}_trendline", f"{period}_adx", f"{period}_candle_trend", f"{period}_open", f"{period}_close", f"{period}_high", f"{period}_low", "qty", "ctime", "avgOpenPrice", "bid", "bidcolor", "last", "lastcolor", "ask", "askcolor", "charts", "bitunix", "action", "add", "reduce"]                
                         self.positiondf2 = pd.merge(self.positiondf, self.signaldf_full[["symbol", f"{period}_open", f"{period}_close", f"{period}_high", f"{period}_low", 
@@ -714,13 +726,13 @@ class BitunixSignal:
                             
                         if select and int(self.settings.MAX_AUTO_TRADES)!=0:
                         
-                            # check take portit or accept loss
+                            # check take profit amount or accept loss amount
                             if float(self.settings.LOSS_AMOUNT) > 0 and total_pnl < -float(self.settings.LOSS_AMOUNT):
                                 last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                 price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
 
                                 self.notifications.add_notification(
-                                    f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to stop loss for {row.symbol} with {row.qty} qty @ {price})'
+                                    f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to stop loss amount for {row.symbol} with {row.qty} qty @ {price})'
                                 )
                                 datajs = await self.bitunixApi.PlaceOrder(
                                     positionId=row.positionId,
@@ -737,7 +749,42 @@ class BitunixSignal:
                                 price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
 
                                 self.notifications.add_notification(
-                                    f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position  due to take profit for {row.symbol} with {row.qty} qty @ {price})'
+                                    f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position  due to take profit amount for {row.symbol} with {row.qty} qty @ {price})'
+                                )
+                                datajs = await self.bitunixApi.PlaceOrder(
+                                    positionId=row.positionId,
+                                    ticker=row.symbol,
+                                    qty=row.qty,
+                                    price=price,
+                                    side=row.side,
+                                    tradeSide="CLOSE"
+                                )
+                                continue
+
+                            # check take profit percentage or accept loss percentage
+                            if float(self.settings.LOSS_PERCENTAGE) > 0 and row['ROI'] < -float(self.settings.LOSS_PERCENTAGE):
+                                last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
+                                price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
+
+                                self.notifications.add_notification(
+                                    f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to stop loss percentage for {row.symbol} with {row.qty} qty @ {price})'
+                                )
+                                datajs = await self.bitunixApi.PlaceOrder(
+                                    positionId=row.positionId,
+                                    ticker=row.symbol,
+                                    qty=row.qty,
+                                    price=price,
+                                    side=row.side,
+                                    tradeSide="CLOSE"
+                                )
+                                continue
+
+                            if float(self.settings.PROFIT_PERCENTAGE) > 0 and row['ROI'] > float(self.settings.PROFIT_PERCENTAGE):
+                                last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
+                                price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
+
+                                self.notifications.add_notification(
+                                    f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position  due to take profit percentage for {row.symbol} with {row.qty} qty @ {price})'
                                 )
                                 datajs = await self.bitunixApi.PlaceOrder(
                                     positionId=row.positionId,
@@ -888,12 +935,12 @@ class BitunixSignal:
 
                             # BOS
                             if self.settings.BOS_STUDY and self.settings.BOS_CHECK_ON_CLOSE: 
-                                if row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_bos'] == "SELL" and total_pnl>0:
+                                if row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_bos'] == "SELL" and total_pnl < 0:
                                     last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                     price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
 
                                     self.notifications.add_notification(
-                                        f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to {period} bos for {row.symbol} with {row.qty} qty @ {price})'
+                                        f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to {period} bos revrsal for {row.symbol} with {row.qty} qty @ {price})'
                                     )
                                     datajs = await self.bitunixApi.PlaceOrder(
                                         positionId=row.positionId,
@@ -905,11 +952,11 @@ class BitunixSignal:
                                     )
                                     continue
 
-                                if row.side == 'SELL' and self.signaldf_full.at[row.symbol, f'{period}_bos'] == "BUY" and total_pnl>0:
+                                if row.side == 'SELL' and self.signaldf_full.at[row.symbol, f'{period}_bos'] == "BUY" and total_pnl <0:
                                     last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                     price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
                                     self.notifications.add_notification(
-                                        f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to {period} bos for {row.symbol} with {row.qty} qty @ {price})'
+                                        f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to {period} bos reversal for {row.symbol} with {row.qty} qty @ {price})'
                                     )
                                     datajs = await self.bitunixApi.PlaceOrder(
                                         positionId=row.positionId,
@@ -923,12 +970,12 @@ class BitunixSignal:
 
                             # TrendLine
                             if self.settings.TRENDLINE_STUDY and self.settings.TRENDLINE_CHECK_ON_CLOSE: 
-                                if row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_trendline'] == "SELL" and total_pnl>0:
+                                if row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_trendline'] == "SELL" and total_pnl < 0:
                                     last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                     price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
 
                                     self.notifications.add_notification(
-                                        f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to {period} trendline for {row.symbol} with {row.qty} qty @ {price})'
+                                        f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to {period} trendline reversalfor {row.symbol} with {row.qty} qty @ {price})'
                                     )
                                     datajs = await self.bitunixApi.PlaceOrder(
                                         positionId=row.positionId,
@@ -940,11 +987,11 @@ class BitunixSignal:
                                     )
                                     continue
 
-                                if row.side == 'SELL' and self.signaldf_full.at[row.symbol, f'{period}_trendline'] == "BUY" and total_pnl>0:
+                                if row.side == 'SELL' and self.signaldf_full.at[row.symbol, f'{period}_trendline'] == "BUY" and total_pnl < 0:
                                     last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                     price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
                                     self.notifications.add_notification(
-                                        f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to {period} trendline for {row.symbol} with {row.qty} qty @ {price})'
+                                        f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to {period} trendline reversal for {row.symbol} with {row.qty} qty @ {price})'
                                     )
                                     datajs = await self.bitunixApi.PlaceOrder(
                                         positionId=row.positionId,
@@ -992,7 +1039,7 @@ class BitunixSignal:
 
                             # candle reversed
                             if self.settings.CANDLE_TREND_STUDY and self.settings.CANDLE_TREND_REVERSAL_CHECK_ON_CLOSE:
-                                if row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_barcolor'] == self.red and self.signaldf_full.at[row.symbol, f'{period}_cb'] > 1 and self.signaldf_full.at[row.symbol, f'{period}_candle_trend'] == "BULLISH":
+                                if row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_barcolor'] == self.red and self.signaldf_full.at[row.symbol, f'{period}_cb'] > 1 and self.signaldf_full.at[row.symbol, f'{period}_candle_trend'] == "BULLISH" and total_pnl < 0:
                                     last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                     price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
 
@@ -1009,7 +1056,7 @@ class BitunixSignal:
                                     )
                                     continue
 
-                                if row.side == 'SELL' and self.signaldf_full.at[row.symbol, f'{period}_barcolor'] == self.green and self.signaldf_full.at[row.symbol, f'{period}_cb'] > 1 and self.signaldf_full.at[row.symbol, f'{period}_candle_trend'] == "BULLISH":
+                                if row.side == 'SELL' and self.signaldf_full.at[row.symbol, f'{period}_barcolor'] == self.green and self.signaldf_full.at[row.symbol, f'{period}_cb'] > 1 and self.signaldf_full.at[row.symbol, f'{period}_candle_trend'] == "BULLISH" and total_pnl < 0:
                                     last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                     price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
 
@@ -1038,7 +1085,7 @@ class BitunixSignal:
         if self.settings.VERBOSE_LOGGING:
             self.logger.info(f"AutoTradeProcess: elapsed time {time.time()-start}")
         if self.settings.BENCHMARK:
-            self.connection = sqlite3.connect("bitunix.db") 
+            self.connection = sqlite3.connect(self.settings.DATABASE) 
             self.cursor = self.connection.cursor()
             self.cursor.execute("INSERT INTO benchmark (process_name, time) VALUES (?, ?)", ("AutoTradeProcess", time.time()-start))
             self.connection.commit()

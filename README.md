@@ -57,6 +57,8 @@ The platform can be configured through the `config.py` file or `config.txt`. Key
   - `MIN_VOLUME`: Ticker selection based on Minimum trading volume
   - `ORDER_AMOUNT_PERCENTAGE`: Order size as percentage of portfolio
   - `MAX_AUTO_TRADES`: Maximum number of automated trades
+  - `PROFIT_PERCENTAGE`: Target profit ROI percentage
+  - `LOSS_PERCENTAGE`: Maximum loss ROI percentage
   - `PROFIT_AMOUNT`: Target profit amount
   - `LOSS_AMOUNT`: Maximum loss amount
   - `OPTION_MOVING_AVERAGE`: Moving average period (1h, 1d, 15m, 5m, 1m)
