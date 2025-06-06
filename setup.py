@@ -65,7 +65,7 @@ class CustomInstall(install):
                     print("pip install TA-Lib")
 
 def get_version():
-    version_file = os.path.abspath("bitunix_automated_crypto_trading/version.py")
+    version_file = os.path.abspath("version.py")
     with open(version_file) as f:
         return re.search(r'__version__ = "(.*?)"', f.read()).group(1)
 
