@@ -406,9 +406,11 @@ class BitunixSignal:
             self.portfolioData = await self.bitunixApi.GetportfolioData()
             if self.portfolioData:
                 self.portfoliodf=pd.DataFrame(self.portfolioData,index=[0])[["marginCoin","available","margin","crossUnrealizedPNL"]]
+                self.portfoliodf = self.portfoliodf.astype({"marginCoin": str, "available": float, "margin": float, "crossUnrealizedPNL": float})
+                self.portfoliodf['Value'] =round(self.portfoliodf['margin'] + self.portfoliodf['crossUnrealizedPNL'] + self.portfoliodf['available'],2)
             else:
                 self.portfolioData = pd.DataFrame()
-            self.portfoliodfStyle= self.portfoliodfrenderer.render_html(self.portfoliodf)
+            self.portfoliodfStyle= self.portfoliodfrenderer.render_html(self.portfoliodf[["Value", "marginCoin", "available", "margin", "crossUnrealizedPNL"]])
             
         except Exception as e:
             self.logger.info(f"Function: GetportfolioData, {e}, {e.args}, {type(e).__name__}")
