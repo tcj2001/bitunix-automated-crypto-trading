@@ -9,6 +9,7 @@
             "type": "debugpy",
             "request": "launch",
             "program": "${file}",
+            "cwd": "${workspaceFolder}/bitunix_automated_crypto_trading", // Specify subdirectory
             //"args": [".env", "bot1.txt", "8000"],
             "console": "integratedTerminal"
         }
