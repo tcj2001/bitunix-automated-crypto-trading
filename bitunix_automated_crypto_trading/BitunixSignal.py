@@ -75,7 +75,7 @@ class BitunixSignal:
         self.signaldf_filtered = pd.DataFrame()
 
         #websockets
-        self.bitunixPrivateWebSocketClient = BitunixPrivateWebSocketClient(self.api_key, self.secret_key)
+        self.bitunixPrivateWebSocketClient = BitunixPrivateWebSocketClient(self.api_key, self.secret_key, logger)
         
         if self.settings.USE_PUBLIC_WEBSOCKET:
             self.bitunixPublicDepthWebSocketClient = BitunixPublicWebSocketClient(self.api_key, self.secret_key, "depth", logger)
@@ -462,7 +462,7 @@ class BitunixSignal:
                 self.positiondf['ask'] = self.positiondf['ask'].astype('float64')
             else:
                 self.positiondf = pd.DataFrame()
-            #self.positiondfStyle= self.positiondfrenderer.render_html(self.positiondf)    
+                self.positiondfStyle= self.positiondfrenderer.render_html(self.positiondf)    
 
             #if not self.settings.USE_PUBLIC_WEBSOCKET:                    
             #get bid las ask using api for the symbols in pending psotion
@@ -1041,7 +1041,7 @@ class BitunixSignal:
 
                             # candle reversed
                             if self.settings.CANDLE_TREND_STUDY and self.settings.CANDLE_TREND_REVERSAL_CHECK_ON_CLOSE:
-                                if row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_barcolor'] == self.red and self.signaldf_full.at[row.symbol, f'{period}_cb'] > 1 and self.signaldf_full.at[row.symbol, f'{period}_candle_trend'] == "BULLISH" and total_pnl < 0:
+                                if row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_barcolor'] == self.red and self.signaldf_full.at[row.symbol, f'{period}_cb'] > 1 and self.signaldf_full.at[row.symbol, f'{period}_candle_trend'] == "BEARISH" and total_pnl < 0:
                                     last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                     price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
 

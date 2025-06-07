@@ -56,10 +56,10 @@ class BitunixPublicWebSocketClient:
                     self.recv_task = asyncio.create_task(self.receive_messages(process_func))
                     await self.recv_task                    
             except websockets.exceptions.ConnectionClosedError as e:
-                logger.warning(f"{self.url} {self.type}  WebSocket connection closed. Retrying in 5 seconds: {e}")
+                self.logger.warning(f"{self.url} {self.type}  WebSocket connection closed. Retrying in 5 seconds: {e}")
                 await asyncio.sleep(5)  # Delay before retrying
             except Exception as e:
-                logger.error(f"{self.url} {self.type} Unexpected error during WebSocket operation: {e}")
+                self.logger.error(f"{self.url} {self.type} Unexpected error during WebSocket operation: {e}")
                 await asyncio.sleep(5)  # Delay before retrying
     
     def create_subscription_message(self, ticker):
@@ -79,7 +79,7 @@ class BitunixPublicWebSocketClient:
             while self.running:
                 message = await self.websocket.recv()
                 await process_func(message)
-            logger.warning(f"{self.url} {self.type}  WebSocket connection closed")
+            self.logger.warning(f"{self.url} {self.type}  WebSocket connection closed")
         except asyncio.CancelledError:
             self.logger.info(f"{self.url} {self.type}  WebSocket receive task cancelled")
             self.running = False                        
@@ -120,14 +120,14 @@ class BitunixPublicWebSocketClient:
                self.loop.call_soon_threadsafe(self.websocket.close)  # 
  
         except Exception as e:
-            logger.error(f"{self.url} {self.type} Unexpected error during WebSocket shutdown: {e}")
+            self.logger.error(f"{self.url} {self.type} Unexpected error during WebSocket shutdown: {e}")
         finally:
             # Stop the event loop
             self.loop.call_soon_threadsafe(self.loop.stop)
             self.logger.info(f"{self.url} {self.type} WebSocket thread stopped and resources cleaned up.")
 
 class BitunixPrivateWebSocketClient:
-    def __init__(self, api_key, secret_key):
+    def __init__(self, api_key, secret_key, logger):
         self.api_key = api_key
         self.secret_key = secret_key
         self.url = "wss://fapi.bitunix.com/private/"
@@ -136,6 +136,7 @@ class BitunixPrivateWebSocketClient:
         self.loop = asyncio.new_event_loop()
         self.loop_thread = threading.Thread(target=self.start_loop)
         self.loop_thread.daemon = True  # Ensure the thread closes with the program
+        self.logger=logger
         self.loop_thread.start()
 
 
@@ -182,10 +183,10 @@ class BitunixPrivateWebSocketClient:
                     await self.recv_task                    
 
             except websockets.exceptions.ConnectionClosedError as e:
-                logger.warning(f"{self.type} WebSocket connection closed. Retrying in 5 seconds: {e}")
+                self.logger.warning(f"{self.type} WebSocket connection closed. Retrying in 5 seconds: {e}")
                 await asyncio.sleep(5)  # Delay before retrying
             except Exception as e:
-                logger.error(f"Unexpected error during {self.type} WebSocket operation: {e}")
+                self.logger.error(f"Unexpected error during {self.type} WebSocket operation: {e}")
                 await asyncio.sleep(5)  # Delay before retrying
 
     async def receive_messages(self, process_func: Callable):
@@ -193,7 +194,7 @@ class BitunixPrivateWebSocketClient:
             while self.running:
                 message = await self.websocket.recv()
                 await process_func(message)
-            logger.warning(f"{self.type} WebSocket connection closed")
+            self.logger.warning(f"{self.type} WebSocket connection closed")
         except asyncio.CancelledError:
             self.logger.info(f"{self.url} WebSocket receive task cancelled")
             self.running = False                        
@@ -234,7 +235,7 @@ class BitunixPrivateWebSocketClient:
                self.loop.call_soon_threadsafe(self.websocket.close)  # 
  
         except Exception as e:
-            logger.error(f"Unexpected error during {self.url} WebSocket shutdown: {e}")
+            self.logger.error(f"Unexpected error during {self.url} WebSocket shutdown: {e}")
         finally:
             # Stop the event loop
             self.loop.call_soon_threadsafe(self.loop.stop)
