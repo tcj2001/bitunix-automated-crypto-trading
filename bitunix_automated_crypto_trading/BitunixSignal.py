@@ -111,7 +111,10 @@ class BitunixSignal:
                 olist = [entry['symbol'] for entry in self.pendingOrders['orderList']]
             newlist=olist+plist+list(set(symbols))
             self.tickerList=newlist[:300]
-            self.tickerList.remove("STMXUSDT")
+            if "STMXUSDT" in self.tickerList:
+                self.tickerList.remove("STMXUSDT")
+            if "AMBUSDT" in self.tickerList:
+                self.tickerList.remove("AMBUSDT")
             #self.tickerList=['POLUSDT']
         else:
             self.tickerList = self.settings.TICKERS.split(",")
@@ -636,6 +639,39 @@ class BitunixSignal:
         del inuse1, inuse2, inuseTickers
         gc.collect()
 
+    async def get_duration_minutes_unixtime(self, trade_time_unix):
+        """Calculates the duration in minutes from trade time to current time."""
+        current_time_unix = int(time.time())  # Get current Unix timestamp
+        duration_seconds = current_time_unix - trade_time_unix
+        duration_minutes = duration_seconds / 60  # Convert seconds to minutes
+        return round(duration_minutes)
+    
+    async def get_duration(self,datetime_str):
+        """Calculates the duration in minutes from a given datetime string to the current time."""
+        # Convert input datetime string to a datetime object
+        trade_time = datetime.strptime(datetime_str, "%Y-%m-%d %H:%M:%S")
+        
+        # Convert datetime object to Unix timestamp
+        trade_time_unix = int(trade_time.timestamp())
+
+        # Get current Unix timestamp
+        current_time_unix = int(time.time())
+
+        # Calculate duration in minutes
+        duration_minutes = (current_time_unix - trade_time_unix) / 60
+        
+        return round(duration_minutes)
+
+    
+
+    async def calculate_candles(self, timeframe, duration_minutes):
+        
+        timeframe_dict = {"5m": 5, "15m": 15, "1h": 60, "1d": 1440}  # 1 day = 1440 minutes
+        if timeframe in timeframe_dict:
+            return duration_minutes // timeframe_dict[timeframe]
+        else:
+            return np.nan
+
     async def AutoTradeProcess(self):
         if self.settings.VERBOSE_LOGGING:
             self.logger.info(f"AutoTradeProcess started")
@@ -714,6 +750,10 @@ class BitunixSignal:
                     total_pnl = unrealized_pnl + realized_pnl
                     side=row['side']
 
+                    ctime = row['ctime']
+                    duration_minutes = await self.get_duration(ctime)
+                    no_of_candles = await self.calculate_candles(period, duration_minutes)
+                    
                     requiredCols=[f'{period}_open', f'{period}_close', f'{period}_high', f'{period}_low', f'{period}_ema_open', f"{period}_ema_close", f'{period}_macd', f'{period}_bbm', f'{period}_rsi', f'{period}_trendline', f'{period}_candle_trend', f'{period}_trend', f'{period}_cb', f'{period}_barcolor']    
                     required_cols = set(requiredCols)
 

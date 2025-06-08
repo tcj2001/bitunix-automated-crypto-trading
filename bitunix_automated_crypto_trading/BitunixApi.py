@@ -193,7 +193,7 @@ class BitunixApi:
         except Exception as e:
             stack = traceback.extract_stack()
             function_name = stack[-2].name
-            logger.error(f"Function: {function_name}, {e}, {e.args}, {type(e).__name__}")
+            self.logger.error(f"Function: {function_name}, {e}, {e.args}, {type(e).__name__}")
 
     async def GetTickersPair(self, tickersStr):
         try:
@@ -204,7 +204,7 @@ class BitunixApi:
         except Exception as e:
             stack = traceback.extract_stack()
             function_name = stack[-2].name
-            logger.error(f"Function: {function_name}, {e}, {e.args}, {type(e).__name__}")
+            self.logger.error(f"Function: {function_name}, {e}, {e.args}, {type(e).__name__}")
 
     async def GetTickerList(self, threshold, volume):
         symbols=[]
