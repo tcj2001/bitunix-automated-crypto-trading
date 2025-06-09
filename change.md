@@ -1,7 +1,7 @@
 # Change Log
 
-## version 3.2.6 ##
-Default config: 
+##version 3.2.6##
+Default config:
 Will open a trade ema_crossing or bbm_crosing or macd_crossing or rsi_crossing or bos_breakout or trendline_breakout happens and adx is strong and candle_trend is bullish.
 Will close a trade profit percentage is 10% or loss percentage is 10%
 
