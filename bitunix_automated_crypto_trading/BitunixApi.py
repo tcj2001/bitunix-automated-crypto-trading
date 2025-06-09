@@ -145,7 +145,7 @@ class BitunixApi:
                 "slPrice": stopLossPrice,
                 "slStopType":'MARK_PRICE',
                 "slStopType": self.settings.PROFIT_LOSS_PRICE_TYPE,
-                "slpOrderType": self.settings.PROFIT_LOSS_ORDER_TYPE,
+                "slOrderType": self.settings.PROFIT_LOSS_ORDER_TYPE,
                 "positionId":positionId
             }
             datajs = await self._post_authenticated(self.placeOrder_Url,data)
@@ -159,7 +159,7 @@ class BitunixApi:
                 "tradeSide":tradeSide,
                 "tpPrice": takeProfitPrice,
                 "tpStopType": self.settings.PROFIT_LOSS_PRICE_TYPE,
-                "tppOrderType": self.settings.PROFIT_LOSS_ORDER_TYPE,
+                "tpOrderType": self.settings.PROFIT_LOSS_ORDER_TYPE,
                 "tpOrderPrice":takeProfitPrice,
                 "positionId":positionId
             }
@@ -174,11 +174,11 @@ class BitunixApi:
                 "tradeSide":tradeSide,
                 "tpPrice": takeProfitPrice,
                 "tpStopType": self.settings.PROFIT_LOSS_PRICE_TYPE,
-                "tppOrderType": self.settings.PROFIT_LOSS_ORDER_TYPE,
+                "tpOrderType": self.settings.PROFIT_LOSS_ORDER_TYPE,
                 "tpOrderPrice":takeProfitPrice,
                 "slPrice": stopLossPrice,
                 "slStopType": self.settings.PROFIT_LOSS_PRICE_TYPE,
-                "slpOrderType": self.settings.PROFIT_LOSS_ORDER_TYPE,
+                "slOrderType": self.settings.PROFIT_LOSS_ORDER_TYPE,
                 "slOrderPrice": stopLossPrice,
                 "positionId":positionId
             }

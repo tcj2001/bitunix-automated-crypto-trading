@@ -705,6 +705,7 @@ class BitunixSignal:
                     for index, row in df.iterrows():
                         
                         # Calculate the duration in minutes since the position was opened
+                        await asyncio.sleep(5)
                         data = await self.bitunixApi.GetPositionHistoryData({'symbol': row['symbol']})
                         xtime = float(data['positionList'][0]['mtime'])
                         mtime = pd.to_datetime(xtime, unit='ms').tz_localize('UTC').tz_convert(cst).strftime('%Y-%m-%d %H:%M:%S')
