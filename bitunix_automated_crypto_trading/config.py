@@ -10,18 +10,19 @@ class Settings(BaseSettings):
     
     #Ticker list
     TICKERS:str = Field(default="")
-    THRESHOLD: float = Field(default=5.0, ge=0.0)
-    MIN_VOLUME: int = Field(default=10_000_000, ge=0)
+    THRESHOLD: float = Field(default=100.0, ge=0.0)
+    MIN_VOLUME: int = Field(default=500000000, ge=0)
 
     # Trading Parameters
     LEVERAGE: int = Field(default=20, ge=1, le=100)
-    ORDER_AMOUNT_PERCENTAGE: float = Field(default=0.01, ge=0.0, le=100)
+    ORDER_AMOUNT_PERCENTAGE: float = Field(default=10, ge=0.0, le=100)
     MAX_AUTO_TRADES: int = Field(default=10, ge=0)
-    PROFIT_PERCENTAGE: float = Field(default=25, ge=0.0)
-    LOSS_PERCENTAGE: float = Field(default=50, ge=0.0)
-    PROFIT_AMOUNT: float = Field(default=0.25, ge=0.0)
+    PROFIT_PERCENTAGE: float = Field(default=10, ge=0.0)
+    LOSS_PERCENTAGE: float = Field(default=10, ge=0.0)
+    PROFIT_AMOUNT: float = Field(default=0, ge=0.0)
     LOSS_AMOUNT: float = Field(default=5.0, ge=0.0)
     OPTION_MOVING_AVERAGE: str = Field(default="1h")
+    DELAY_IN_MINUTES_FOR_SAME_TICKER_TRADES: int = Field(default=15, ge=0)
     BARS: int = Field(default=100, ge=1)
 
     # Technical Indicators Parameters
@@ -40,50 +41,50 @@ class Settings(BaseSettings):
     # Technical Indicators
     OPEN_ON_ANY_SIGNAL: bool = Field(default=True)
 
-    BOS_PERIOD: int = Field(default=20, ge=1)
-    BOS_STUDY: bool = Field(default=True)
-    BOS_CHART: bool = Field(default=True)
-    BOS_CHECK_ON_OPEN: bool = Field(default=False)
-    BOS_CHECK_ON_CLOSE: bool = Field(default=False)
-
     EMA_CHART: bool = Field(default=True)
     EMA_STUDY: bool = Field(default=True)
     EMA_CROSSING: bool = Field(default=False)
     EMA_CHECK_ON_OPEN: bool = Field(default=True)
     EMA_CHECK_ON_CLOSE: bool = Field(default=True)
-    EMA_CLOSE_ON_FAST_MEDIUM: bool = Field(default=True)
+    EMA_CLOSE_ON_FAST_MEDIUM: bool = Field(default=False)
 
-    MACD_CHART: bool = Field(default=False)
+    MACD_CHART: bool = Field(default=True)
     MACD_STUDY: bool = Field(default=True)
-    MACD_CROSSING: bool = Field(default=False)
-    MACD_CHECK_ON_OPEN: bool = Field(default=False)
+    MACD_CROSSING: bool = Field(default=True)
+    MACD_CHECK_ON_OPEN: bool = Field(default=True)
     MACD_CHECK_ON_CLOSE: bool = Field(default=False)
 
-    BBM_CHART: bool = Field(default=False)
+    BBM_CHART: bool = Field(default=True)
     BBM_STUDY: bool = Field(default=True)
-    BBM_CROSSING: bool = Field(default=False)
-    BBM_CHECK_ON_OPEN: bool = Field(default=False)
+    BBM_CROSSING: bool = Field(default=True)
+    BBM_CHECK_ON_OPEN: bool = Field(default=True)
     BBM_CHECK_ON_CLOSE: bool = Field(default=False)
 
-    RSI_CHART: bool = Field(default=False)
+    RSI_CHART: bool = Field(default=True)
     RSI_STUDY: bool = Field(default=True)
-    RSI_CROSSING: bool = Field(default=False)
-    RSI_CHECK_ON_OPEN: bool = Field(default=False)
+    RSI_CROSSING: bool = Field(default=True)
+    RSI_CHECK_ON_OPEN: bool = Field(default=True)
     RSI_CHECK_ON_CLOSE: bool = Field(default=False)
 
-    TRENDLINE_PEAK_DISTANCE: int = Field(default=1, ge=0, le=30)
+    BOS_PERIOD: int = Field(default=24, ge=1)
+    BOS_STUDY: bool = Field(default=True)
+    BOS_CHART: bool = Field(default=True)
+    BOS_CHECK_ON_OPEN: bool = Field(default=True)
+    BOS_CHECK_ON_CLOSE: bool = Field(default=False)
+
+    TRENDLINE_PEAK_DISTANCE: int = Field(default=3, ge=0, le=30)
     TRENDLINE_CHART: bool = Field(default=True)
     TRENDLINE_STUDY: bool = Field(default=True)
-    TRENDLINE_BREAKOUT: bool = Field(default=False)
-    TRENDLINE_CHECK_ON_OPEN: bool = Field(default=False)
+    TRENDLINE_BREAKOUT: bool = Field(default=True)
+    TRENDLINE_CHECK_ON_OPEN: bool = Field(default=True)
     TRENDLINE_CHECK_ON_CLOSE: bool = Field(default=False)
 
     ADX_STUDY: bool = Field(default=True)
-    ADX_CHECK_ON_OPEN: bool = Field(default=False)
+    ADX_CHECK_ON_OPEN: bool = Field(default=True)
     ADX_CHECK_ON_CLOSE: bool = Field(default=False)
 
     CANDLE_TREND_STUDY: bool = Field(default=True)
-    CANDLE_TREND_CHECK_ON_OPEN: bool = Field(default=False)
+    CANDLE_TREND_CHECK_ON_OPEN: bool = Field(default=True)
     CANDLE_TREND_REVERSAL_CHECK_ON_CLOSE: bool = Field(default=False)
 
     # Time Intervals

@@ -616,7 +616,7 @@ async def stream_log_file(websocket: WebSocket):
             lines = log_file.readlines()
             # Determine starting point: offset_from_end
             start_index = max(len(lines) - 100, 0)
-            for line in lines[start_index:]:  # Yield existing lines from offset
+            for line in  reversed(lines[start_index:]):  # Yield existing lines from offset
                 await websocket.send_text(line)
             # Stream new lines added to the file
             log_file.seek(0, 2)  # Go to the end of the file

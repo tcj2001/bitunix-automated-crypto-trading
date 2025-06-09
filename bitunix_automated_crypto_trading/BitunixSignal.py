@@ -618,7 +618,6 @@ class BitunixSignal:
                     self.signaldf['sell'] = self.signaldf.apply(self.add_sell_button, axis=1)
                 else:
                     self.signaldf = pd.DataFrame()
-                self.signaldfStyle= self.signaldfrenderer.render_html(self.signaldf)
 
                 #if not self.settings.USE_PUBLIC_WEBSOCKET:                    
                 #get bid las ask using api for max_auto_trades rows
@@ -632,6 +631,9 @@ class BitunixSignal:
                                 for index, row in self.signaldf[:m].iterrows()
                             ]
                         )  
+            else:
+                self.signaldf = pd.DataFrame()                        
+            self.signaldfStyle= self.signaldfrenderer.render_html(self.signaldf)
 
         except Exception as e:
             self.logger.info(f"Function: BuySellList, {e}, {e.args}, {type(e).__name__}")
@@ -701,26 +703,35 @@ class BitunixSignal:
                     #open position upto a max of max_auto_trades from the signal list
                     df=self.signaldf.copy(deep=False)
                     for index, row in df.iterrows():
-                        side = "BUY" if row[f'{period}_barcolor'] == self.green and row[f'{period}_trend'] == "BUY"  else "SELL" if row[f'{period}_barcolor'] == self.red and row[f'{period}_trend'] == "SELL" else ""
-                        if side != "":
-                            select = True
-                            self.pendingPositions = await self.bitunixApi.GetPendingPositionData({'symbol': row.symbol})
-                            if self.pendingPositions and len(self.pendingPositions) == 1:
-                                select = False
-                            self.pendingOrders = await self.bitunixApi.GetPendingOrderData({'symbol': row.symbol})
-                            if self.pendingOrders and len(self.pendingOrders['orderList']) == 1:
-                                select = False
-                            if select:
-                                last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
-                                price = (bid if side == "BUY" else ask if side == "SELL" else last) if bid<=last<=ask else last
-                                balance = float(self.portfoliodf["available"].iloc[0]) + float(self.portfoliodf["crossUnrealizedPNL"].iloc[0])
-                                qty= str(max(balance * (float(self.settings.ORDER_AMOUNT_PERCENTAGE) / 100) / price * int(self.settings.LEVERAGE),mtv))
+                        
+                        # Calculate the duration in minutes since the position was opened
+                        data = await self.bitunixApi.GetPositionHistoryData({'symbol': row['symbol']})
+                        xtime = float(data['positionList'][0]['mtime'])
+                        mtime = pd.to_datetime(xtime, unit='ms').tz_localize('UTC').tz_convert(cst).strftime('%Y-%m-%d %H:%M:%S')
+                        duration_minutes = await self.get_duration(mtime)
+                        if duration_minutes > self.settings.DELAY_IN_MINUTES_FOR_SAME_TICKER_TRADES:
+                            side = "BUY" if row[f'{period}_barcolor'] == self.green and row[f'{period}_trend'] == "BUY"  else "SELL" if row[f'{period}_barcolor'] == self.red and row[f'{period}_trend'] == "SELL" else ""
+                            if side != "":
+                                select = True
+                                self.pendingPositions = await self.bitunixApi.GetPendingPositionData({'symbol': row.symbol})
+                                if self.pendingPositions and len(self.pendingPositions) == 1:
+                                    select = False
+                                self.pendingOrders = await self.bitunixApi.GetPendingOrderData({'symbol': row.symbol})
+                                if self.pendingOrders and len(self.pendingOrders['orderList']) == 1:
+                                    select = False
+                                if select:
+                                    last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
+                                    price = (bid if side == "BUY" else ask if side == "SELL" else last) if bid<=last<=ask else last
+                                    balance = float(self.portfoliodf["available"].iloc[0]) + float(self.portfoliodf["crossUnrealizedPNL"].iloc[0])
+                                    qty= str(max(balance * (float(self.settings.ORDER_AMOUNT_PERCENTAGE) / 100) / price * int(self.settings.LEVERAGE),mtv))
 
-                                self.notifications.add_notification(
-                                    f'{colors.YELLOW} Opening {"long" if side=="BUY" else "short"} position for {row.symbol} with {qty} qty @ {price})'
-                                )
-                                datajs = await self.bitunixApi.PlaceOrder(row.symbol, qty, price, side)
-                                count=count+1
+                                    self.notifications.add_notification(
+                                        f'{colors.YELLOW} Opening {"long" if side=="BUY" else "short"} position for {row.symbol} with {qty} qty @ {price})'
+                                    )
+                                    datajs = await self.bitunixApi.PlaceOrder(row.symbol, qty, price, side)
+                                    count=count+1
+                        else:
+                            self.logger.info(f"Skipping {row.symbol} as it has been opened for less than {self.settings.DELAY_IN_MINUTES_FOR_SAME_TICKER_TRADES} minutes")
                         if count >= int(self.settings.MAX_AUTO_TRADES):
                             break
                         await asyncio.sleep(0)
@@ -750,9 +761,10 @@ class BitunixSignal:
                     total_pnl = unrealized_pnl + realized_pnl
                     side=row['side']
 
+                    # Calculate the duration in minutes since the position was opened
                     ctime = row['ctime']
                     duration_minutes = await self.get_duration(ctime)
-                    no_of_candles = await self.calculate_candles(period, duration_minutes)
+                    no_of_candles_since_current_open = await self.calculate_candles(period, duration_minutes)
                     
                     requiredCols=[f'{period}_open', f'{period}_close', f'{period}_high', f'{period}_low', f'{period}_ema_open', f"{period}_ema_close", f'{period}_macd', f'{period}_bbm', f'{period}_rsi', f'{period}_trendline', f'{period}_candle_trend', f'{period}_trend', f'{period}_cb', f'{period}_barcolor']    
                     required_cols = set(requiredCols)

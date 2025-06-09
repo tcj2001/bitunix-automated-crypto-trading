@@ -268,16 +268,16 @@ class Interval:
                         
                         if df is not None and len(df) >= 2:
                             if self.settings.TRENDLINE_BREAKOUT:
-                                if df['close'].iloc[-1] > df['trend_resistance_line'].iloc[-1]:     
+                                if df['close'].iloc[-1] > df['trend_resistance_line'].iloc[-1] and df['trend_resistance_line'].iloc[-1] > df['trend_support_line'].iloc[-1]:     
                                         self.trendline_signal = "BUY"
-                                elif df['close'].iloc[-1] < df['trend_support_line'].iloc[-1]:     
+                                elif df['close'].iloc[-1] < df['trend_support_line'].iloc[-1] and df['trend_resistance_line'].iloc[-1] > df['trend_support_line'].iloc[-1]:     
                                         self.trendline_signal = "SELL"
                                 else:
                                     self.trendline_signal = "HOLD"
                             else:
-                                if df['close'].iloc[-1] < df['trend_resistance_line'].iloc[-1]  and df['close'].iloc[-2] < df['open'].iloc[-2] and df['close'].iloc[-1] < df['open'].iloc[-1]:
+                                if df['close'].iloc[-1] < df['trend_resistance_line'].iloc[-1]  and df['close'].iloc[-2] < df['open'].iloc[-2] and df['close'].iloc[-1] < df['open'].iloc[-1]  and df['trend_resistance_line'].iloc[-1] > df['trend_support_line'].iloc[-1]:
                                     self.trendline_signal = "SELL"
-                                elif df['close'].iloc[-1] > df['trend_support_line'].iloc[-1] and df['close'].iloc[-2] > df['open'].iloc[-2] and df['close'].iloc[-1] > df['open'].iloc[-1]:
+                                elif df['close'].iloc[-1] > df['trend_support_line'].iloc[-1] and df['close'].iloc[-2] > df['open'].iloc[-2] and df['close'].iloc[-1] > df['open'].iloc[-1]  and df['trend_resistance_line'].iloc[-1] > df['trend_support_line'].iloc[-1]:
                                     self.trendline_signal = "BUY"
                                 else:
                                     self.trendline_signal = "HOLD"
@@ -334,9 +334,10 @@ class Interval:
                         (self.settings.TRENDLINE_STUDY and self.settings.TRENDLINE_CHECK_ON_OPEN and self.trendline_signal == "BUY")
                     )
                     additional_buy_conditions = (
-                        (not self.settings.ADX_STUDY or not self.settings.ADX_CHECK_ON_OPEN or self.adx_signal == "STRONG") or
+                        (not self.settings.ADX_STUDY or not self.settings.ADX_CHECK_ON_OPEN or self.adx_signal == "STRONG") and
                         (not self.settings.CANDLE_TREND_STUDY or not self.settings.CANDLE_TREND_CHECK_ON_OPEN or self.candle_trend == "BULLISH")
                     )
+
 
                     # Check for SELL signal
                     sell_conditions = (
@@ -348,7 +349,7 @@ class Interval:
                         (self.settings.TRENDLINE_STUDY and self.settings.TRENDLINE_CHECK_ON_OPEN and self.trendline_signal == "SELL")
                     )
                     additional_sell_conditions = (
-                        (self.settings.ADX_STUDY and self.settings.ADX_CHECK_ON_OPEN and self.adx_signal == "STRONG") or
+                        (self.settings.ADX_STUDY and self.settings.ADX_CHECK_ON_OPEN and self.adx_signal == "STRONG") and
                         (self.settings.CANDLE_TREND_STUDY and self.settings.CANDLE_TREND_CHECK_ON_OPEN or self.candle_trend == "BEARISH")
                     )
 
