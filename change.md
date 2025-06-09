@@ -5,8 +5,8 @@ if LOSS_PERCANTAGE, LOSS_AMOUNT is > 0 then The trade is opened with stop loss t
 _PERCANTAGE has greater priority over _AMOUNT. 
 
 Added 2 new config
-PROFIT_LOSS_PRICE_TYPE: "MARK_PRICE" or "LAST_PRICE"
-PROFIT_LOSS_ORDER_TYPE: "MARKET" or "LIMIT" 
+PROFIT_LOSS_PRICE_TYPE -> this can be "MARK_PRICE" or "LAST_PRICE"
+PROFIT_LOSS_ORDER_TYPE -> this can be "MARKET" or "LIMIT" 
 
 
 ## version 3.2.6 ##
