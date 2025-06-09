@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     LOSS_PERCENTAGE: float = Field(default=10, ge=0.0)
     PROFIT_AMOUNT: float = Field(default=0, ge=0.0)
     LOSS_AMOUNT: float = Field(default=5.0, ge=0.0)
+    PROFIT_LOSS_PRICE_TYPE: str = Field(default="MARK_PRICE", pattern=r"^(MARK_PRICE|LAST_PRICE)$")
+    PROFIT_LOSS_ORDER_TYPE: str = Field(default="LIMIT", pattern=r"^(MARKET|LIMIT)$")
     OPTION_MOVING_AVERAGE: str = Field(default="1h")
     DELAY_IN_MINUTES_FOR_SAME_TICKER_TRADES: int = Field(default=15, ge=0)
     BARS: int = Field(default=100, ge=1)

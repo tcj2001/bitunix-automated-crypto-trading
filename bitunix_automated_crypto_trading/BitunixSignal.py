@@ -721,14 +721,36 @@ class BitunixSignal:
                                     select = False
                                 if select:
                                     last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
+
                                     price = (bid if side == "BUY" else ask if side == "SELL" else last) if bid<=last<=ask else last
+
+                                    tp_price=0
+                                    if self.settings.PROFIT_AMOUNT > 0:
+                                        tp_price = price * (1 + float(self.settings.PROFIT_AMOUNT)) if side == "BUY" else price * (1 - float(self.settings.PROFIT_AMOUNT))
+                                    if self.settings.PROFIT_PERCENTAGE > 0 or self.settings.PROFIT_AMOUNT > 0:
+                                        tp_price = price * (1 + float(self.settings.PROFIT_PERCENTAGE) / 100 / self.settings.LEVERAGE) if side == "BUY" else price * (1 - float(self.settings.PROFIT_PERCENTAGE) / 100 / self.settings.LEVERAGE)
+
+                                    lp_price=0
+                                    if self.settings.LOSS_AMOUNT > 0:
+                                        lp_price = price * (1 - float(self.settings.LOSS_AMOUNT)) if side == "BUY" else price * (1 + float(self.settings.LOSS_AMOUNT))
+                                    if self.settings.LOSS_PERCENTAGE > 0 or self.settings.LOSS_AMOUNT > 0:
+                                        lp_price = price * (1 - float(self.settings.LOSS_PERCENTAGE) / 100 / self.settings.LEVERAGE) if side == "BUY" else price * (1 + float(self.settings.LOSS_PERCENTAGE) / 100 / self.settings.LEVERAGE)
+                                        
                                     balance = float(self.portfoliodf["available"].iloc[0]) + float(self.portfoliodf["crossUnrealizedPNL"].iloc[0])
-                                    qty= str(max(balance * (float(self.settings.ORDER_AMOUNT_PERCENTAGE) / 100) / price * int(self.settings.LEVERAGE),mtv))
+                                    qty= str(max(balance * (float(self.settings.ORDER_AMOUNT_PERCENTAGE) / 100 ) / price * int(self.settings.LEVERAGE),mtv))
 
                                     self.notifications.add_notification(
                                         f'{colors.YELLOW} Opening {"long" if side=="BUY" else "short"} position for {row.symbol} with {qty} qty @ {price})'
                                     )
-                                    datajs = await self.bitunixApi.PlaceOrder(row.symbol, qty, price, side)
+                                    datajs = None
+                                    if tp_price == 0 and lp_price == 0:
+                                        datajs = await self.bitunixApi.PlaceOrder(row.symbol, qty, price, side)
+                                    elif tp_price == 0:
+                                        datajs = await self.bitunixApi.PlaceOrder(row.symbol, qty, price, side, stopLossPrice=lp_price)
+                                    elif lp_price == 0:
+                                        datajs = await self.bitunixApi.PlaceOrder(row.symbol, qty, price, side, takeProfitPrice=tp_price)
+                                    else:   
+                                        datajs = await self.bitunixApi.PlaceOrder(row.symbol, qty, price, side, takeProfitPrice=tp_price, stopLossPrice=lp_price)
                                     count=count+1
                         else:
                             self.logger.info(f"Skipping {row.symbol} as it has been opened for less than {self.settings.DELAY_IN_MINUTES_FOR_SAME_TICKER_TRADES} minutes")
@@ -746,7 +768,7 @@ class BitunixSignal:
             current_time = time.time() * 1000
             df=self.orderdf.copy(deep=False)
             for index, row in df.iterrows():
-                if current_time - int(row.ctime) > 60000:
+                if current_time - int(row.ctime) > 6000000000:
                     self.notifications.add_notification(
                         f'{colors.LBLUE} Canceling order {row.orderId}, {row.symbol} {row.qty} created at {row.rtime} '
                     )
@@ -780,76 +802,6 @@ class BitunixSignal:
                             
                         if select and int(self.settings.MAX_AUTO_TRADES)!=0:
                         
-                            # check take profit amount or accept loss amount
-                            if float(self.settings.LOSS_AMOUNT) > 0 and total_pnl < -float(self.settings.LOSS_AMOUNT):
-                                last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
-                                price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
-
-                                self.notifications.add_notification(
-                                    f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to stop loss amount for {row.symbol} with {row.qty} qty @ {price})'
-                                )
-                                datajs = await self.bitunixApi.PlaceOrder(
-                                    positionId=row.positionId,
-                                    ticker=row.symbol,
-                                    qty=row.qty,
-                                    price=price,
-                                    side=row.side,
-                                    tradeSide="CLOSE"
-                                )
-                                continue
-
-                            if float(self.settings.PROFIT_AMOUNT) > 0 and total_pnl > float(self.settings.PROFIT_AMOUNT):
-                                last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
-                                price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
-
-                                self.notifications.add_notification(
-                                    f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position  due to take profit amount for {row.symbol} with {row.qty} qty @ {price})'
-                                )
-                                datajs = await self.bitunixApi.PlaceOrder(
-                                    positionId=row.positionId,
-                                    ticker=row.symbol,
-                                    qty=row.qty,
-                                    price=price,
-                                    side=row.side,
-                                    tradeSide="CLOSE"
-                                )
-                                continue
-
-                            # check take profit percentage or accept loss percentage
-                            if float(self.settings.LOSS_PERCENTAGE) > 0 and row['ROI'] < -float(self.settings.LOSS_PERCENTAGE):
-                                last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
-                                price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
-
-                                self.notifications.add_notification(
-                                    f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position due to stop loss percentage for {row.symbol} with {row.qty} qty @ {price})'
-                                )
-                                datajs = await self.bitunixApi.PlaceOrder(
-                                    positionId=row.positionId,
-                                    ticker=row.symbol,
-                                    qty=row.qty,
-                                    price=price,
-                                    side=row.side,
-                                    tradeSide="CLOSE"
-                                )
-                                continue
-
-                            if float(self.settings.PROFIT_PERCENTAGE) > 0 and row['ROI'] > float(self.settings.PROFIT_PERCENTAGE):
-                                last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
-                                price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
-
-                                self.notifications.add_notification(
-                                    f'{colors.CYAN} Closing {"long" if side=="BUY" else "short"} position  due to take profit percentage for {row.symbol} with {row.qty} qty @ {price})'
-                                )
-                                datajs = await self.bitunixApi.PlaceOrder(
-                                    positionId=row.positionId,
-                                    ticker=row.symbol,
-                                    qty=row.qty,
-                                    price=price,
-                                    side=row.side,
-                                    tradeSide="CLOSE"
-                                )
-                                continue
-
                             # Moving average comparison between fast and medium or medium and slow
                             if self.settings.EMA_STUDY and self.settings.EMA_CHECK_ON_CLOSE: 
                                 if row.side == 'BUY' and self.signaldf_full.at[row.symbol, f'{period}_ema_close'] == "SELL":

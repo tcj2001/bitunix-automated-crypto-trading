@@ -18,6 +18,7 @@ class BitunixApi:
         self.api_key = api_key
         self.secret_key = secret_key
         self.logger = logger
+        self.settings = settings
         self.session = requests.Session()
         self.session.headers.update({
             'Content-Type': 'application/json',
@@ -119,18 +120,70 @@ class BitunixApi:
         response.raise_for_status()
         return response.json()
 
-    async def PlaceOrder(self, ticker, qty, price, side, positionId=0, tradeSide="OPEN",reduceOnly=False):
-        data = {
-            "side": side,
-            "orderType":"LIMIT",
-            "qty":  qty,
-            "price": price,
-            "symbol": ticker,
-            "tradeSide":tradeSide,
-            "reduceOnly":reduceOnly,
-            "positionId":positionId
-        }
-        datajs = await self._post_authenticated(self.placeOrder_Url,data)
+    async def PlaceOrder(self, ticker, qty, price, side, positionId=0, tradeSide="OPEN",reduceOnly=False, takeProfitPrice=0, stopLossPrice=0):
+        datajs = None
+        if takeProfitPrice == 0 or stopLossPrice == 0:
+            data = {
+                "side": side,
+                "orderType":"LIMIT",
+                "qty":  qty,
+                "price": price,
+                "symbol": ticker,
+                "tradeSide":tradeSide,
+                "reduceOnly":reduceOnly,
+                "positionId":positionId
+            }
+            datajs = await self._post_authenticated(self.placeOrder_Url,data)
+        elif takeProfitPrice == 0:
+            data = {
+                "side": side,
+                "orderType":"LIMIT",
+                "qty":  qty,
+                "price": price,
+                "symbol": ticker,
+                "tradeSide":tradeSide,
+                "slPrice": stopLossPrice,
+                "slStopType":'MARK_PRICE',
+                "slStopType": self.settings.PROFIT_LOSS_PRICE_TYPE,
+                "slpOrderType": self.settings.PROFIT_LOSS_ORDER_TYPE,
+                "positionId":positionId
+            }
+            datajs = await self._post_authenticated(self.placeOrder_Url,data)
+        elif stopLossPrice == 0:
+            data = {
+                "side": side,
+                "orderType":"LIMIT",
+                "qty":  qty,
+                "price": price,
+                "symbol": ticker,
+                "tradeSide":tradeSide,
+                "tpPrice": takeProfitPrice,
+                "tpStopType": self.settings.PROFIT_LOSS_PRICE_TYPE,
+                "tppOrderType": self.settings.PROFIT_LOSS_ORDER_TYPE,
+                "tpOrderPrice":takeProfitPrice,
+                "positionId":positionId
+            }
+            datajs = await self._post_authenticated(self.placeOrder_Url,data)
+        else:
+            data = {
+                "side": side,
+                "orderType":"LIMIT",
+                "qty":  qty,
+                "price": price,
+                "symbol": ticker,
+                "tradeSide":tradeSide,
+                "tpPrice": takeProfitPrice,
+                "tpStopType": self.settings.PROFIT_LOSS_PRICE_TYPE,
+                "tppOrderType": self.settings.PROFIT_LOSS_ORDER_TYPE,
+                "tpOrderPrice":takeProfitPrice,
+                "slPrice": stopLossPrice,
+                "slStopType": self.settings.PROFIT_LOSS_PRICE_TYPE,
+                "slpOrderType": self.settings.PROFIT_LOSS_ORDER_TYPE,
+                "slOrderPrice": stopLossPrice,
+                "positionId":positionId
+            }
+            datajs = await self._post_authenticated(self.placeOrder_Url,data)
+            
         return datajs
 
     async def FlashClose(self, positionId):

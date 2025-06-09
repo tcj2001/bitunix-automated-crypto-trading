@@ -59,9 +59,12 @@ The platform can be configured through the `config.py` file or `config.txt`. Key
   - `MAX_AUTO_TRADES`: Maximum number of automated trades
   - `PROFIT_PERCENTAGE`: Target profit ROI percentage
   - `LOSS_PERCENTAGE`: Maximum loss ROI percentage
+  - `PROFIT_LOSS_PRICE_TYPE`: "MARK_PRICE" or "LAST_PRICE"
+  - `PROFIT_LOSS_ORDER_TYPE`: "MARKET" or "LIMIT" 
   - `PROFIT_AMOUNT`: Target profit amount
   - `LOSS_AMOUNT`: Maximum loss amount
   - `OPTION_MOVING_AVERAGE`: Moving average period (1h, 1d, 15m, 5m, 1m)
+  - `DELAY_IN_MINUTES_FOR_SAME_TICKER_TRADES`: Delay in minutes to prohibit trading the same ticker again
   - `BARS`: Number of bars to use for study and charting
     
   - `Technical Indicators Parameters`:

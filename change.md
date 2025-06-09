@@ -1,6 +1,15 @@
 # Change Log
+## version 3.2.7 ##
+if PROFIT_PERCANTAGE, PROFIT_AMOUNT is > 0 then The trade is opened with take profit trade immediately instead of bot placing it after profit is reached.
+if LOSS_PERCANTAGE, LOSS_AMOUNT is > 0 then The trade is opened with stop loss trade immediately instead of bot placing it after loss is reached.
+_PERCANTAGE has greater priority over _AMOUNT. 
 
-##version 3.2.6##
+Added 2 new config
+PROFIT_LOSS_PRICE_TYPE: "MARK_PRICE" or "LAST_PRICE"
+PROFIT_LOSS_ORDER_TYPE: "MARKET" or "LIMIT" 
+
+
+## version 3.2.6 ##
 Default config:
 Will open a trade ema_crossing or bbm_crosing or macd_crossing or rsi_crossing or bos_breakout or trendline_breakout happens and adx is strong and candle_trend is bullish.
 Will close a trade profit percentage is 10% or loss percentage is 10%
