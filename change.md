@@ -1,4 +1,10 @@
 # Change Log
+## version 3.3.0 ##
+Fix for takeprofit and stoploss calculation
+## version 3.2.9 ##
+fixed a bug
+## version 3.2.8 ##
+fixed a bug
 ## version 3.2.7 ##
 if PROFIT_PERCANTAGE, PROFIT_AMOUNT is > 0 then The trade is opened with take profit trade immediately instead of bot placing it after profit is reached.
 if LOSS_PERCANTAGE, LOSS_AMOUNT is > 0 then The trade is opened with stop loss trade immediately instead of bot placing it after loss is reached.

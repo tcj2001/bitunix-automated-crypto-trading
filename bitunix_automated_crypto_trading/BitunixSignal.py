@@ -3,6 +3,8 @@ import pandas as pd
 import json
 import asyncio
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal
+
 from collections import defaultdict
 import traceback
 import time
@@ -664,7 +666,18 @@ class BitunixSignal:
         
         return round(duration_minutes)
 
-    
+    async def str_precision(self,num):
+        num_decimal = Decimal(str(num))  # Convert to Decimal to preserve precision
+        decimal_places = abs(num_decimal.as_tuple().exponent)  # Get original decimal places
+        return f"{num:.{decimal_places}f}"  # Format with the original precision
+
+    async def increment_by_last_decimal(self, value_str):
+        value = Decimal(value_str)
+        # Count number of decimal places
+        decimal_places = abs(value.as_tuple().exponent)
+        increment = Decimal(f'1e-{decimal_places}')
+        return float(value + increment)
+
 
     async def calculate_candles(self, timeframe, duration_minutes):
         
@@ -703,14 +716,16 @@ class BitunixSignal:
                     #open position upto a max of max_auto_trades from the signal list
                     df=self.signaldf.copy(deep=False)
                     for index, row in df.iterrows():
-                        
-                        # Calculate the duration in minutes since the position was opened
                         await asyncio.sleep(5)
+                        data=None
+                        # Calculate the duration in minutes since the position was opened
                         data = await self.bitunixApi.GetPositionHistoryData({'symbol': row['symbol']})
-                        xtime = float(data['positionList'][0]['mtime'])
-                        mtime = pd.to_datetime(xtime, unit='ms').tz_localize('UTC').tz_convert(cst).strftime('%Y-%m-%d %H:%M:%S')
-                        duration_minutes = await self.get_duration(mtime)
-                        if duration_minutes > self.settings.DELAY_IN_MINUTES_FOR_SAME_TICKER_TRADES:
+                        duration_minutes = None
+                        if data and 'positionList' in data and len(data['positionList']) > 0:
+                            xtime = float(data['positionList'][0]['mtime'])
+                            mtime = pd.to_datetime(xtime, unit='ms').tz_localize('UTC').tz_convert(cst).strftime('%Y-%m-%d %H:%M:%S')
+                            duration_minutes = await self.get_duration(mtime)
+                        if duration_minutes > self.settings.DELAY_IN_MINUTES_FOR_SAME_TICKER_TRADES or duration_minutes is None:
                             side = "BUY" if row[f'{period}_barcolor'] == self.green and row[f'{period}_trend'] == "BUY"  else "SELL" if row[f'{period}_barcolor'] == self.red and row[f'{period}_trend'] == "SELL" else ""
                             if side != "":
                                 select = True
@@ -721,37 +736,54 @@ class BitunixSignal:
                                 if self.pendingOrders and len(self.pendingOrders['orderList']) == 1:
                                     select = False
                                 if select:
+                                    balance = float(self.portfoliodf["available"].iloc[0]) + float(self.portfoliodf["crossUnrealizedPNL"].iloc[0])
+
                                     last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
 
                                     price = (bid if side == "BUY" else ask if side == "SELL" else last) if bid<=last<=ask else last
-
-                                    tp_price=0
-                                    if self.settings.PROFIT_AMOUNT > 0:
-                                        tp_price = price * (1 + float(self.settings.PROFIT_AMOUNT)) if side == "BUY" else price * (1 - float(self.settings.PROFIT_AMOUNT))
-                                    if self.settings.PROFIT_PERCENTAGE > 0 or self.settings.PROFIT_AMOUNT > 0:
-                                        tp_price = price * (1 + float(self.settings.PROFIT_PERCENTAGE) / 100 / self.settings.LEVERAGE) if side == "BUY" else price * (1 - float(self.settings.PROFIT_PERCENTAGE) / 100 / self.settings.LEVERAGE)
-
-                                    lp_price=0
-                                    if self.settings.LOSS_AMOUNT > 0:
-                                        lp_price = price * (1 - float(self.settings.LOSS_AMOUNT)) if side == "BUY" else price * (1 + float(self.settings.LOSS_AMOUNT))
-                                    if self.settings.LOSS_PERCENTAGE > 0 or self.settings.LOSS_AMOUNT > 0:
-                                        lp_price = price * (1 - float(self.settings.LOSS_PERCENTAGE) / 100 / self.settings.LEVERAGE) if side == "BUY" else price * (1 + float(self.settings.LOSS_PERCENTAGE) / 100 / self.settings.LEVERAGE)
-                                        
-                                    balance = float(self.portfoliodf["available"].iloc[0]) + float(self.portfoliodf["crossUnrealizedPNL"].iloc[0])
                                     qty= str(max(balance * (float(self.settings.ORDER_AMOUNT_PERCENTAGE) / 100 ) / price * int(self.settings.LEVERAGE),mtv))
+
+                                    decimal_places = abs(Decimal(str(price)).as_tuple().exponent)
+                                    
+                                    tpPrice=0
+                                    tpOrderPrice=0
+                                    if self.settings.PROFIT_AMOUNT > 0:
+                                        tpPrice = (price * qty + float(self.settings.PROFIT_AMOUNT))/qty if side == "BUY" else (price * qty - float(self.settings.PROFIT_AMOUNT))/qty
+                                        tpPrice = Decimal(await self.str_precision(tpPrice))
+                                        tpPrice =float(str(tpPrice.quantize(Decimal(f'1e-{decimal_places}'))))
+                                        tpOrderPrice = await self.increment_by_last_decimal(str(tpPrice))
+                                    if self.settings.PROFIT_PERCENTAGE > 0 or self.settings.PROFIT_AMOUNT > 0:
+                                        tpPrice = price * (1 + float(self.settings.PROFIT_PERCENTAGE) / 100 / self.settings.LEVERAGE) if side == "BUY" else price * (1 - float(self.settings.PROFIT_PERCENTAGE) / 100 / self.settings.LEVERAGE)
+                                        tpPrice = Decimal(await self.str_precision(tpPrice))
+                                        tpPrice = float(str(tpPrice.quantize(Decimal(f'1e-{decimal_places}'))))
+                                        tpOrderPrice = await self.increment_by_last_decimal(await self.str_precision(tpPrice))
+
+                                    slPrice=0
+                                    slOrderPrice=0
+                                    if self.settings.LOSS_AMOUNT > 0:
+                                        slPrice = (price * qty - float(self.settings.LOSS_AMOUNT))/qty if side == "BUY" else (price * qty + float(self.settings.LOSS_AMOUNT))/qty
+                                        slPrice = Decimal(await self.str_precision(slPrice))
+                                        slPrice = float(str(slPrice.quantize(Decimal(f'1e-{decimal_places}'))))
+                                        slOrderPrice = await self.increment_by_last_decimal(str(slPrice))
+                                    if self.settings.LOSS_PERCENTAGE > 0 or self.settings.LOSS_AMOUNT > 0:
+                                        slPrice = price * (1 - float(self.settings.LOSS_PERCENTAGE) / 100 / self.settings.LEVERAGE) if side == "BUY" else price * (1 + float(self.settings.LOSS_PERCENTAGE) / 100 / self.settings.LEVERAGE)
+                                        slPrice = Decimal(await self.str_precision(slPrice))
+                                        slPrice = float(str(slPrice.quantize(Decimal(f'1e-{decimal_places}'))))
+                                        slOrderPrice = await self.increment_by_last_decimal(await self.str_precision(slPrice))
+                                        
 
                                     self.notifications.add_notification(
                                         f'{colors.YELLOW} Opening {"long" if side=="BUY" else "short"} position for {row.symbol} with {qty} qty @ {price})'
                                     )
                                     datajs = None
-                                    if tp_price == 0 and lp_price == 0:
+                                    if tpPrice == 0 and slPrice == 0:
                                         datajs = await self.bitunixApi.PlaceOrder(row.symbol, qty, price, side)
-                                    elif tp_price == 0:
-                                        datajs = await self.bitunixApi.PlaceOrder(row.symbol, qty, price, side, stopLossPrice=lp_price)
-                                    elif lp_price == 0:
-                                        datajs = await self.bitunixApi.PlaceOrder(row.symbol, qty, price, side, takeProfitPrice=tp_price)
+                                    elif tpPrice == 0:
+                                        datajs = await self.bitunixApi.PlaceOrder(row.symbol, qty, price, side, slPrice=slPrice, slOrderPrice=slOrderPrice)
+                                    elif slPrice == 0:
+                                        datajs = await self.bitunixApi.PlaceOrder(row.symbol, qty, price, side, tpPrice=tpPrice, tpOrderPrice=tpOrderPrice)
                                     else:   
-                                        datajs = await self.bitunixApi.PlaceOrder(row.symbol, qty, price, side, takeProfitPrice=tp_price, stopLossPrice=lp_price)
+                                        datajs = await self.bitunixApi.PlaceOrder(row.symbol, qty, price, side, tpPrice=tpPrice, tpOrderPrice=tpOrderPrice, slPrice=slPrice, slOrderPrice=slOrderPrice)
                                     count=count+1
                         else:
                             self.logger.info(f"Skipping {row.symbol} as it has been opened for less than {self.settings.DELAY_IN_MINUTES_FOR_SAME_TICKER_TRADES} minutes")

@@ -120,9 +120,9 @@ class BitunixApi:
         response.raise_for_status()
         return response.json()
 
-    async def PlaceOrder(self, ticker, qty, price, side, positionId=0, tradeSide="OPEN",reduceOnly=False, takeProfitPrice=0, stopLossPrice=0):
+    async def PlaceOrder(self, ticker, qty, price, side, positionId=0, tradeSide="OPEN",reduceOnly=False, tpPrice=0, tpOrderPrice=0, slPrice=0, slOrderPrice=0):
         datajs = None
-        if takeProfitPrice == 0 or stopLossPrice == 0:
+        if tpPrice == 0 and slPrice == 0:
             data = {
                 "side": side,
                 "orderType":"LIMIT",
@@ -134,7 +134,7 @@ class BitunixApi:
                 "positionId":positionId
             }
             datajs = await self._post_authenticated(self.placeOrder_Url,data)
-        elif takeProfitPrice == 0:
+        elif tpPrice == 0:
             data = {
                 "side": side,
                 "orderType":"LIMIT",
@@ -142,14 +142,14 @@ class BitunixApi:
                 "price": price,
                 "symbol": ticker,
                 "tradeSide":tradeSide,
-                "slPrice": stopLossPrice,
-                "slStopType":'MARK_PRICE',
+                "slPrice": slPrice,
                 "slStopType": self.settings.PROFIT_LOSS_PRICE_TYPE,
                 "slOrderType": self.settings.PROFIT_LOSS_ORDER_TYPE,
+                "slOrderPrice": slOrderPrice,
                 "positionId":positionId
             }
             datajs = await self._post_authenticated(self.placeOrder_Url,data)
-        elif stopLossPrice == 0:
+        elif slPrice == 0:
             data = {
                 "side": side,
                 "orderType":"LIMIT",
@@ -157,10 +157,10 @@ class BitunixApi:
                 "price": price,
                 "symbol": ticker,
                 "tradeSide":tradeSide,
-                "tpPrice": takeProfitPrice,
+                "tpPrice": tpPrice,
                 "tpStopType": self.settings.PROFIT_LOSS_PRICE_TYPE,
                 "tpOrderType": self.settings.PROFIT_LOSS_ORDER_TYPE,
-                "tpOrderPrice":takeProfitPrice,
+                "tpOrderPrice":tpOrderPrice,
                 "positionId":positionId
             }
             datajs = await self._post_authenticated(self.placeOrder_Url,data)
@@ -172,14 +172,14 @@ class BitunixApi:
                 "price": price,
                 "symbol": ticker,
                 "tradeSide":tradeSide,
-                "tpPrice": takeProfitPrice,
+                "tpPrice": tpPrice,
                 "tpStopType": self.settings.PROFIT_LOSS_PRICE_TYPE,
                 "tpOrderType": self.settings.PROFIT_LOSS_ORDER_TYPE,
-                "tpOrderPrice":takeProfitPrice,
-                "slPrice": stopLossPrice,
+                "tpOrderPrice":tpOrderPrice,
+                "slPrice": slPrice,
                 "slStopType": self.settings.PROFIT_LOSS_PRICE_TYPE,
                 "slOrderType": self.settings.PROFIT_LOSS_ORDER_TYPE,
-                "slOrderPrice": stopLossPrice,
+                "slOrderPrice": slOrderPrice,
                 "positionId":positionId
             }
             datajs = await self._post_authenticated(self.placeOrder_Url,data)
