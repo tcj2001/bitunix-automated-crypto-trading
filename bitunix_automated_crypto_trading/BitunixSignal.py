@@ -725,7 +725,7 @@ class BitunixSignal:
                             xtime = float(data['positionList'][0]['mtime'])
                             mtime = pd.to_datetime(xtime, unit='ms').tz_localize('UTC').tz_convert(cst).strftime('%Y-%m-%d %H:%M:%S')
                             duration_minutes = await self.get_duration(mtime)
-                        if duration_minutes > self.settings.DELAY_IN_MINUTES_FOR_SAME_TICKER_TRADES or duration_minutes is None:
+                        if duration_minutes is None or duration_minutes > self.settings.DELAY_IN_MINUTES_FOR_SAME_TICKER_TRADES:
                             side = "BUY" if row[f'{period}_barcolor'] == self.green and row[f'{period}_trend'] == "BUY"  else "SELL" if row[f'{period}_barcolor'] == self.red and row[f'{period}_trend'] == "SELL" else ""
                             if side != "":
                                 select = True
