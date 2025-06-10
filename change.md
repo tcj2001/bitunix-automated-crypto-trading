@@ -1,4 +1,6 @@
 # Change Log
+## version 3.3.1 ##
+bug fix
 ## version 3.3.0 ##
 Fix for takeprofit and stoploss calculation
 ## version 3.2.9 ##
