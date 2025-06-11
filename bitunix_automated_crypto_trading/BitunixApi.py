@@ -143,8 +143,8 @@ class BitunixApi:
                 "symbol": ticker,
                 "tradeSide":tradeSide,
                 "slPrice": slPrice,
-                "slStopType": self.settings.PROFIT_LOSS_PRICE_TYPE,
-                "slOrderType": self.settings.PROFIT_LOSS_ORDER_TYPE,
+                "slStopType": self.settings.STOP_LOSS_PRICE_TYPE,
+                "slOrderType": self.settings.STOP_LOSS_ORDER_TYPE,
                 "slOrderPrice": slOrderPrice,
                 "positionId":positionId
             }
@@ -158,8 +158,8 @@ class BitunixApi:
                 "symbol": ticker,
                 "tradeSide":tradeSide,
                 "tpPrice": tpPrice,
-                "tpStopType": self.settings.PROFIT_LOSS_PRICE_TYPE,
-                "tpOrderType": self.settings.PROFIT_LOSS_ORDER_TYPE,
+                "tpStopType": self.settings.TAKE_PROFIT_PRICE_TYPE,
+                "tpOrderType": self.settings.TAKE_PROFIT_ORDER_TYPE,
                 "tpOrderPrice":tpOrderPrice,
                 "positionId":positionId
             }
@@ -173,12 +173,12 @@ class BitunixApi:
                 "symbol": ticker,
                 "tradeSide":tradeSide,
                 "tpPrice": tpPrice,
-                "tpStopType": self.settings.PROFIT_LOSS_PRICE_TYPE,
-                "tpOrderType": self.settings.PROFIT_LOSS_ORDER_TYPE,
+                "tpStopType": self.settings.TAKE_PROFIT_PRICE_TYPE,
+                "tpOrderType": self.settings.TAKE_PROFIT_ORDER_TYPE,
                 "tpOrderPrice":tpOrderPrice,
                 "slPrice": slPrice,
-                "slStopType": self.settings.PROFIT_LOSS_PRICE_TYPE,
-                "slOrderType": self.settings.PROFIT_LOSS_ORDER_TYPE,
+                "slStopType": self.settings.STOP_LOSS_PRICE_TYPE,
+                "slOrderType": self.settings.STOP_LOSS_ORDER_TYPE,
                 "slOrderPrice": slOrderPrice,
                 "positionId":positionId
             }

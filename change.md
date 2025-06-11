@@ -1,12 +1,30 @@
 # Change Log
+## version 3.3.2 ##
+removed config
+PROFIT_LOSS_PRICE_TYPE
+PROFIT_LOSS_ORDER_TYPE
+
+and new added config
+BOT_TAKE_PROFIT_STOP_LOSS=False  
+    if false take_prodit and stop loss will be placed when the trade is opened, 
+    if true then take profit and stop loss will be placed by the bot when take profit or stop loss is reached. 
+TAKE_PROFIT_PRICE_TYPE -> this can be "MARK_PRICE" or "LAST_PRICE"
+TAKE_PROFIT_ORDER_TYPE=LIMIT -> this can be "MARKET" or "LIMIT" 
+STOP_LOSS_PRICE_TYPE=MARK_PRICE -> this can be "MARK_PRICE" or "LAST_PRICE"
+STOP_LOSS_ORDER_TYPE=MARKET -> this can be "MARKET" or "LIMIT" 
+
 ## version 3.3.1 ##
 bug fix
+
 ## version 3.3.0 ##
 Fix for takeprofit and stoploss calculation
+
 ## version 3.2.9 ##
 fixed a bug
+
 ## version 3.2.8 ##
 fixed a bug
+
 ## version 3.2.7 ##
 if PROFIT_PERCANTAGE, PROFIT_AMOUNT is > 0 then The trade is opened with take profit trade immediately instead of bot placing it after profit is reached.
 if LOSS_PERCANTAGE, LOSS_AMOUNT is > 0 then The trade is opened with stop loss trade immediately instead of bot placing it after loss is reached.
