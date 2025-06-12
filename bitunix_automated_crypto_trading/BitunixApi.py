@@ -33,8 +33,13 @@ class BitunixApi:
         self.depth_Url='https://fapi.bitunix.com/api/v1/futures/market/depth'
         self.placeOrder_Url="https://fapi.bitunix.com/api/v1/futures/trade/place_order"
         self.flashClose_Url="https://fapi.bitunix.com/api/v1/futures/trade/flash_close_position"
+        self.get_order_url="https://fapi.bitunix.com/api/v1/futures/trade/get_order_detail"
         self.pending_order_url="https://fapi.bitunix.com/api/v1/futures/trade/get_pending_orders"
         self.cancelOrder_Url="https://fapi.bitunix.com/api/v1/futures/trade/cancel_orders"
+        self.pending_tpsl_order_url="https://fapi.bitunix.com/api/v1/futures/tpsl/get_pending_orders"
+        self.place_tpsl_order_url="https://fapi.bitunix.com/api/v1/futures/tpsl/position/place_order"
+        self.modify_tpsl_order_url="https://fapi.bitunix.com/api/v1/futures/tpsl/position/modify_order"
+        self.cancel_tpsl_Order_Url="https://fapi.bitunix.com/api/v1/futures/tpsl/cancel_order"
         self.Trade_history_Url="https://fapi.bitunix.com/api/v1/futures/trade/get_history_trades"
         self.position_history_Url="https://fapi.bitunix.com/api/v1/futures/position/get_history_positions"
  
@@ -143,8 +148,8 @@ class BitunixApi:
                 "symbol": ticker,
                 "tradeSide":tradeSide,
                 "slPrice": slPrice,
-                "slStopType": self.settings.STOP_LOSS_PRICE_TYPE,
-                "slOrderType": self.settings.STOP_LOSS_ORDER_TYPE,
+                "slStopType": self.settings.SL_STOP_TYPE,
+                "slOrderType": self.settings.SL_ORDER_TYPE,
                 "slOrderPrice": slOrderPrice,
                 "positionId":positionId
             }
@@ -158,8 +163,8 @@ class BitunixApi:
                 "symbol": ticker,
                 "tradeSide":tradeSide,
                 "tpPrice": tpPrice,
-                "tpStopType": self.settings.TAKE_PROFIT_PRICE_TYPE,
-                "tpOrderType": self.settings.TAKE_PROFIT_ORDER_TYPE,
+                "tpStopType": self.settings.TP_STOP_TYPE,
+                "tpOrderType": self.settings.TP_ORDER_TYPE,
                 "tpOrderPrice":tpOrderPrice,
                 "positionId":positionId
             }
@@ -173,12 +178,12 @@ class BitunixApi:
                 "symbol": ticker,
                 "tradeSide":tradeSide,
                 "tpPrice": tpPrice,
-                "tpStopType": self.settings.TAKE_PROFIT_PRICE_TYPE,
-                "tpOrderType": self.settings.TAKE_PROFIT_ORDER_TYPE,
+                "tpStopType": self.settings.TP_STOP_TYPE,
+                "tpOrderType": self.settings.TP_ORDER_TYPE,
                 "tpOrderPrice":tpOrderPrice,
                 "slPrice": slPrice,
-                "slStopType": self.settings.STOP_LOSS_PRICE_TYPE,
-                "slOrderType": self.settings.STOP_LOSS_ORDER_TYPE,
+                "slStopType": self.settings.SL_STOP_TYPE,
+                "slOrderType": self.settings.SL_ORDER_TYPE,
                 "slOrderPrice": slOrderPrice,
                 "positionId":positionId
             }
@@ -201,12 +206,19 @@ class BitunixApi:
         datajs = await self._post_authenticated(self.cancelOrder_Url,data)
         return datajs
 
-    async def GetTradeHistoryData(self):
-        tradeHistory=await self._get_authenticated(self.Trade_history_Url)
+    async def GetTradeHistoryData(self, dictparm={}):
+        tradeHistory=await self._get_authenticated(self.Trade_history_Url, dictparm)
         if tradeHistory['code']==0:
             return tradeHistory['data']
         else:
             self.logger.info(tradeHistory['msg'])
+
+    async def GetOrderData(self, dictparm={}):
+        orders=await self._get_authenticated(self.get_order_url, dictparm)
+        if orders['code']==0:
+            return orders['data']
+        else:
+            self.logger.info(orders['msg'])
 
     async def GetPendingOrderData(self,dictparm={}):
         orders=await self._get_authenticated(self.pending_order_url, dictparm)
@@ -214,6 +226,35 @@ class BitunixApi:
             return orders['data']
         else:
             self.logger.info(orders['msg'])
+
+    async def GetPendingTpSlOrderData(self,dictparm={}):
+        orders=await self._get_authenticated(self.pending_tpsl_order_url, dictparm)
+        if orders['code']==0:
+            return orders['data']
+        else:
+            self.logger.info(orders['msg'])
+
+    async def PlaceTpSlOrder(self,dictparm={}):
+        orders=await self._get_authenticated(self.place_tpsl_order_url, dictparm)
+        if orders['code']==0:
+            return orders['data']
+        else:
+            self.logger.info(orders['msg'])
+
+    async def ModifyTpSlOrder(self,dictparm={}):
+        orders=await self._get_authenticated(self.modify_tpsl_order_url, dictparm)
+        if orders['code']==0:
+            return orders['data']
+        else:
+            self.logger.info(orders['msg'])
+
+    async def CancelTpSlOrder(self, symbol, orderId):
+        data = {
+            "symbol": symbol,
+            "orderId":orderId
+        }
+        datajs = await self._post_authenticated(self.cancel_tpsl_Order_Url,data)
+        return datajs
 
     async def GetPendingPositionData(self, dictparm={}):
         positions=await self._get_authenticated(self.pending_positions_URL, dictparm)
