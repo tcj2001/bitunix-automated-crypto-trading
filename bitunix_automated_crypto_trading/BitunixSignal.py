@@ -646,6 +646,7 @@ class BitunixSignal:
     async def get_duration_minutes_unixtime(self, trade_time_unix):
         """Calculates the duration in minutes from trade time to current time."""
         current_time_unix = int(time.time())  # Get current Unix timestamp
+        print(f"Current time (Unix): {current_time_unix}, Trade time (Unix): {trade_time_unix}")
         duration_seconds = current_time_unix - trade_time_unix
         duration_minutes = duration_seconds / 60  # Convert seconds to minutes
         return round(duration_minutes)
@@ -838,6 +839,77 @@ class BitunixSignal:
                             select = False
                             
                         if select and int(self.settings.MAX_AUTO_TRADES)!=0:
+                            if self.settings.BOT_TRAIL_STOP_LOSS and self.settings.PROFIT_PERCENTAGE > 0 and self.settings.LOSS_PERCENTAGE > 0:
+                                last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
+                                price = (bid if side == "BUY" else ask if side == "SELL" else last) if bid<=last<=ask else last
+                                decimal_places = abs(Decimal(str(price)).as_tuple().exponent)                                
+
+                                symbol = row['symbol']
+                                positionId = row['positionId']
+                                avgOpenPrice = float(row['avgOpenPrice'])
+                                qty = float(row['qty'])
+
+                                tpPrice = avgOpenPrice * (1 + float(self.settings.PROFIT_PERCENTAGE) / 100 / self.settings.LEVERAGE) if side == "BUY" else avgOpenPrice * (1 - float(self.settings.PROFIT_PERCENTAGE) / 100 / self.settings.LEVERAGE) 
+                                tpPrice = Decimal(await self.str_precision(tpPrice))
+                                tpPrice =float(str(tpPrice.quantize(Decimal(f'1e-{decimal_places}'))))
+                                
+                                tpPrice90 = avgOpenPrice * (1 + float(self.settings.PROFIT_PERCENTAGE*0.9) / 100 / self.settings.LEVERAGE) if side == "BUY" else avgOpenPrice * (1 - float(self.settings.PROFIT_PERCENTAGE*0.9) / 100 / self.settings.LEVERAGE)
+                                tpPrice90 = Decimal(await self.str_precision(tpPrice90))
+                                tpPrice90 =float(str(tpPrice90.quantize(Decimal(f'1e-{decimal_places}'))))
+
+                                tpPrice50 = avgOpenPrice * (1 + float(self.settings.PROFIT_PERCENTAGE*0.5) / 100 / self.settings.LEVERAGE) if side == "BUY" else avgOpenPrice * (1 - float(self.settings.PROFIT_PERCENTAGE*0.5) / 100 / self.settings.LEVERAGE)
+                                tpPrice50 = Decimal(await self.str_precision(tpPrice50))
+                                tpPrice50 =float(str(tpPrice50.quantize(Decimal(f'1e-{decimal_places}'))))
+                                
+                                slPrice = last * (1 - float(self.settings.LOSS_PERCENTAGE) / 100 / self.settings.LEVERAGE) if side == "BUY" else last * (1 + float(self.settings.LOSS_PERCENTAGE) / 100 / self.settings.LEVERAGE)
+                                slorderId = None
+                                slStopType = self.settings.SL_STOP_TYPE
+                                slOrderType = self.settings.SL_ORDER_TYPE
+                                datajs = await self.bitunixApi.GetPendingTpSlOrderData({'symbol': symbol})
+                                if datajs:
+                                    for order in datajs:
+                                        if order['slPrice'] is not None:
+                                            slorderId = order['id']
+                                            slStopType = order['slStopType']
+                                            slOrderType = order['slOrderType']
+                                            slPrice = float(order['slPrice'])
+
+                                slPrice = Decimal(await self.str_precision(slPrice))
+                                slPrice = float(str(slPrice.quantize(Decimal(f'1e-{decimal_places}'))))
+                                
+                                slOrderPrice = await self.increment_by_last_decimal(await self.str_precision(slPrice))
+                                slPrice50 = avgOpenPrice
+                                slOrderPrice50 = await self.increment_by_last_decimal(await self.str_precision(slPrice50))
+                                slPrice90 = tpPrice50
+                                slOrderPrice90 = await self.increment_by_last_decimal(await self.str_precision(slPrice90))
+
+                                if float(slPrice) < avgOpenPrice if side == "BUY" else float(slPrice) > avgOpenPrice:
+                                    if last > tpPrice90 and side == "BUY":
+                                        datajs3 = await self.bitunixApi.ModifyTpSlOrder({'orderId': slorderId, 'slPrice': str(slPrice90), 'slOrderPrice': str(slOrderPrice90), 'slQty': str(qty), 'slStopType': slStopType, 'slOrderType': slOrderType})
+                                        if datajs3 is not None:
+                                            self.notifications.add_notification(
+                                                f'{colors.CYAN} Stop Loss order placed for {row.symbol} to {slPrice})'
+                                            )
+                                    elif last < tpPrice90 and side == "SELL":
+                                        datajs3 = await self.bitunixApi.ModifyTpSlOrder({'orderId': slorderId,'slPrice': str(slPrice90), 'slOrderPrice': str(slOrderPrice90), 'slQty': str(qty), 'slStopType': slStopType, 'slOrderType': slOrderType})
+                                        if datajs3 is not None:
+                                            self.notifications.add_notification(
+                                                f'{colors.CYAN} Stop Loss order placed for {row.symbol} to {slPrice})'
+                                            )
+                                    elif last > tpPrice50 and side == "BUY":
+                                        datajs3 = await self.bitunixApi.ModifyTpSlOrder({'orderId': slorderId, 'slPrice': str(slPrice90), 'slOrderPrice': str(slOrderPrice90), 'slQty': str(qty), 'slStopType': slStopType, 'slOrderType': slOrderType})
+                                        if datajs3 is not None:
+                                            self.notifications.add_notification(
+                                                f'{colors.CYAN} Stop Loss order placed for {row.symbol} to {slPrice})'
+                                            )
+                                    elif last < tpPrice50 and side == "SELL":
+                                        datajs3 = await self.bitunixApi.ModifyTpSlOrder({'orderId': slorderId, 'slPrice': str(slPrice50), 'slOrderPrice': str(slOrderPrice50), 'slQty': str(qty), 'slStopType': slStopType, 'slOrderType': slOrderType})
+                                        if datajs3 is not None:
+                                            self.notifications.add_notification(
+                                                f'{colors.CYAN} Stop Loss order placed for {row.symbol} to {slPrice})'
+                                            )
+                                            
+
                             if self.settings.BOT_TAKE_PROFIT_STOP_LOSS:
                                 # check take profit amount or accept loss amount
                                 if float(self.settings.LOSS_AMOUNT) > 0 and total_pnl < -float(self.settings.LOSS_AMOUNT):

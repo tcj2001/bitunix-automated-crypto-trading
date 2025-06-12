@@ -1,3 +1,5 @@
+#setup
+
 # Web Framework
 fastapi
 uvicorn
@@ -28,6 +30,7 @@ colorama
 
 # Data Processing
 #TA-LIB
-pandas
 numpy
+pandas
 scipy
+pytz
