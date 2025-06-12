@@ -22,9 +22,6 @@ aiohttp
 # Date/Time
 pytz
 
-# Security
-cryptography
-
 # Utilities
 colorama
 
@@ -33,4 +30,6 @@ colorama
 numpy
 pandas
 scipy
-pytz
+
+# Security
+#cryptography

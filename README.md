@@ -228,7 +228,7 @@ The platform can be configured through the `config.py` file or `config.txt`. Key
   - check python version should be 3.13 or above
     - python3 --version
     - python -m pip install --upgrade pip
-    - pip install https://github.com/cgohlke/talib-build/releases/download/v0.6.3/ta_lib-0.6.3-cp313-cp313-win_amd64.whl
+    - ta-lib, install it from https://ta-lib.org/install/#executable-installer-recommended
   - change the tags/3.1.8 to the latest version in the script below and run it
     - wget https://github.com/tcj2001/bitunix-automated-crypto-trading/archive/refs/tags/3.1.8.zip
     - unzip zip file and copy the content inside C:\bitunix\Ver1.0.zip\bitunix-automated-crypto-trading-Ver1.0 to c:\bitunix
