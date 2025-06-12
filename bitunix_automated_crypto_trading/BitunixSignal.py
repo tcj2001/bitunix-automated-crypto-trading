@@ -863,6 +863,7 @@ class BitunixSignal:
                                 
                                 slPrice = last * (1 - float(self.settings.LOSS_PERCENTAGE) / 100 / self.settings.LEVERAGE) if side == "BUY" else last * (1 + float(self.settings.LOSS_PERCENTAGE) / 100 / self.settings.LEVERAGE)
                                 slorderId = None
+                                old_slPrice = None
                                 slStopType = self.settings.SL_STOP_TYPE
                                 slOrderType = self.settings.SL_ORDER_TYPE
                                 datajs = await self.bitunixApi.GetPendingTpSlOrderData({'symbol': symbol})
@@ -873,6 +874,7 @@ class BitunixSignal:
                                             slStopType = order['slStopType']
                                             slOrderType = order['slOrderType']
                                             slPrice = float(order['slPrice'])
+                                            old_slPrice = slPrice
 
                                 slPrice = Decimal(await self.str_precision(slPrice))
                                 slPrice = float(str(slPrice.quantize(Decimal(f'1e-{decimal_places}'))))
@@ -883,31 +885,42 @@ class BitunixSignal:
                                 slPrice90 = tpPrice50
                                 slOrderPrice90 = await self.increment_by_last_decimal(await self.str_precision(slPrice90))
 
-                                if float(slPrice) < avgOpenPrice if side == "BUY" else float(slPrice) > avgOpenPrice:
-                                    if last > tpPrice90 and side == "BUY":
-                                        datajs3 = await self.bitunixApi.ModifyTpSlOrder({'orderId': slorderId, 'slPrice': str(slPrice90), 'slOrderPrice': str(slOrderPrice90), 'slQty': str(qty), 'slStopType': slStopType, 'slOrderType': slOrderType})
-                                        if datajs3 is not None:
-                                            self.notifications.add_notification(
-                                                f'{colors.CYAN} Stop Loss order placed for {row.symbol} to {slPrice})'
-                                            )
-                                    elif last < tpPrice90 and side == "SELL":
-                                        datajs3 = await self.bitunixApi.ModifyTpSlOrder({'orderId': slorderId,'slPrice': str(slPrice90), 'slOrderPrice': str(slOrderPrice90), 'slQty': str(qty), 'slStopType': slStopType, 'slOrderType': slOrderType})
-                                        if datajs3 is not None:
-                                            self.notifications.add_notification(
-                                                f'{colors.CYAN} Stop Loss order placed for {row.symbol} to {slPrice})'
-                                            )
-                                    elif last > tpPrice50 and side == "BUY":
-                                        datajs3 = await self.bitunixApi.ModifyTpSlOrder({'orderId': slorderId, 'slPrice': str(slPrice90), 'slOrderPrice': str(slOrderPrice90), 'slQty': str(qty), 'slStopType': slStopType, 'slOrderType': slOrderType})
-                                        if datajs3 is not None:
-                                            self.notifications.add_notification(
-                                                f'{colors.CYAN} Stop Loss order placed for {row.symbol} to {slPrice})'
-                                            )
-                                    elif last < tpPrice50 and side == "SELL":
-                                        datajs3 = await self.bitunixApi.ModifyTpSlOrder({'orderId': slorderId, 'slPrice': str(slPrice50), 'slOrderPrice': str(slOrderPrice50), 'slQty': str(qty), 'slStopType': slStopType, 'slOrderType': slOrderType})
-                                        if datajs3 is not None:
-                                            self.notifications.add_notification(
-                                                f'{colors.CYAN} Stop Loss order placed for {row.symbol} to {slPrice})'
-                                            )
+                                if last > tpPrice90 and side == "BUY" and old_slPrice < slPrice90:
+                                    self.notifications.add_notification(
+                                        f'{colors.CYAN} {row.symbol} reached 90% profit, of {tpPrice90})'
+                                    )
+                                    datajs3 = await self.bitunixApi.ModifyTpSlOrder({'orderId':slorderId,'slPrice':str(slPrice90),'slQty':str(qty),'slStopType':slStopType,'slOrderType':slOrderType})
+                                    if datajs3 is not None:
+                                        self.notifications.add_notification(
+                                            f'{colors.CYAN} Stop Loss order for {row.symbol} moved from {old_slPrice} to {slPrice90})'
+                                        )
+                                elif last < tpPrice90 and side == "SELL" and old_slPrice > slPrice90:
+                                    self.notifications.add_notification(
+                                        f'{colors.CYAN} {row.symbol} reached 90% profit, of {tpPrice90})'
+                                    )
+                                    datajs3 = await self.bitunixApi.ModifyTpSlOrder({'orderId':slorderId,'slPrice':str(slPrice90),'slQty':str(qty),'slStopType':slStopType,'slOrderType':slOrderType})
+                                    if datajs3 is not None:
+                                        self.notifications.add_notification(
+                                            f'{colors.CYAN} Stop Loss order placed for {row.symbol} moved from {old_slPrice} to {slPrice90})'
+                                        )
+                                elif last > tpPrice50 and side == "BUY" and old_slPrice < slPrice50:
+                                    self.notifications.add_notification(
+                                        f'{colors.CYAN} {row.symbol} reached 50% profit, of {tpPrice50})'
+                                    )
+                                    datajs3 = await self.bitunixApi.ModifyTpSlOrder({'orderId':slorderId,'slPrice':str(slPrice50),'slQty':str(qty),'slStopType':slStopType,'slOrderType':slOrderType})
+                                    if datajs3 is not None:
+                                        self.notifications.add_notification(
+                                            f'{colors.CYAN} Stop Loss order placed for {row.symbol} moved from {old_slPrice} to {slPrice50})'
+                                        )
+                                elif last < tpPrice50 and side == "SELL" and old_slPrice > slPrice50:
+                                    self.notifications.add_notification(
+                                        f'{colors.CYAN} {row.symbol} reached 50% profit, of {tpPrice50})'
+                                    )
+                                    datajs3 = await self.bitunixApi.ModifyTpSlOrder({'orderId':slorderId,'slPrice':str(slPrice50),'slQty':str(qty),'slStopType':slStopType,'slOrderType':slOrderType})
+                                    if datajs3 is not None:
+                                        self.notifications.add_notification(
+                                            f'{colors.CYAN} Stop Loss order placed for {row.symbol} moved from {old_slPrice} to {slPrice50})'
+                                        )
                                             
 
                             if self.settings.BOT_TAKE_PROFIT_STOP_LOSS:

@@ -4,6 +4,7 @@ import time
 import json
 import hashlib
 import asyncio 
+import re
 import requests
 from urllib.parse import urlencode
 from typing import Dict, Any
@@ -37,8 +38,8 @@ class BitunixApi:
         self.pending_order_url="https://fapi.bitunix.com/api/v1/futures/trade/get_pending_orders"
         self.cancelOrder_Url="https://fapi.bitunix.com/api/v1/futures/trade/cancel_orders"
         self.pending_tpsl_order_url="https://fapi.bitunix.com/api/v1/futures/tpsl/get_pending_orders"
-        self.place_tpsl_order_url="https://fapi.bitunix.com/api/v1/futures/tpsl/position/place_order"
-        self.modify_tpsl_order_url="https://fapi.bitunix.com/api/v1/futures/tpsl/position/modify_order"
+        self.place_tpsl_order_url="https://fapi.bitunix.com/api/v1/futures/tpsl/place_order"
+        self.modify_tpsl_order_url="https://fapi.bitunix.com/api/v1/futures/tpsl/modify_order"
         self.cancel_tpsl_Order_Url="https://fapi.bitunix.com/api/v1/futures/tpsl/cancel_order"
         self.Trade_history_Url="https://fapi.bitunix.com/api/v1/futures/trade/get_history_trades"
         self.position_history_Url="https://fapi.bitunix.com/api/v1/futures/position/get_history_positions"
@@ -46,9 +47,6 @@ class BitunixApi:
     async def update_settings(self, settings):
         self.settings = settings
        
-    async def create_timestamp(self):
-        return str(int(time.time()*1000))
-
     async def is_near_high_of_day(self, current_value, high_of_day, threshold_percentage=5):
         # Calculate the difference as a percentage of the high of the day
         difference_percentage = ((high_of_day - current_value) / high_of_day) * 100
@@ -61,69 +59,79 @@ class BitunixApi:
         # Check if the difference is within the threshold
         return difference_percentage <= threshold_percentage
 
+    #signature generation related methods
+    async def _create_timestamp(self):
+        return str(int(time.time()*1000))
 
     async def _generate_nonce(self) -> str:
         random_bytes = secrets.token_bytes(32)
         return base64.b64encode(random_bytes).decode('utf-8')
 
+    async def _generate_sign_api(self, nonce, timestamp, api_key, secret_key, method, data):
+        query_params = ""
+        body = ""
+        if data:
+            if method.lower() == "get":
+                data = {k: v for k, v in data.items() if v is not None}
+                query_params = '&'.join([f"{k}={v}" for k, v in sorted(data.items())])
+                query_params = re.sub(r'[^a-zA-Z0-9]', '', query_params)
+            if method.lower() == "post":
+                # body = str(data).replace(" ", "")
+                body = str(data)
 
-    async def sign_request(self, nonce: str, timestamp: str, 
-                     query_params: str = None, 
-                     body: str = None) -> str:
-        query_string = query_params if query_params else ""
-        body_string = body if body else ""
-        message = f"{nonce}{timestamp}{self.api_key}{query_string}{body_string}"
+        digest_input = nonce + timestamp + api_key + query_params + body
+        # print(f"digest_input={digest_input}")
+        digest = hashlib.sha256((digest_input).encode()).hexdigest()
+        # print(f"digest={digest}")
+        sign_input = digest + secret_key
+        # print(f"sign_input={sign_input}")
+        sign = hashlib.sha256((sign_input).encode()).hexdigest()
 
-        # First SHA256 encryption
-        digest = hashlib.sha256(message.encode()).hexdigest()
-
-        # Second SHA256 encryption
-        sign = hashlib.sha256((digest + self.secret_key).encode()).hexdigest()
-
-        return sign
-        
-    async def _get(self, endpoint: str, params: Dict[str, Any] = None) -> Dict[str, Any]:
-            response = self.session.get(endpoint, params=params)
-            response.raise_for_status()
-            return response.json()    
-
+        return sign        
+    
     async def _get_authenticated(self, endpoint: str, params: Dict[str, Any] = None) -> Dict[str, Any]:
-        timestamp = await self.create_timestamp()
+        timestamp = await self._create_timestamp()
         nonce = await self._generate_nonce()
+        
+        signature = await self._generate_sign_api(nonce, timestamp, self.api_key, self.secret_key, "get", params)  
         
         headers = {
             "api-key": self.api_key,  
+            "nonce": nonce,
             "timestamp": timestamp,   
-            "nonce": nonce,           
+            "sign": signature,  # Placeholder for signature   
+            "language": "en-US",
+            "Content-Type": "application/json"  
         }
-        
-        query_string = urlencode(sorted(params.items())).replace('=','').replace('&','')  if params else ""
-        signature = await self.sign_request(nonce, timestamp, query_params=query_string)
-        headers["sign"] = signature  
 
         response = self.session.get(endpoint, params=params, headers=headers)
         response.raise_for_status()
         return response.json()
 
     async def _post_authenticated(self, endpoint: str, data: Dict[str, Any]) -> Dict[str, Any]:
-        timestamp = await self.create_timestamp()
+        timestamp = await self._create_timestamp()
         nonce = await self._generate_nonce()
         
+        body_string = json.dumps(data, separators=(',',':'))
+        signature = await self._generate_sign_api(nonce, timestamp, self.api_key, self.secret_key, "post", body_string)
+
         headers = {
             "api-key": self.api_key,
             "timestamp": timestamp,
             "nonce": nonce,
+            "sign": signature,
             "Content-Type": "application/json"
         }
-        
-        body_string = json.dumps(data, separators=(',', ':'))
-        signature = await self.sign_request(nonce, timestamp, body=body_string)
-        headers["sign"] = signature
 
         response = self.session.post(endpoint, data=body_string, headers=headers)
         self.logger.info(f"Response: {body_string} {response.json()}")
         response.raise_for_status()
         return response.json()
+
+    async def _get(self, endpoint: str, params: Dict[str, Any] = None) -> Dict[str, Any]:
+            response = self.session.get(endpoint, params=params)
+            response.raise_for_status()
+            return response.json()    
 
     async def PlaceOrder(self, ticker, qty, price, side, positionId=0, tradeSide="OPEN",reduceOnly=False, tpPrice=0, tpOrderPrice=0, slPrice=0, slOrderPrice=0):
         datajs = None
@@ -235,14 +243,14 @@ class BitunixApi:
             self.logger.info(orders['msg'])
 
     async def PlaceTpSlOrder(self,dictparm={}):
-        orders=await self._get_authenticated(self.place_tpsl_order_url, dictparm)
+        orders=await self._post_authenticated(self.place_tpsl_order_url, dictparm)
         if orders['code']==0:
             return orders['data']
         else:
             self.logger.info(orders['msg'])
 
     async def ModifyTpSlOrder(self,dictparm={}):
-        orders=await self._get_authenticated(self.modify_tpsl_order_url, dictparm)
+        orders=await self._post_authenticated(self.modify_tpsl_order_url, dictparm)
         if orders['code']==0:
             return orders['data']
         else:

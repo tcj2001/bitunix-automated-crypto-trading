@@ -1,4 +1,9 @@
 # Change Log
+## version 3.3.3 ##
+added new config
+BOT_TRAIL_STOP_LOSS 
+if set to True then bot will move the stop loss to breakeven when the trade is reaches 50% of the target profit and then move the stop loss to the 50% of the target profit when the trade reaches 90% of the target profit.
+
 ## version 3.3.2 ##
 removed config
 PROFIT_LOSS_PRICE_TYPE

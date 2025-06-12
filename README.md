@@ -57,12 +57,16 @@ The platform can be configured through the `config.py` file or `config.txt`. Key
   - `MIN_VOLUME`: Ticker selection based on Minimum trading volume
   - `ORDER_AMOUNT_PERCENTAGE`: Order size as percentage of portfolio
   - `MAX_AUTO_TRADES`: Maximum number of automated trades
-  - `PROFIT_PERCENTAGE`: Target profit ROI percentage
-  - `LOSS_PERCENTAGE`: Maximum loss ROI percentage
-  - `PROFIT_LOSS_PRICE_TYPE`: "MARK_PRICE" or "LAST_PRICE"
-  - `PROFIT_LOSS_ORDER_TYPE`: "MARKET" or "LIMIT" 
   - `PROFIT_AMOUNT`: Target profit amount
   - `LOSS_AMOUNT`: Maximum loss amount
+  - `PROFIT_PERCENTAGE`: Target profit ROI percentage
+  - `LOSS_PERCENTAGE`: Maximum loss ROI percentage
+  - `BOT_TAKE_PROFIT_STOP_LOSS`: True or False
+      if false then take profit and stop loss will be placed by the bot when TP or SL is reached, if true then take profit and stop loss will be placed when the trade is opened
+  - `BOT_TRAIL_STOP_LOSS`: True or False
+      if set to True then bot will move the stop loss to breakeven when the trade is reaches 50% of the target profit and then move the stop loss to the 50% of the target profit when the trade reaches 90% of the target profit.
+  - `PROFIT_LOSS_PRICE_TYPE`: "MARK_PRICE" or "LAST_PRICE"
+  - `PROFIT_LOSS_ORDER_TYPE`: "MARKET" or "LIMIT" 
   - `OPTION_MOVING_AVERAGE`: Moving average period (1h, 1d, 15m, 5m, 1m)
   - `DELAY_IN_MINUTES_FOR_SAME_TICKER_TRADES`: Delay in minutes to prohibit trading the same ticker again
   - `BARS`: Number of bars to use for study and charting
