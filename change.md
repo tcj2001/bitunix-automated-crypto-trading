@@ -1,4 +1,8 @@
 # Change Log
+## version 3.3.4 ##
+BOT_TRAIL_STOP_LOSS 
+if set to True then bot will trail the TP and SL in the direction of profit
+
 ## version 3.3.3 ##
 added new config
 BOT_TRAIL_STOP_LOSS 

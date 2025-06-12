@@ -181,6 +181,7 @@ The platform can be configured through the `config.py` file or `config.txt`. Key
     - You can control the study like Moving Average, MACD, Bollinger Band, RSI or close proximity to high or low of the candle using the env file
     - You can control the trading strategy using the CalculateStudy function in TickerManager.py and AutoTradeProcess function in BitunixSignal.py
     - Changes are activated by unchecking and checking the AutoTrade checkbox
+    - Trailing TP and SL in the direction of profit, if BOT_TRAIL_STOP_LOSS to True and BOT_TAKE_PROFIT_STOP_LOSS to False in the config file
 
 ## Auto Trading
 
