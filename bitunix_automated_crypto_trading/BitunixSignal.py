@@ -784,7 +784,7 @@ class BitunixSignal:
                                         f'{colors.YELLOW} Opening {"long" if side=="BUY" else "short"} position for {row.symbol} with {qty} qty @ {price})'
                                     )
                                     datajs = None
-                                    if self.settings.BOT_TAKE_PROFIT_STOP_LOSS:
+                                    if self.settings.BOT_CONTROLS_TP_SL:
                                         datajs = await self.bitunixApi.PlaceOrder(row.symbol, qty, price, side)
                                     else:
                                         if tpPrice == 0 and slPrice == 0:
@@ -846,7 +846,7 @@ class BitunixSignal:
                             
                         if select and int(self.settings.MAX_AUTO_TRADES)!=0:
                             
-                            if self.settings.BOT_TRAIL_STOP_LOSS and self.settings.PROFIT_PERCENTAGE > 0 and self.settings.LOSS_PERCENTAGE > 0:
+                            if self.settings.BOT_TRAIL_TP_SL and self.settings.PROFIT_PERCENTAGE > 0 and self.settings.LOSS_PERCENTAGE > 0:
                                 last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                 price = (bid if side == "BUY" else ask if side == "SELL" else last) if bid<=last<=ask else last
                                 decimal_places = abs(Decimal(str(price)).as_tuple().exponent)                                
@@ -913,7 +913,7 @@ class BitunixSignal:
                                         )
                                             
 
-                            if self.settings.BOT_TAKE_PROFIT_STOP_LOSS:
+                            if self.settings.BOT_CONTROLS_TP_SL:
                                 # check take profit amount or accept loss amount
                                 if float(self.settings.LOSS_AMOUNT) > 0 and total_pnl < -float(self.settings.LOSS_AMOUNT):
                                     last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)

@@ -1,4 +1,9 @@
 # Change Log
+## vaersion 3.3.5 ##
+Renamed config
+BOT_TAKE_PROFIT_STOP_LOSS to BOT_CONTROLS_TP_SL
+BOT_TRAIL_STOP_LOSS to BOT_TRAIL_TP_SL
+
 ## version 3.3.4 ##
 BOT_TRAIL_STOP_LOSS 
 if set to True then bot will trail the TP and SL in the direction of profit
@@ -14,7 +19,7 @@ PROFIT_LOSS_PRICE_TYPE
 PROFIT_LOSS_ORDER_TYPE
 
 and new added config
-BOT_TAKE_PROFIT_STOP_LOSS=False  
+BOT_TAKE_PROFIT_STOP_LOSS=False
     if false take_prodit and stop loss will be placed when the trade is opened, 
     if true then take profit and stop loss will be placed by the bot when take profit or stop loss is reached. 
 TAKE_PROFIT_PRICE_TYPE -> this can be "MARK_PRICE" or "LAST_PRICE"

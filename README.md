@@ -61,9 +61,9 @@ The platform can be configured through the `config.py` file or `config.txt`. Key
   - `LOSS_AMOUNT`: Maximum loss amount
   - `PROFIT_PERCENTAGE`: Target profit ROI percentage
   - `LOSS_PERCENTAGE`: Maximum loss ROI percentage
-  - `BOT_TAKE_PROFIT_STOP_LOSS`: True or False
+  - `BOT_CONTROLS_TP_SL`: True or False
       if false then take profit and stop loss will be placed by the bot when TP or SL is reached, if true then take profit and stop loss will be placed when the trade is opened
-  - `BOT_TRAIL_STOP_LOSS`: True or False
+  - `BOT_TRAIL_TP_SL`: True or False
       if set to True then bot will move the stop loss to breakeven when the trade is reaches 50% of the target profit and then move the stop loss to the 50% of the target profit when the trade reaches 90% of the target profit.
   - `PROFIT_LOSS_PRICE_TYPE`: "MARK_PRICE" or "LAST_PRICE"
   - `PROFIT_LOSS_ORDER_TYPE`: "MARKET" or "LIMIT" 
@@ -181,7 +181,8 @@ The platform can be configured through the `config.py` file or `config.txt`. Key
     - You can control the study like Moving Average, MACD, Bollinger Band, RSI or close proximity to high or low of the candle using the env file
     - You can control the trading strategy using the CalculateStudy function in TickerManager.py and AutoTradeProcess function in BitunixSignal.py
     - Changes are activated by unchecking and checking the AutoTrade checkbox
-    - Trailing TP and SL in the direction of profit, if BOT_TRAIL_STOP_LOSS to True and BOT_TAKE_PROFIT_STOP_LOSS to False in the config file
+    - BOT controled take profit and stop loss or take_profit and stop_loss create when order is created
+    - Trailing TP and SL in the direction of profit, if BOT_TRAIL_TP_SL to True and BOT_TAKE_PROFIT_STOP_LOSS to False in the config file
 
 ## Auto Trading
 
