@@ -887,39 +887,39 @@ class BitunixSignal:
 
                                 if last > tpPrice90 and side == "BUY" and old_slPrice < slPrice90:
                                     self.notifications.add_notification(
-                                        f'{colors.CYAN} {row.symbol} reached 90% profit at {tpPrice90})'
+                                        f'{colors.CYAN} {row.symbol} reached 90% profit at {tpPrice90}'
                                     )
                                     datajs3 = await self.bitunixApi.ModifyTpSlOrder({'orderId':slorderId,'slPrice':str(slPrice90),'slQty':str(qty),'slStopType':slStopType,'slOrderType':slOrderType})
                                     if datajs3 is not None:
                                         self.notifications.add_notification(
-                                            f'{colors.CYAN} Stop Loss order for {row.symbol} moved from {old_slPrice} to {slPrice90})'
+                                            f'{colors.CYAN} Stop Loss order for {row.symbol} moved from {old_slPrice} to {slPrice90}'
                                         )
                                 elif last < tpPrice90 and side == "SELL" and old_slPrice > slPrice90:
                                     self.notifications.add_notification(
-                                        f'{colors.CYAN} {row.symbol} reached 90% profit at {tpPrice90})'
+                                        f'{colors.CYAN} {row.symbol} reached 90% profit at {tpPrice90}'
                                     )
                                     datajs3 = await self.bitunixApi.ModifyTpSlOrder({'orderId':slorderId,'slPrice':str(slPrice90),'slQty':str(qty),'slStopType':slStopType,'slOrderType':slOrderType})
                                     if datajs3 is not None:
                                         self.notifications.add_notification(
-                                            f'{colors.CYAN} Stop Loss order placed for {row.symbol} moved from {old_slPrice} to {slPrice90})'
+                                            f'{colors.CYAN} Stop Loss order placed for {row.symbol} moved from {old_slPrice} to {slPrice90}'
                                         )
                                 elif last > tpPrice50 and side == "BUY" and old_slPrice < slPrice50:
                                     self.notifications.add_notification(
-                                        f'{colors.CYAN} {row.symbol} reached 50% profit at {tpPrice50})'
+                                        f'{colors.CYAN} {row.symbol} reached 50% profit at {tpPrice50}'
                                     )
                                     datajs3 = await self.bitunixApi.ModifyTpSlOrder({'orderId':slorderId,'slPrice':str(slPrice50),'slQty':str(qty),'slStopType':slStopType,'slOrderType':slOrderType})
                                     if datajs3 is not None:
                                         self.notifications.add_notification(
-                                            f'{colors.CYAN} Stop Loss order placed for {row.symbol} moved from {old_slPrice} to {slPrice50})'
+                                            f'{colors.CYAN} Stop Loss order placed for {row.symbol} moved from {old_slPrice} to {slPrice50}'
                                         )
                                 elif last < tpPrice50 and side == "SELL" and old_slPrice > slPrice50:
                                     self.notifications.add_notification(
-                                        f'{colors.CYAN} {row.symbol} reached 50% profit at {tpPrice50})'
+                                        f'{colors.CYAN} {row.symbol} reached 50% profit at {tpPrice50}'
                                     )
                                     datajs3 = await self.bitunixApi.ModifyTpSlOrder({'orderId':slorderId,'slPrice':str(slPrice50),'slQty':str(qty),'slStopType':slStopType,'slOrderType':slOrderType})
                                     if datajs3 is not None:
                                         self.notifications.add_notification(
-                                            f'{colors.CYAN} Stop Loss order placed for {row.symbol} moved from {old_slPrice} to {slPrice50})'
+                                            f'{colors.CYAN} Stop Loss order placed for {row.symbol} moved from {old_slPrice} to {slPrice50}'
                                         )
                                             
 
