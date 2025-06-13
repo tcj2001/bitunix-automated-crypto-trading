@@ -1,5 +1,15 @@
 # Change Log
-## vaersion 3.3.5 ##
+## version 3.3.6 ##
+Removed
+BOT_TRAIL_TP_SL
+
+Added
+BOT_TRAIL_TP
+    if set to True then bot will trail the TP in the direction of profit    
+BOT_TRAIL_SL
+    if set to True then bot will trail the SL in the direction of profit
+
+## version 3.3.5 ##
 Renamed config
 BOT_TAKE_PROFIT_STOP_LOSS to BOT_CONTROLS_TP_SL
 BOT_TRAIL_STOP_LOSS to BOT_TRAIL_TP_SL

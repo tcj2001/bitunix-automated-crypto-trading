@@ -63,8 +63,10 @@ The platform can be configured through the `config.py` file or `config.txt`. Key
   - `LOSS_PERCENTAGE`: Maximum loss ROI percentage
   - `BOT_CONTROLS_TP_SL`: True or False
       if false then take profit and stop loss will be placed by the bot when TP or SL is reached, if true then take profit and stop loss will be placed when the trade is opened
-  - `BOT_TRAIL_TP_SL`: True or False
-      if set to True then bot will move the stop loss to breakeven when the trade is reaches 50% of the target profit and then move the stop loss to the 50% of the target profit when the trade reaches 90% of the target profit.
+  - `BOT_TRAIL_TP`
+      if set to True then bot will trail the TP in the direction of profit    
+  - `BOT_TRAIL_SL`
+      if set to True then bot will trail the SL in the direction of profit
   - `PROFIT_LOSS_PRICE_TYPE`: "MARK_PRICE" or "LAST_PRICE"
   - `PROFIT_LOSS_ORDER_TYPE`: "MARKET" or "LIMIT" 
   - `OPTION_MOVING_AVERAGE`: Moving average period (1h, 1d, 15m, 5m, 1m)
