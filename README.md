@@ -85,6 +85,7 @@ The platform can be configured through the `config.py` file or `config.txt`. Key
     - `MACD_SHORT`: MACD short period
     - `MACD_LONG`: MACD long period
     - `ADX_PERIOD`: ADX period
+    - `MINIMUM_CONSECUTIVE_CANDLES`: Minimum number of consecutive candles to consider for a signal.
     
   - `Study Parameters`:
     - `EMA_STUDY`: Enable EMA study

@@ -1,4 +1,9 @@
 # Change Log
+## version 3.3.7 ##
+Added
+MINIMUM_CONSECUTIVE_CANDLES (default = 2)
+    Minimum number of consecutive candles to consider for a signal.
+
 ## version 3.3.6 ##
 Removed
 BOT_TRAIL_TP_SL

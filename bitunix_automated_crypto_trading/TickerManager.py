@@ -750,13 +750,13 @@ class Tickers:
                 trending_conditions = [
                     (
                         (df[f'{period}_trend']=='BUY') &
-                        (df[f'{period}_cb']>1) 
+                        (df[f'{period}_cb']>= self.settings.MINIMUM_CONSECUTIVE_CANDLES) 
                         #&
                         #(df[f'{period}_barcolor']==self.green) 
                     ),
                     (
                         (df[f'{period}_trend']=='SELL') &
-                        (df[f'{period}_cb']>1) 
+                        (df[f'{period}_cb']>= self.settings.MINIMUM_CONSECUTIVE_CANDLES) 
                         #&
                         #(df[f'{period}_barcolor']==self.red) 
                     )

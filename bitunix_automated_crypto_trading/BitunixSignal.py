@@ -650,14 +650,14 @@ class BitunixSignal:
         trade_time = datetime.strptime(datetime_str, "%Y-%m-%d %H:%M:%S")
         # Convert datetime object to Unix timestamp)
         trade_time_unix = int(trade_time.timestamp())
-        print(f"trade_time_unix: {trade_time_unix}, trade_time: {trade_time}")
+        #print(f"trade_time_unix: {trade_time_unix}, trade_time: {trade_time}")
         # Get current Unix timestamp
         current_time_unix = int(time.time())
-        print(f"current_time_unix: {current_time_unix}, time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        #print(f"current_time_unix: {current_time_unix}, time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         # Calculate duration in minutes
         duration_minutes = (current_time_unix - trade_time_unix) / 60
-        print(f"diff: {current_time_unix - trade_time_unix}")
-        print(f"duration_minutes: {duration_minutes}")
+        #print(f"diff: {current_time_unix - trade_time_unix}")
+        #print(f"duration_minutes: {duration_minutes}")
         
         return round(duration_minutes)
 
@@ -729,6 +729,7 @@ class BitunixSignal:
                         self.logger.info(f"row.symbol: {row.symbol} , duration_minutes: {duration_minutes}, last trade time: {mtime if duration_minutes is not None else 'N/A'}")
                         if duration_minutes is None or duration_minutes > self.settings.DELAY_IN_MINUTES_FOR_SAME_TICKER_TRADES:
                             side = "BUY" if row[f'{period}_barcolor'] == self.green and row[f'{period}_trend'] == "BUY"  else "SELL" if row[f'{period}_barcolor'] == self.red and row[f'{period}_trend'] == "SELL" else ""
+                            #self.logger.info(f"row.symbol: {row.symbol} , ok to {side}, {row[f'{period}_barcolor']} , {row[f'{period}_trend']} ")
                             if side != "":
                                 select = True
                                 self.pendingPositions = await self.bitunixApi.GetPendingPositionData({'symbol': row.symbol})
@@ -792,6 +793,7 @@ class BitunixSignal:
                                     count=count+1
                         else:
                             self.logger.info(f"Skipping {row.symbol} as it has been opened for less than {self.settings.DELAY_IN_MINUTES_FOR_SAME_TICKER_TRADES} minutes")
+                            
                         if count >= int(self.settings.MAX_AUTO_TRADES):
                             break
                         await asyncio.sleep(0)
@@ -898,17 +900,22 @@ class BitunixSignal:
                                             
                                 if self.settings.BOT_TRAIL_SL:
                                     if old_slPrice is not None:
-                                        sl_midpoint =  old_slPrice / (1 - self.settings.LOSS_PERCENTAGE/100/self.settings.LEVERAGE) if side == "BUY" else old_slPrice / (1 + self.settings.LOSS_PERCENTAGE/100/self.settings.LEVERAGE) if tpPrice is not None else None
+                                       sl_midpoint =  old_slPrice / (1 - self.settings.LOSS_PERCENTAGE/100/self.settings.LEVERAGE) if side == "BUY" else old_slPrice / (1 + self.settings.LOSS_PERCENTAGE/100/self.settings.LEVERAGE) if tpPrice is not None else None
+                                       if roi > self.settings.PROFIT_PERCENTAGE:
+                                           sl_midpoint = tp_midpoint                                       
+                                       
                                     if sl_midpoint is not None and (price > sl_midpoint and side == "BUY" or price < sl_midpoint and side == "SELL"):
-
-                                        slPrice = price * (1 - float(self.settings.LOSS_PERCENTAGE) / 100 / self.settings.LEVERAGE) if side == "BUY" else price * (1 + float(self.settings.LOSS_PERCENTAGE) / 100 / self.settings.LEVERAGE)
+                                        if roi > self.settings.PROFIT_PERCENTAGE and self.settings.PROFIT_PERCENTAGE < self.settings.LOSS_PERCENTAGE:
+                                            slPrice = price * (1 - float(self.settings.PROFIT_PERCENTAGE) / 100 / self.settings.LEVERAGE) if side == "BUY" else price * (1 + float(self.settings.PROFIT_PERCENTAGE) / 100 / self.settings.LEVERAGE)
+                                        else:
+                                            slPrice = price * (1 - float(self.settings.LOSS_PERCENTAGE) / 100 / self.settings.LEVERAGE) if side == "BUY" else price * (1 + float(self.settings.LOSS_PERCENTAGE) / 100 / self.settings.LEVERAGE)
                                         slPrice = Decimal(await self.str_precision(slPrice))
                                         slPrice = float(str(slPrice.quantize(Decimal(f'1e-{decimal_places}'))))
                                         slOrderPrice = await self.increment_by_last_decimal(await self.str_precision(slPrice))
 
                                 if (self.settings.BOT_TRAIL_TP and tpOrderPrice is not None) or (self.settings.BOT_TRAIL_SL and slOrderPrice is not None):
                                     self.notifications.add_notification(
-                                        f'{colors.CYAN} {row.symbol} price: {price}, ROI: {roi}%, TP: {old_tpPrice}, TP midpoint: {tp_midpoint}, new TP: {tpPrice}, SL: {old_slPrice}, SL midpoint: {sl_midpoint}, new SL: {slPrice}'
+                                        f'{colors.CYAN} {row.symbol} avgOpenPrice: {avgOpenPrice}, current price: {price}, ROI: {roi}%, TP: {old_tpPrice}, TP midpoint: {tp_midpoint}, new TP: {tpPrice}, SL: {old_slPrice}, SL midpoint: {sl_midpoint}, new SL: {slPrice}'
                                     )
 
 
@@ -922,9 +929,14 @@ class BitunixSignal:
                                 if self.settings.BOT_TRAIL_SL and slPrice is not None and slOrderPrice is not None:
                                         datajs3 = await self.bitunixApi.ModifyTpSlOrder({'orderId':slorderId,'slPrice':str(slPrice),'slQty':str(qty),'slStopType':slStopType,'slOrderType':slOrderType})
                                         if datajs3 is not None:
-                                            self.notifications.add_notification(
-                                                f'{colors.CYAN} Stop Loss order for {row.symbol} moved from {old_slPrice} to {slPrice}'
-                                            )
+                                            if roi > self.settings.PROFIT_PERCENTAGE and self.settings.PROFIT_PERCENTAGE < self.settings.LOSS_PERCENTAGE:
+                                                self.notifications.add_notification(
+                                                    f'{colors.CYAN} Stop Loss order for {row.symbol} moved from {old_slPrice} to breakeven {slPrice}'
+                                                )
+                                            else:
+                                                self.notifications.add_notification(
+                                                    f'{colors.CYAN} Stop Loss order for {row.symbol} moved from {old_slPrice} to {slPrice}'
+                                                )
 
                                                                           
 

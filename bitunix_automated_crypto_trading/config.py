@@ -44,6 +44,7 @@ class Settings(BaseSettings):
     MACD_SHORT: int = Field(default=12, ge=1)
     MACD_LONG: int = Field(default=26, ge=1)
     ADX_PERIOD: int = Field(default=14, ge=1)
+    MINIMUM_CONSECUTIVE_CANDLES: int = Field(default=2, ge=1)
 
     # Technical Indicators
     OPEN_ON_ANY_SIGNAL: bool = Field(default=True)
