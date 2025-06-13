@@ -643,25 +643,18 @@ class BitunixSignal:
         del inuse1, inuse2, inuseTickers
         gc.collect()
 
-    async def get_duration_minutes_unixtime(self, trade_time_unix):
-        """Calculates the duration in minutes from trade time to current time."""
-        current_time_unix = int(time.time())  # Get current Unix timestamp
-        print(f"Current time (Unix): {current_time_unix}, Trade time (Unix): {trade_time_unix}")
-        duration_seconds = current_time_unix - trade_time_unix
-        duration_minutes = duration_seconds / 60  # Convert seconds to minutes
-        return round(duration_minutes)
-    
+   
     async def get_duration(self,datetime_str):
         """Calculates the duration in minutes from a given datetime string to the current time."""
         # Convert input datetime string to a datetime object
         trade_time = datetime.strptime(datetime_str, "%Y-%m-%d %H:%M:%S")
-        
+        print(f"trade_time: {trade_time}, datetime_str: {datetime_str}")
         # Convert datetime object to Unix timestamp
         trade_time_unix = int(trade_time.timestamp())
-
+        print(f"trade_time_unix: {trade_time_unix}")
         # Get current Unix timestamp
         current_time_unix = int(time.time())
-
+        print(f"current_time_unix: {current_time_unix}")
         # Calculate duration in minutes
         duration_minutes = (current_time_unix - trade_time_unix) / 60
         
@@ -812,7 +805,7 @@ class BitunixSignal:
             current_time = time.time() * 1000
             df=self.orderdf.copy(deep=False)
             for index, row in df.iterrows():
-                if current_time - int(row.ctime) > 6000000000:
+                if current_time - int(row.ctime) > 60000:
                     self.notifications.add_notification(
                         f'{colors.LBLUE} Canceling order {row.orderId}, {row.symbol} {row.qty} created at {row.rtime} '
                     )
@@ -829,8 +822,8 @@ class BitunixSignal:
 
                     # Calculate the duration in minutes since the position was opened
                     ctime = row['ctime']
-                    duration_minutes = await self.get_duration(ctime)
-                    no_of_candles_since_current_open = await self.calculate_candles(period, duration_minutes)
+                    #duration_minutes = await self.get_duration(ctime)
+                    #no_of_candles_since_current_open = await self.calculate_candles(period, duration_minutes)
                     
                     requiredCols=[f'{period}_open', f'{period}_close', f'{period}_high', f'{period}_low', f'{period}_ema_open', f"{period}_ema_close", f'{period}_macd', f'{period}_bbm', f'{period}_rsi', f'{period}_trendline', f'{period}_candle_trend', f'{period}_trend', f'{period}_cb', f'{period}_barcolor']    
                     required_cols = set(requiredCols)
