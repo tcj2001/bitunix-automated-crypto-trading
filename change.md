@@ -1,8 +1,15 @@
 # Change Log
+## version 3.3.8 ##
+Fixed a bug in moving SL to breakeven
+updated logic to move the SL to close to breakeven if ROI > 75% of PROFIT_PERCENTAGE and LOSS_PERCENTAGE < PROFIT_PERCENTAGE , this way initially you can set a larger SL percentage initially so you are not stopped out early, and once ROI > 75% of PROFIT_PERCENTAGE, SL will use PROFIT_PERCENTAGE to Trail    
+
+
 ## version 3.3.7 ##
 Added
 MINIMUM_CONSECUTIVE_CANDLES (default = 2)
     Minimum number of consecutive candles to consider for a signal.
+
+Added a logic to move the SL to breakeven if ROI > PROFIT_PERCENTAGE and LOSS_PERCENTAGE < PROFIT_PERCENTAGE , this way initially you can set a larger SL so you are not stopped out early, and once ROI > PROFIT_PERCENTAGE, SL will use PROFIT_PERCENTAGE to Trail    
 
 ## version 3.3.6 ##
 Removed

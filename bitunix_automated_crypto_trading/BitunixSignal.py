@@ -399,7 +399,7 @@ class BitunixSignal:
     ###########################################################################################################
     async def checkTickerAndAutotradeStatus(self):
         while True:
-            if self.lastAutoTradeTime + 300 < time.time()  or self.lastTickerDataTime + 300 < time.time():
+            if self.lastAutoTradeTime + 300 < time.time(): # or self.lastTickerDataTime + 300 < time.time():
                 self.notifications.add_notification("AutoTradeProcess or GetTickerData is not running")
                 os._exit(1) 
                 break
@@ -901,12 +901,10 @@ class BitunixSignal:
                                 if self.settings.BOT_TRAIL_SL:
                                     if old_slPrice is not None:
                                        sl_midpoint =  old_slPrice / (1 - self.settings.LOSS_PERCENTAGE/100/self.settings.LEVERAGE) if side == "BUY" else old_slPrice / (1 + self.settings.LOSS_PERCENTAGE/100/self.settings.LEVERAGE) if tpPrice is not None else None
-                                       if roi > self.settings.PROFIT_PERCENTAGE:
-                                           sl_midpoint = tp_midpoint                                       
                                        
                                     if sl_midpoint is not None and (price > sl_midpoint and side == "BUY" or price < sl_midpoint and side == "SELL"):
-                                        if roi > self.settings.PROFIT_PERCENTAGE and self.settings.PROFIT_PERCENTAGE < self.settings.LOSS_PERCENTAGE:
-                                            slPrice = price * (1 - float(self.settings.PROFIT_PERCENTAGE) / 100 / self.settings.LEVERAGE) if side == "BUY" else price * (1 + float(self.settings.PROFIT_PERCENTAGE) / 100 / self.settings.LEVERAGE)
+                                        if roi > self.settings.PROFIT_PERCENTAGE * 0.75 and self.settings.PROFIT_PERCENTAGE < self.settings.LOSS_PERCENTAGE:
+                                            slPrice = price * (1 - float(self.settings.PROFIT_PERCENTAGE * 0.75) / 100 / self.settings.LEVERAGE) if side == "BUY" else avgOpenPrice * (1 + float(self.settings.PROFIT_PERCENTAGE) / 100 / self.settings.LEVERAGE)
                                         else:
                                             slPrice = price * (1 - float(self.settings.LOSS_PERCENTAGE) / 100 / self.settings.LEVERAGE) if side == "BUY" else price * (1 + float(self.settings.LOSS_PERCENTAGE) / 100 / self.settings.LEVERAGE)
                                         slPrice = Decimal(await self.str_precision(slPrice))
@@ -920,6 +918,7 @@ class BitunixSignal:
 
 
                                 if self.settings.BOT_TRAIL_TP and tpPrice is not None and tpOrderPrice is not None:
+                                    if old_tpPrice is None or tpPrice != old_tpPrice:
                                         datajs2 = await self.bitunixApi.ModifyTpSlOrder({'orderId':tporderId,'tpPrice':str(tpPrice), 'tpOrderPrice':str(tpOrderPrice), 'tpQty':str(qty),'tpStopType':tpStopType,'tpOrderType':tpOrderType})
                                         if datajs2 is not None:
                                             self.notifications.add_notification(
@@ -927,9 +926,10 @@ class BitunixSignal:
                                             )
 
                                 if self.settings.BOT_TRAIL_SL and slPrice is not None and slOrderPrice is not None:
+                                    if old_slPrice is None or slPrice != old_slPrice:
                                         datajs3 = await self.bitunixApi.ModifyTpSlOrder({'orderId':slorderId,'slPrice':str(slPrice),'slQty':str(qty),'slStopType':slStopType,'slOrderType':slOrderType})
                                         if datajs3 is not None:
-                                            if roi > self.settings.PROFIT_PERCENTAGE and self.settings.PROFIT_PERCENTAGE < self.settings.LOSS_PERCENTAGE:
+                                            if roi > self.settings.PROFIT_PERCENTAGE * 0.75 and self.settings.PROFIT_PERCENTAGE < self.settings.LOSS_PERCENTAGE:
                                                 self.notifications.add_notification(
                                                     f'{colors.CYAN} Stop Loss order for {row.symbol} moved from {old_slPrice} to breakeven {slPrice}'
                                                 )

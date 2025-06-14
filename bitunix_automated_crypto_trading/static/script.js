@@ -109,7 +109,8 @@ function attachTableClickHandlerFunction(tableId, targetColumnIndex, func) {
 }
 
 function openURL(url) { 
-    window.location.href = url; 
+    //window.location.href = url; 
+    window.open(url, '_blank');
 } 
 
 // Batch Save State to Server
