@@ -651,7 +651,7 @@ class BitunixSignal:
         trade_time = datetime.strptime(datetime_str, "%Y-%m-%d %H:%M:%S")
         # Convert datetime object to Unix timestamp)
         trade_time_unix = int(trade_time.timestamp())
-        print(f"trade_time: {trade_time}, trade_time_unix: {trade_time_unix}")
+        print(f"last_trade_time: {trade_time}, last_trade_time_unix: {trade_time_unix}")
         # Get current Unix timestamp
         current_time = time.time()
         current_time_unix = int(current_time)
