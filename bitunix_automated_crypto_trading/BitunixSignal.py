@@ -946,7 +946,7 @@ class BitunixSignal:
                                             datajs3 = await self.bitunixApi.ModifyTpSlOrder({'orderId':slorderId,'slPrice':str(slPrice),'slQty':str(qty),'slStopType':slStopType,'slOrderType':slOrderType})
                                             if datajs3 is not None:
                                                 self.notifications.add_notification(
-                                                    f'{colors.CYAN} Stop Loss order for {row.symbol} moved from {old_slPrice} to  {"break even" if breakeven_calc  else ""} {slPrice}'
+                                                    f'{colors.CYAN} Stop Loss order for {row.symbol} moved from {old_slPrice} to {"break even" if breakeven_calc  else ""} {slPrice}'
                                                 )
                                                                           
 
