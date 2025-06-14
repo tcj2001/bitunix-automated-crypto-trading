@@ -9,7 +9,10 @@ class Settings(BaseSettings):
     AUTOTRADE: bool = Field(default=False)
     
     #Ticker list
-    TICKERS:str = Field(default="")
+    ALL_TICKERS:str = Field(default="")
+    LONG_TICKERS:str = Field(default="")
+    SHORT_TICKERS:str = Field(default="")
+    IGNORE_TICKERS:str = Field(default="")
     THRESHOLD: float = Field(default=100.0, ge=0.0)
     MIN_VOLUME: int = Field(default=500000000, ge=0)
 

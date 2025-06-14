@@ -1,5 +1,24 @@
 # Change Log
 ## version 3.3.8 ##
+Added new parms
+SL_BREAKEVEN_PERCENTAGE
+    Percentage of profit to move the stop loss to breakeven, default is 75%
+ALL_TICKERS  
+    Will be tickers that are not in LONG_TICKERS and SHORT_TICKERS, this willtrade all other tickers that are not in LONG_TICKERS and SHORT_TICKERS
+LONG_TICKERS 
+    Will always trade long, even if the signal is SELL
+SHORT_TICKERS 
+    Will always trade short, even if the signal is BUY
+IGNORE_TICKERS 
+    will not trade these tickers
+
+If you want to trade all tickers except the ones in IGNORE_TICKERS, then set ALL_TICKERS, LONG_TICKERS and SHORT_TICKERS to ""
+
+Fixed a bug in moving SL to breakeven
+updated logic to move the SL to close to breakeven if ROI > SL_BREAKEVEN_PERCENTAGE of PROFIT_PERCENTAGE and LOSS_PERCENTAGE < PROFIT_PERCENTAGE , this way initially you can set a larger SL percentage initially so you are not stopped out early, and once ROI > SL_BREAKEVEN_PERCENTAGE of PROFIT_PERCENTAGE, SL will use PROFIT_PERCENTAGE to Trail    
+
+
+## version 3.3.8 ##
 Fixed a bug in moving SL to breakeven
 updated logic to move the SL to close to breakeven if ROI > 75% of PROFIT_PERCENTAGE and LOSS_PERCENTAGE < PROFIT_PERCENTAGE , this way initially you can set a larger SL percentage initially so you are not stopped out early, and once ROI > 75% of PROFIT_PERCENTAGE, SL will use PROFIT_PERCENTAGE to Trail    
 

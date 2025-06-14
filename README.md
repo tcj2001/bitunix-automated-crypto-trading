@@ -51,6 +51,13 @@ Supports running the app in multiple instances (bots) with each instance having 
 The platform can be configured through the `config.py` file or `config.txt`. Key configuration parameters include:
 - Trading Parameters:
   - `AUTOTRADE` : True or False
+
+  - `ALL_TICKERS`  will be tickers that are not in LONG_TICKERS and SHORT_TICKERS, this willtrade all other tickers that are not in LONG_TICKERS and SHORT_TICKERS
+  - `LONG_TICKERS` will always trade long, even if the signal is SELL
+  - `SHORT_TICKERS` will always trade short, even if the signal is BUY
+  - `IGNORE_TICKERS` will not trade these tickers
+    If you want to trade all tickers except the ones in IGNORE_TICKERS, then set ALL_TICKERS, LONG_TICKERS and SHORT_TICKERS to ""
+  
   - `TICKERS`: supply a list of tickers seperated by comma to trade, e.g., "BTCUSDT,ETHUSDT" or "" to auto select based on MIN_VOLUME and THRESHOLD
   - `LEVERAGE`: Trading leverage (1-100)
   - `THRESHOLD`: Ticker selection based close near high or low of the day
@@ -61,6 +68,8 @@ The platform can be configured through the `config.py` file or `config.txt`. Key
   - `LOSS_AMOUNT`: Maximum loss amount
   - `PROFIT_PERCENTAGE`: Target profit ROI percentage
   - `LOSS_PERCENTAGE`: Maximum loss ROI percentage
+  -  `SL_BREAKEVEN_PERCENTAGE`
+      Percentage of profit to move the stop loss to breakeven, default is 75%
   - `BOT_CONTROLS_TP_SL`: True or False
       if false then take profit and stop loss will be placed by the bot when TP or SL is reached, if true then take profit and stop loss will be placed when the trade is opened
   - `BOT_TRAIL_TP`

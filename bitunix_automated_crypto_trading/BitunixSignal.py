@@ -100,7 +100,7 @@ class BitunixSignal:
         self.tickerObjects.update_settings(settings)
         
     async def load_tickers(self):
-        if self.settings.TICKERS=="":
+        if self.settings.LONG_TICKERS=="" and self.settings.SHORT_TICKERS=="" and self.settings.ALL_TICKERS=="":
             symbols = await self.bitunixApi.GetTickerList(float(self.settings.THRESHOLD), float(self.settings.MIN_VOLUME))
             self.pendingPositions= await self.bitunixApi.GetPendingPositionData()
             self.pendingOrders= await self.bitunixApi.GetPendingOrderData()
@@ -112,15 +112,17 @@ class BitunixSignal:
                 olist = [entry['symbol'] for entry in self.pendingOrders['orderList']]
             newlist=olist+plist+list(set(symbols))
             self.tickerList=newlist[:300]
-            if "STMXUSDT" in self.tickerList:
-                self.tickerList.remove("STMXUSDT")
-            if "AMBUSDT" in self.tickerList:
-                self.tickerList.remove("AMBUSDT")
-            #self.tickerList=['POLUSDT']
         else:
-            self.tickerList = self.settings.TICKERS.split(",")
+            all_tickers = self.settings.LONG_TICKERS + "," + self.settings.SHORT_TICKERS + "," + self.settings.ALL_TICKERS;
+            self.tickerList = all_tickers.split(",")
             self.tickerList = [sym.strip().upper() for sym in self.tickerList if sym.strip()]
-
+            
+        #remove ignore tickers
+        if self.settings.IGNORE_TICKERS!="":
+            ignore_tickers = self.settings.IGNORE_TICKERS.split(",")
+            ignore_tickers = [sym.strip().upper() for sym in ignore_tickers if sym.strip()]
+            self.tickerList = [sym for sym in self.tickerList if sym not in ignore_tickers]
+            
         [await self.add_ticker_to_tickerObjects(sym) for sym in self.tickerList]
         self.notifications.add_notification(f"{len(self.tickerList)} ticker list loaded") 
         
@@ -400,9 +402,9 @@ class BitunixSignal:
         while True:
             if self.lastAutoTradeTime + 1500 < time.time() or self.lastTickerDataTime + 1500 < time.time():
                 self.notifications.add_notification("AutoTradeProcess or GetTickerData is not running")
-                #os._exit(1) 
+                os._exit(1) 
                 break
-            await asyncio.sleep(300)
+            await asyncio.sleep(1500)
 
     async def GetportfolioData(self):
         start=time.time()
@@ -723,6 +725,7 @@ class BitunixSignal:
                         # Calculate the duration in minutes since the position was opened
                         data = await self.bitunixApi.GetPositionHistoryData({'symbol': row['symbol']})
                         duration_minutes = None
+                        mtime = None
                         if data and 'positionList' in data and len(data['positionList']) > 0:
                             xtime = float(data['positionList'][0]['mtime'])
                             mtime = pd.to_datetime(xtime, unit='ms').tz_localize('UTC').tz_convert(cst).strftime('%Y-%m-%d %H:%M:%S')
@@ -730,7 +733,12 @@ class BitunixSignal:
                         self.logger.info(f"row.symbol: {row.symbol} , last trade time: {mtime}, duration_minutes: {duration_minutes}")
                         if duration_minutes is None or duration_minutes > self.settings.DELAY_IN_MINUTES_FOR_SAME_TICKER_TRADES:
                             side = "BUY" if row[f'{period}_barcolor'] == self.green and row[f'{period}_trend'] == "BUY"  else "SELL" if row[f'{period}_barcolor'] == self.red and row[f'{period}_trend'] == "SELL" else ""
-                            #self.logger.info(f"row.symbol: {row.symbol} , ok to {side}, {row[f'{period}_barcolor']} , {row[f'{period}_trend']} ")
+                            if row['symbol'] in self.settings.LONG_TICKERS.split(","):
+                                side = "BUY"
+                                self.logger.info(f"row.symbol: {row.symbol} , will always be long")
+                            if row['symbol'] in self.settings.SHORT_TICKERS.split(","):
+                                side = "SELL"
+                                self.logger.info(f"row.symbol: {row.symbol} , will always be short")
                             if side != "":
                                 select = True
                                 self.pendingPositions = await self.bitunixApi.GetPendingPositionData({'symbol': row.symbol})
