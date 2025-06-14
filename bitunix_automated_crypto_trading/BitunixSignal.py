@@ -932,6 +932,8 @@ class BitunixSignal:
                                             slPrice = price * (1 - float(self.settings.PROFIT_PERCENTAGE) /100 /self.settings.LEVERAGE) if side == "BUY" else price * (1 + float(self.settings.PROFIT_PERCENTAGE) / 100 / self.settings.LEVERAGE)
                                         else:
                                             slPrice = price * (1 - float(self.settings.LOSS_PERCENTAGE) / 100 / self.settings.LEVERAGE) if side == "BUY" else price * (1 + float(self.settings.LOSS_PERCENTAGE) / 100 / self.settings.LEVERAGE)
+                                        if slPrice < avgOpenPrice and side == "BUY" or slPrice > avgOpenPrice and side == "SELL":
+                                            slPrice = avgOpenPrice
                                         slPrice = Decimal(await self.str_precision(slPrice))
                                         slPrice = float(str(slPrice.quantize(Decimal(f'1e-{decimal_places}'))))
                                         slOrderPrice = await self.increment_by_last_decimal(await self.str_precision(slPrice))
