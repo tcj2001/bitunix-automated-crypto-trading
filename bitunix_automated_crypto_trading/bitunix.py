@@ -12,7 +12,6 @@ from pathlib import Path
 import re
 
 
-from ThreadManager import ThreadManager
 from BitunixApi import BitunixApi
 from BitunixSignal import BitunixSignal
 from NotificationManager import NotificationManager
@@ -75,10 +74,9 @@ class bitunix():
         self.logger=logger
         self.autoTrade=settings.AUTOTRADE
         self.settings = settings
-        self.threadManager = ThreadManager()
         self.notifications = NotificationManager(logger)
         self.bitunixApi = BitunixApi(api_key, secret_key, settings, self.logger)
-        self.bitunixSignal = BitunixSignal(api_key, secret_key, settings, self.threadManager, self.notifications, self.bitunixApi, self.logger)
+        self.bitunixSignal = BitunixSignal(api_key, secret_key, settings, self.notifications, self.bitunixApi, self.logger)
 
         self.websocket_connections = set()
         self.DB = {"admin": {"password": password}}

@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     MAX_AUTO_TRADES: int = Field(default=10, ge=0)
     PROFIT_PERCENTAGE: float = Field(default=10, ge=0.0)
     LOSS_PERCENTAGE: float = Field(default=10, ge=0.0)
+    SL_BREAKEVEN_PERCENTAGE: float = Field(default=50, ge=0.0, le=100.0)
     PROFIT_AMOUNT: float = Field(default=0, ge=0.0)
     LOSS_AMOUNT: float = Field(default=5.0, ge=0.0)
     BOT_CONTROLS_TP_SL: bool = Field(default=False)
