@@ -2,7 +2,7 @@
 ## version 3.3.8 ##
 Added new parms
 SL_BREAKEVEN_PERCENTAGE
-    Percentage of profit to move the stop loss to breakeven, default is 75%
+    Percentage of profit to move the stop loss to breakeven, default is 50%
 ALL_TICKERS  
     Will be tickers that are not in LONG_TICKERS and SHORT_TICKERS, this willtrade all other tickers that are not in LONG_TICKERS and SHORT_TICKERS
 LONG_TICKERS 
