@@ -1,6 +1,25 @@
 # Change Log
+## version 3.4.1 ##
+Removed 
+BOT_CONTROLS_TP_SL, making use of BOT_TRAIL_TP and BOT_TRAIL_SL instead.
+
+Renamed 
+LOSS_PERCENTAGE to SL_PERCENTAGE
+PROFIT_PERCENTAGE to TP_PERCENTAGE
+LOSS_AMOUNT to SL_AMOUNT
+PROFIT_AMOUNT to TP_AMOUNT
+
+Added
+TP_ROI_PERCENTAGE_1 ROI percentage for the firts TP
+TP_ROI_PERCENTAGE_2 ROI percentage for the second TP
+TP_ROI_PERCENTAGE_3 ROI percentage for the third TP
+TP_QTY_PERCENTAGE_1 Quantity percentage for the first TP
+TP_QTY_PERCENTAGE_2 Quantity percentage for the second TP   
+TP_QTY_PERCENTAGE_3 Quantity percentage for the third TP, if zero then the remaining quantity will be used for the last TP
+the above setting need TP_PERCENTAGE set to 0 and BOT_TRAIL_TP to False
+
 ## version 3.4.0 ##
-Fixed SL moved to breakeven when ROI > SL_BREAKEVEN_PERCENTAGE of PROFIT_PERCENTAGE and LOSS_PERCENTAGE < PROFIT_PERCENTAGE
+Fixed SL moved to breakeven when ROI > SL_BREAKEVEN_PERCENTAGE of TP_PERCENTAGE and SL_PERCENTAGE < TP_PERCENTAGE
 
 ## version 3.3.9 ##
 Added new parms
@@ -18,12 +37,12 @@ IGNORE_TICKERS
 If you want to trade all tickers except the ones in IGNORE_TICKERS, then set ALL_TICKERS, LONG_TICKERS and SHORT_TICKERS to ""
 
 Fixed a bug in moving SL to breakeven
-updated logic to move the SL to close to breakeven if ROI > SL_BREAKEVEN_PERCENTAGE of PROFIT_PERCENTAGE and LOSS_PERCENTAGE < PROFIT_PERCENTAGE , this way initially you can set a larger SL percentage initially so you are not stopped out early, and once ROI > SL_BREAKEVEN_PERCENTAGE of PROFIT_PERCENTAGE, SL will use PROFIT_PERCENTAGE to Trail    
+updated logic to move the SL to close to breakeven if ROI > SL_BREAKEVEN_PERCENTAGE of TP_PERCENTAGE and SL_PERCENTAGE < TP_PERCENTAGE , this way initially you can set a larger SL percentage initially so you are not stopped out early, and once ROI > SL_BREAKEVEN_PERCENTAGE of TP_PERCENTAGE, SL will use TP_PERCENTAGE to Trail    
 
 
 ## version 3.3.8 ##
 Fixed a bug in moving SL to breakeven
-updated logic to move the SL to close to breakeven if ROI > 75% of PROFIT_PERCENTAGE and LOSS_PERCENTAGE < PROFIT_PERCENTAGE , this way initially you can set a larger SL percentage initially so you are not stopped out early, and once ROI > 75% of PROFIT_PERCENTAGE, SL will use PROFIT_PERCENTAGE to Trail    
+updated logic to move the SL to close to breakeven if ROI > 75% of TP_PERCENTAGE and SL_PERCENTAGE < TP_PERCENTAGE , this way initially you can set a larger SL percentage initially so you are not stopped out early, and once ROI > 75% of TP_PERCENTAGE, SL will use TP_PERCENTAGE to Trail    
 
 
 ## version 3.3.7 ##
@@ -31,7 +50,7 @@ Added
 MINIMUM_CONSECUTIVE_CANDLES (default = 2)
     Minimum number of consecutive candles to consider for a signal.
 
-Added a logic to move the SL to breakeven if ROI > PROFIT_PERCENTAGE and LOSS_PERCENTAGE < PROFIT_PERCENTAGE , this way initially you can set a larger SL so you are not stopped out early, and once ROI > PROFIT_PERCENTAGE, SL will use PROFIT_PERCENTAGE to Trail    
+Added a logic to move the SL to breakeven if ROI > TP_PERCENTAGE and SL_PERCENTAGE < TP_PERCENTAGE , this way initially you can set a larger SL so you are not stopped out early, and once ROI > TP_PERCENTAGE, SL will use TP_PERCENTAGE to Trail    
 
 ## version 3.3.6 ##
 Removed
@@ -84,8 +103,8 @@ fixed a bug
 fixed a bug
 
 ## version 3.2.7 ##
-if PROFIT_PERCANTAGE, PROFIT_AMOUNT is > 0 then The trade is opened with take profit trade immediately instead of bot placing it after profit is reached.
-if LOSS_PERCANTAGE, LOSS_AMOUNT is > 0 then The trade is opened with stop loss trade immediately instead of bot placing it after loss is reached.
+if PROFIT_PERCANTAGE, TP_AMOUNT is > 0 then The trade is opened with take profit trade immediately instead of bot placing it after profit is reached.
+if LOSS_PERCANTAGE, SL_AMOUNT is > 0 then The trade is opened with stop loss trade immediately instead of bot placing it after loss is reached.
 _PERCANTAGE has greater priority over _AMOUNT. 
 
 Added 2 new config

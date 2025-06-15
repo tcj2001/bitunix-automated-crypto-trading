@@ -64,14 +64,21 @@ The platform can be configured through the `config.py` file or `config.txt`. Key
   - `MIN_VOLUME`: Ticker selection based on Minimum trading volume
   - `ORDER_AMOUNT_PERCENTAGE`: Order size as percentage of portfolio
   - `MAX_AUTO_TRADES`: Maximum number of automated trades
-  - `PROFIT_AMOUNT`: Target profit amount
-  - `LOSS_AMOUNT`: Maximum loss amount
-  - `PROFIT_PERCENTAGE`: Target profit ROI percentage
-  - `LOSS_PERCENTAGE`: Maximum loss ROI percentage
-  -  `SL_BREAKEVEN_PERCENTAGE`
+  - `TP_AMOUNT`: Target profit amount
+  - `SL_AMOUNT`: Maximum loss amount
+  - `TP_PERCENTAGE`: Target profit ROI percentage
+
+  - `TP_ROI_PERCENTAGE_1`: ROI percentage for the firts TP
+  - `TP_ROI_PERCENTAGE_2`: ROI percentage for the second TP
+  - `TP_ROI_PERCENTAGE_3`: ROI percentage for the third TP
+  - `TP_QTY_PERCENTAGE_1`: Quantity percentage for the first TP
+  - `TP_QTY_PERCENTAGE_2`: Quantity percentage for the second TP   
+  - `TP_QTY_PERCENTAGE_3`: Quantity percentage for the third TP, if zero then the remaining quantity will be used for the last TP
+     the above setting need TP_PERCENTAGE set to 0 and BOT_TRAIL_TP to False
+
+  - `SL_PERCENTAGE`: Maximum loss ROI percentage
+  - `SL_BREAKEVEN_PERCENTAGE`
       Percentage of profit to move the stop loss to breakeven, default is 75%
-  - `BOT_CONTROLS_TP_SL`: True or False
-      if false then take profit and stop loss will be placed by the bot when TP or SL is reached, if true then take profit and stop loss will be placed when the trade is opened
   - `BOT_TRAIL_TP`
       if set to True then bot will trail the TP in the direction of profit    
   - `BOT_TRAIL_SL`

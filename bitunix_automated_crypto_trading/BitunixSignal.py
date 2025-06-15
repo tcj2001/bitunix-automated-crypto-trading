@@ -695,6 +695,18 @@ class BitunixSignal:
         else:
             return np.nan
 
+    async def calculate_quantities(self, qty, x1_percent, x2_percent, x3_percent):
+            # Calculate x1 based on the initial qty
+            x1_qty = qty * (x1_percent / 100)
+            # Calculate x2 based on remaining qty after x1
+            x2_qty = (qty - x1_qty) * (x2_percent / 100)
+            # Calculate x3 based on remaining qty after x1 and x2
+            if x3_percent == 0:
+                x3_qty = qty - x1_qty - x2_qty  # Assign full remaining
+            else:
+                x3_qty = (qty - x1_qty - x2_qty) * (x3_percent / 100)
+            return round(x1_qty, 2), round(x2_qty, 2), round(x3_qty, 2)
+
     async def AutoTradeProcess(self):
         if self.settings.VERBOSE_LOGGING:
             self.logger.info(f"AutoTradeProcess started")
@@ -763,26 +775,29 @@ class BitunixSignal:
                                     
                                     tpPrice=0
                                     tpOrderPrice=0
-                                    if self.settings.PROFIT_AMOUNT > 0:
-                                        tpPrice = price + float(self.settings.PROFIT_AMOUNT)/qty if side == "BUY" else price - float(self.settings.PROFIT_AMOUNT)/qty
+                                    tpPrice1=0
+                                    tpPrice2=0
+                                    tpPrice3=0
+                                    if self.settings.TP_AMOUNT > 0:
+                                        tpPrice = price + float(self.settings.TP_AMOUNT)/qty if side == "BUY" else price - float(self.settings.TP_AMOUNT)/qty
                                         tpPrice = Decimal(await self.str_precision(tpPrice))
                                         tpPrice =float(str(tpPrice.quantize(Decimal(f'1e-{decimal_places}'))))
                                         tpOrderPrice = await self.decrement_by_last_decimal(str(tpPrice))
-                                    if self.settings.PROFIT_PERCENTAGE > 0 or self.settings.PROFIT_AMOUNT > 0:
-                                        tpPrice = price * (1 + float(self.settings.PROFIT_PERCENTAGE) / 100 / self.settings.LEVERAGE) if side == "BUY" else price * (1 - float(self.settings.PROFIT_PERCENTAGE) / 100 / self.settings.LEVERAGE)
+                                    if self.settings.TP_PERCENTAGE > 0 and self.settings.TP_ROI_PERCENTAGE_1 == 0 and self.settings.TP_ROI_PERCENTAGE_2 == 0 and self.settings.TP_ROI_PERCENTAGE_3 == 0:
+                                        tpPrice = price * (1 + float(self.settings.TP_PERCENTAGE) / 100 / self.settings.LEVERAGE) if side == "BUY" else price * (1 - float(self.settings.TP_PERCENTAGE) / 100 / self.settings.LEVERAGE)
                                         tpPrice = Decimal(await self.str_precision(tpPrice))
                                         tpPrice = float(str(tpPrice.quantize(Decimal(f'1e-{decimal_places}'))))
                                         tpOrderPrice = await self.decrement_by_last_decimal(await self.str_precision(tpPrice))
 
                                     slPrice=0
                                     slOrderPrice=0
-                                    if self.settings.LOSS_AMOUNT > 0:
-                                        slPrice = price - float(self.settings.LOSS_AMOUNT)/qty if side == "BUY" else price + float(self.settings.LOSS_AMOUNT)/qty
+                                    if self.settings.SL_AMOUNT > 0:
+                                        slPrice = price - float(self.settings.SL_AMOUNT)/qty if side == "BUY" else price + float(self.settings.SL_AMOUNT)/qty
                                         slPrice = Decimal(await self.str_precision(slPrice))
                                         slPrice = float(str(slPrice.quantize(Decimal(f'1e-{decimal_places}'))))
                                         slOrderPrice = await self.increment_by_last_decimal(str(slPrice))
-                                    if self.settings.LOSS_PERCENTAGE > 0 or self.settings.LOSS_AMOUNT > 0:
-                                        slPrice = price * (1 - float(self.settings.LOSS_PERCENTAGE) / 100 / self.settings.LEVERAGE) if side == "BUY" else price * (1 + float(self.settings.LOSS_PERCENTAGE) / 100 / self.settings.LEVERAGE)
+                                    if self.settings.SL_PERCENTAGE > 0:
+                                        slPrice = price * (1 - float(self.settings.SL_PERCENTAGE) / 100 / self.settings.LEVERAGE) if side == "BUY" else price * (1 + float(self.settings.SL_PERCENTAGE) / 100 / self.settings.LEVERAGE)
                                         slPrice = Decimal(await self.str_precision(slPrice))
                                         slPrice = float(str(slPrice.quantize(Decimal(f'1e-{decimal_places}'))))
                                         slOrderPrice = await self.increment_by_last_decimal(await self.str_precision(slPrice))
@@ -792,9 +807,13 @@ class BitunixSignal:
                                         f'{colors.YELLOW} Opening {"long" if side=="BUY" else "short"} position for {row.symbol} with {qty} qty @ {price})'
                                     )
                                     datajs = None
-                                    if self.settings.BOT_CONTROLS_TP_SL:
+                                    if self.settings.BOT_TRAIL_TP == False and self.settings.BOT_TRAIL_SL == False:
                                         datajs = await self.bitunixApi.PlaceOrder(row.symbol, qty, price, side)
-                                    else:
+                                        
+                                    elif self.settings.BOT_TRAIL_TP == True and self.settings.TP_PERCENTAGE == 0 and self.settings.TP_ROI_PERCENTAGE_1 > 0 and  self.settings.TP_ROI_PERCENTAGE_2 > 0 and self.settings.TP_ROI_PERCENTAGE_3 > 0:
+                                        datajs = await self.bitunixApi.PlaceOrder(row.symbol, qty, price, side, slPrice=slPrice, slOrderPrice=slOrderPrice)
+                                    
+                                    elif self.settings.BOT_TRAIL_TP == True and self.settings.TP_PERCENTAGE > 0 and self.settings.TP_ROI_PERCENTAGE_1 == 0 and  self.settings.TP_ROI_PERCENTAGE_2 == 0 and self.settings.TP_ROI_PERCENTAGE_3 == 0:
                                         if tpPrice == 0 and slPrice == 0:
                                             datajs = await self.bitunixApi.PlaceOrder(row.symbol, qty, price, side)
                                         elif tpPrice == 0:
@@ -831,13 +850,21 @@ class BitunixSignal:
             if not self.positiondf.empty:
                 df=self.positiondf.copy(deep=False)
                 for index, row in df.iterrows():
+
+                    symbol = row['symbol']
+                    positionId = row['positionId']
+                    avgOpenPrice = float(row['avgOpenPrice'])
+                    qty = float(row['qty'])
+
                     unrealized_pnl = float(row.unrealizedPNL)
                     realized_pnl = float(row.realizedPNL)
                     total_pnl = unrealized_pnl + realized_pnl
                     side=row['side']
 
+                    roi = round((row['unrealizedPNL'] / (row['qty'] * row['avgOpenPrice'])) * 100 * self.settings.LEVERAGE,2)
+
                     # Calculate the duration in minutes since the position was opened
-                    ctime = row['ctime']
+                    #ctime = row['ctime']
                     #duration_minutes = await self.get_duration(ctime)
                     #no_of_candles_since_current_open = await self.calculate_candles(period, duration_minutes)
                     
@@ -855,55 +882,60 @@ class BitunixSignal:
                             
                         if select and int(self.settings.MAX_AUTO_TRADES)!=0:
                             
-                            if self.settings.PROFIT_PERCENTAGE > 0 and self.settings.LOSS_PERCENTAGE > 0:
-                                last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
-                                price = (bid if side == "BUY" else ask if side == "SELL" else last) if bid<=last<=ask else last
-                                decimal_places = abs(Decimal(str(price)).as_tuple().exponent)                                
+                            last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
+                            price = (bid if side == "BUY" else ask if side == "SELL" else last) if bid<=last<=ask else last
+                            decimal_places = abs(Decimal(str(price)).as_tuple().exponent)                                
 
-                                symbol = row['symbol']
-                                positionId = row['positionId']
-                                avgOpenPrice = float(row['avgOpenPrice'])
-                                qty = float(row['qty'])
-                              
+                            PendingTpSlOrderdatajs = await self.bitunixApi.GetPendingTpSlOrderData({'symbol': symbol})
+
+
+                            #add TP1 , TP2, TP3 if TP_ROI_PERCENTAGE_1, TP_ROI_PERCENTAGE_2, TP_ROI_PERCENTAGE_3 > 0
+                            if self.settings.TP_PERCENTAGE == 0 and self.settings.TP_ROI_PERCENTAGE_1 > 0 and self.settings.TP_ROI_PERCENTAGE_2 > 0 and self.settings.TP_ROI_PERCENTAGE_3 > 0 and self.settings.BOT_TRAIL_TP==False:
+
+                                qty1, qty2, qty3 = calculate_quantities = await self.calculate_quantities(float(qty), float(self.settings.TP_QTY_PERCENTAGE_1), float(self.settings.TP_QTY_PERCENTAGE_2), float(self.settings.TP_QTY_PERCENTAGE_3))
+
+                                tpPrice1 = price * (1 + float(self.settings.TP_ROI_PERCENTAGE_1) / 100 / self.settings.LEVERAGE) if side == "BUY" else price * (1 - float(self.settings.TP_ROI_PERCENTAGE_1) / 100 / self.settings.LEVERAGE)
+                                tpPrice1 = Decimal(await self.str_precision(tpPrice1))
+                                tpPrice1 = float(str(tpPrice1.quantize(Decimal(f'1e-{decimal_places}'))))
+                                tpPrice2 = price * (1 + float(self.settings.TP_ROI_PERCENTAGE_2) / 100 / self.settings.LEVERAGE) if side == "BUY" else price * (1 - float(self.settings.TP_ROI_PERCENTAGE_2) / 100 / self.settings.LEVERAGE)
+                                tpPrice2 = Decimal(await self.str_precision(tpPrice2))  
+                                tpPrice2 = float(str(tpPrice2.quantize(Decimal(f'1e-{decimal_places}'))))
+                                tpPrice3 = price * (1 + float(self.settings.TP_ROI_PERCENTAGE_3) / 100 / self.settings.LEVERAGE) if side == "BUY" else price * (1 - float(self.settings.TP_ROI_PERCENTAGE_3) / 100 / self.settings.LEVERAGE)        
+                                tpPrice3 = Decimal(await self.str_precision(tpPrice3))
+                                tpPrice3 = float(str(tpPrice3.quantize(Decimal(f'1e-{decimal_places}'))))
+                               
+                                if not PendingTpSlOrderdatajs:
+                                    datajs = await self.bitunixApi.PlaceTpSlOrder({'symbol':row.symbol,'positionId':positionId, 'tpQty':qty1,'tpPrice':str(tpPrice1), 'tpStopType':self.settings.TP_STOP_TYPE, 'tpOrderType':'MARKET'})
+                                    datajs = await self.bitunixApi.PlaceTpSlOrder({'symbol':row.symbol,'positionId':positionId, 'tpQty':qty2,'tpPrice':str(tpPrice2), 'tpStopType':self.settings.TP_STOP_TYPE, 'tpOrderType':'MARKET'})
+                                    datajs = await self.bitunixApi.PlaceTpSlOrder({'symbol':row.symbol,'positionId':positionId, 'tpQty':qty3,'tpPrice':str(tpPrice3), 'tpStopType':self.settings.TP_STOP_TYPE, 'tpOrderType':'MARKET'})
+
+                            # TP_PERCENTAGE > 0 and BOT_TRAIL_TP == True
+                            if self.settings.TP_PERCENTAGE > 0 and self.settings.TP_ROI_PERCENTAGE_1 == 0 and self.settings.TP_ROI_PERCENTAGE_2 == 0 and self.settings.TP_ROI_PERCENTAGE_3 == 0 and self.settings.BOT_TRAIL_TP==True:
+
                                 tpPrice = None 
                                 tporderId = None
                                 old_tpPrice = None
                                 tpStopType = self.settings.SL_STOP_TYPE
                                 tpOrderType = self.settings.SL_ORDER_TYPE
                                 tpOrderPrice = None
-
-                                slPrice = None 
-                                slorderId = None
-                                old_slPrice = None
-                                slStopType = self.settings.SL_STOP_TYPE
-                                slOrderType = self.settings.SL_ORDER_TYPE
-                                slOrderPrice = None
-
-                                roi = round((row['unrealizedPNL'] / (row['qty'] * row['avgOpenPrice'])) * 100 * self.settings.LEVERAGE,2)
-                                
-                                datajs = await self.bitunixApi.GetPendingTpSlOrderData({'symbol': symbol})
-                                if datajs:
-                                    for order in datajs:
+                               
+                                if PendingTpSlOrderdatajs:
+                                    for order in PendingTpSlOrderdatajs:
                                         if order['tpPrice'] is not None:
                                             tporderId = order['id']
                                             tpStopType = order['tpStopType']
                                             tpOrderType = order['tpOrderType']
                                             old_tpPrice = float(order['tpPrice'])
-                                        if order['slPrice'] is not None:
-                                            slorderId = order['id']
-                                            slStopType = order['slStopType']
-                                            slOrderType = order['slOrderType']
-                                            old_slPrice = float(order['slPrice'])
 
                                 # move TP and SL in the direction of profit
                                 tp_midpoint = None
                                 if self.settings.BOT_TRAIL_TP and old_tpPrice is not None:
-                                    tp_midpoint =  old_tpPrice / (1 + self.settings.PROFIT_PERCENTAGE/100/self.settings.LEVERAGE) if side == "BUY" else old_tpPrice / (1 - self.settings.PROFIT_PERCENTAGE/100/self.settings.LEVERAGE)
+                                    tp_midpoint =  old_tpPrice / (1 + self.settings.TP_PERCENTAGE/100/self.settings.LEVERAGE) if side == "BUY" else old_tpPrice / (1 - self.settings.TP_PERCENTAGE/100/self.settings.LEVERAGE)
                                     tp_midpoint = Decimal(await self.str_precision(tp_midpoint))
                                     tp_midpoint =float(str(tp_midpoint.quantize(Decimal(f'1e-{decimal_places}'))))
 
                                     if price > tp_midpoint and side == "BUY" or price < tp_midpoint and side == "SELL":
-                                        tpPrice = price * (1 + float(self.settings.PROFIT_PERCENTAGE) / 100 / self.settings.LEVERAGE) if side == "BUY" else price * (1 - float(self.settings.PROFIT_PERCENTAGE) / 100 / self.settings.LEVERAGE)
+                                        tpPrice = price * (1 + float(self.settings.TP_PERCENTAGE) / 100 / self.settings.LEVERAGE) if side == "BUY" else price * (1 - float(self.settings.TP_PERCENTAGE) / 100 / self.settings.LEVERAGE)
                                         tpPrice = Decimal(await self.str_precision(tpPrice))
                                         tpPrice =float(str(tpPrice.quantize(Decimal(f'1e-{decimal_places}'))))
                                         tpOrderPrice = await self.decrement_by_last_decimal(str(tpPrice))
@@ -920,24 +952,43 @@ class BitunixSignal:
                                                         f'{colors.CYAN} Take Profit order for {row.symbol} moved from {old_tpPrice} to {tpPrice}'
                                                     )
 
+                                                                          
+                            # SL_PERCENTAGE > 0
+                            if self.settings.SL_PERCENTAGE > 0 and self.settings.BOT_TRAIL_SL==True: 
+
+                                slPrice = None 
+                                slorderId = None
+                                old_slPrice = None
+                                slStopType = self.settings.SL_STOP_TYPE
+                                slOrderType = self.settings.SL_ORDER_TYPE
+                                slOrderPrice = None
+
+                                if PendingTpSlOrderdatajs:
+                                    for order in PendingTpSlOrderdatajs:
+                                        if order['slPrice'] is not None:
+                                            slorderId = order['id']
+                                            slStopType = order['slStopType']
+                                            slOrderType = order['slOrderType']
+                                            old_slPrice = float(order['slPrice'])
+
                                 breakeven_calc = False                                            
                                 sl_midpoint = None
                                 if self.settings.BOT_TRAIL_SL and old_slPrice is not None:
-                                    if roi > self.settings.PROFIT_PERCENTAGE * self.settings.SL_BREAKEVEN_PERCENTAGE/100 and self.settings.PROFIT_PERCENTAGE < self.settings.LOSS_PERCENTAGE:
-                                        sl_midpoint =  old_slPrice / (1 - self.settings.PROFIT_PERCENTAGE/100/self.settings.LEVERAGE) if side == "BUY" else old_slPrice / (1 + self.settings.PROFIT_PERCENTAGE/100/self.settings.LEVERAGE)
+                                    if self.settings.TP_PERCENTAGE > 0 and roi > self.settings.TP_PERCENTAGE * self.settings.SL_BREAKEVEN_PERCENTAGE/100 and self.settings.TP_PERCENTAGE < self.settings.SL_PERCENTAGE:
+                                        sl_midpoint =  old_slPrice / (1 - self.settings.TP_PERCENTAGE/100/self.settings.LEVERAGE) if side == "BUY" else old_slPrice / (1 + self.settings.TP_PERCENTAGE/100/self.settings.LEVERAGE)
                                         breakeven_calc = True
                                     else:
-                                        sl_midpoint =  old_slPrice / (1 - self.settings.LOSS_PERCENTAGE/100/self.settings.LEVERAGE) if side == "BUY" else old_slPrice / (1 + self.settings.LOSS_PERCENTAGE/100/self.settings.LEVERAGE) 
+                                        sl_midpoint =  old_slPrice / (1 - self.settings.SL_PERCENTAGE/100/self.settings.LEVERAGE) if side == "BUY" else old_slPrice / (1 + self.settings.SL_PERCENTAGE/100/self.settings.LEVERAGE) 
                                     sl_midpoint = Decimal(await self.str_precision(sl_midpoint))
                                     sl_midpoint =float(str(sl_midpoint.quantize(Decimal(f'1e-{decimal_places}'))))
                                        
                                     if price > sl_midpoint and side == "BUY" or price < sl_midpoint and side == "SELL":
                                         if breakeven_calc:
-                                            slPrice = price * (1 - float(self.settings.PROFIT_PERCENTAGE) /100 /self.settings.LEVERAGE) if side == "BUY" else price * (1 + float(self.settings.PROFIT_PERCENTAGE) / 100 / self.settings.LEVERAGE)
+                                            slPrice = price * (1 - float(self.settings.TP_PERCENTAGE) /100 /self.settings.LEVERAGE) if side == "BUY" else price * (1 + float(self.settings.TP_PERCENTAGE) / 100 / self.settings.LEVERAGE)
                                             if slPrice < avgOpenPrice and side == "BUY" or slPrice > avgOpenPrice and side == "SELL":
                                                 slPrice = avgOpenPrice
                                         else:
-                                            slPrice = price * (1 - float(self.settings.LOSS_PERCENTAGE) / 100 / self.settings.LEVERAGE) if side == "BUY" else price * (1 + float(self.settings.LOSS_PERCENTAGE) / 100 / self.settings.LEVERAGE)
+                                            slPrice = price * (1 - float(self.settings.SL_PERCENTAGE) / 100 / self.settings.LEVERAGE) if side == "BUY" else price * (1 + float(self.settings.SL_PERCENTAGE) / 100 / self.settings.LEVERAGE)
                                         slPrice = Decimal(await self.str_precision(slPrice))
                                         slPrice = float(str(slPrice.quantize(Decimal(f'1e-{decimal_places}'))))
                                         slOrderPrice = await self.increment_by_last_decimal(await self.str_precision(slPrice))
@@ -954,9 +1005,9 @@ class BitunixSignal:
                                                 )
                                                                           
 
-                            if self.settings.BOT_CONTROLS_TP_SL:
+                            if self.settings.BOT_TRAIL_TP == False and self.settings.BOT_TRAIL_SL == False:
                                 # check take profit amount or accept loss amount
-                                if float(self.settings.LOSS_AMOUNT) > 0 and total_pnl < -float(self.settings.LOSS_AMOUNT):
+                                if float(self.settings.SL_AMOUNT) > 0 and total_pnl < -float(self.settings.SL_AMOUNT):
                                     last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                     price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
 
@@ -973,7 +1024,7 @@ class BitunixSignal:
                                     )
                                     continue
 
-                                if float(self.settings.PROFIT_AMOUNT) > 0 and total_pnl > float(self.settings.PROFIT_AMOUNT):
+                                if float(self.settings.TP_AMOUNT) > 0 and total_pnl > float(self.settings.TP_AMOUNT):
                                     last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                     price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
 
@@ -991,7 +1042,7 @@ class BitunixSignal:
                                     continue
 
                                 # check take profit percentage or accept loss percentage
-                                if float(self.settings.LOSS_PERCENTAGE) > 0 and row['ROI'] < -float(self.settings.LOSS_PERCENTAGE):
+                                if float(self.settings.SL_PERCENTAGE) > 0 and row['ROI'] < -float(self.settings.SL_PERCENTAGE):
                                     last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                     price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
 
@@ -1008,7 +1059,7 @@ class BitunixSignal:
                                     )
                                     continue
 
-                                if float(self.settings.PROFIT_PERCENTAGE) > 0 and row['ROI'] > float(self.settings.PROFIT_PERCENTAGE):
+                                if float(self.settings.TP_PERCENTAGE) > 0 and row['ROI'] > float(self.settings.TP_PERCENTAGE):
                                     last, bid, ask, mtv = await self.GetTickerBidLastAsk(row.symbol)
                                     price = (ask if row['side'] == "BUY" else bid if row['side'] == "SELL" else last) if bid<=last<=ask else last
 

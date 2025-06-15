@@ -190,11 +190,11 @@ async def set_server_states():
         settings.OPTION_MOVING_AVERAGE = app.state.element_states['optionMovingAverage']
         settings.notifications.add_notification(f"optionMovingAverage: {settings.OPTION_MOVING_AVERAGE}")
 
-        settings.PROFIT_AMOUNT = app.state.element_states['profitAmount']
-        settings.notifications.add_notification(f"profitAmount: {settings.PROFIT_AMOUNT}")
+        settings.TP_AMOUNT = app.state.element_states['profitAmount']
+        settings.notifications.add_notification(f"profitAmount: {settings.TP_AMOUNT}")
 
-        settings.LOSS_AMOUNT = app.state.element_states['lossAmount']
-        settings.notifications.add_notification(f"lossAmount: {settings.LOSS_AMOUNT}")
+        settings.SL_AMOUNT = app.state.element_states['lossAmount']
+        settings.notifications.add_notification(f"lossAmount: {settings.SL_AMOUNT}")
 
         settings.MAX_AUTO_TRADES = app.state.element_states['maxAutoTrades']
         settings.notifications.add_notification(f"maxAutoTrades: {settings.MAX_AUTO_TRADES}")
