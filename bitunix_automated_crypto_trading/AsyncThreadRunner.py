@@ -87,8 +87,8 @@ class AsyncThreadRunner:
                     # For now, we'll just log and continue, allowing the manager to detect if the thread dies from other reasons.
                 
                 # Check stop event again before sleeping to allow immediate stopping
-                if self._stop_event.is_set():
-                    break
+                #if self._stop_event.is_set():
+                #    break
                 
                 # Use asyncio.sleep to allow graceful cancellation
                 try:

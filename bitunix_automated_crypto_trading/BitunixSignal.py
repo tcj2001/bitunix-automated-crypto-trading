@@ -158,14 +158,14 @@ class BitunixSignal:
             self.StoreDepthDataTask = AsyncThreadRunner(self.bitunixPublicDepthWebSocketClient.run_websocket, self.logger, 0, self.StoreDepthData)
             self.StoreDepthDataTask.start_thread(thread_name="StoreDepthData")
             self.depth_que = asyncio.Queue()
-            self.ProcessDepthDataTask = AsyncThreadRunner(self.ProcessDepthData, self.logger, interval=0) # run only once
+            self.ProcessDepthDataTask = AsyncThreadRunner(self.ProcessDepthData, self.logger, interval=int(self.settings.TICKER_DATA_API_INTERVAL)) # run only once
             self.ProcessDepthDataTask.start_thread(thread_name="ProcessDepthData")
 
             self.bitunixPublicTickerWebSocketClient.tickerList = self.tickerList
             self.StoreTickerDataTask = AsyncThreadRunner(self.bitunixPublicTickerWebSocketClient.run_websocket, self.logger, 0, self.StoreTickerData)
             self.StoreTickerDataTask.start_thread(thread_name="StoreTickerData")
             self.ticker_que = asyncio.Queue()
-            self.ProcessTickerDataTask = AsyncThreadRunner(self.ProcessTickerData, self.logger, interval=0) # run only once
+            self.ProcessTickerDataTask = AsyncThreadRunner(self.ProcessTickerData, self.logger, interval=int(self.settings.TICKER_DATA_API_INTERVAL)) # run only once
             self.ProcessTickerDataTask.start_thread(thread_name="ProcessTickerData")
             
 
@@ -238,38 +238,39 @@ class BitunixSignal:
 
     #api data       
     async def GetTickerData(self):
-        if not self.settings.USE_PUBLIC_WEBSOCKET:
-            start=time.time()
-            # Get the current time and set the seconds and microseconds to zero
-            current_time = datetime.now()
-            current_minute = current_time.replace(second=0, microsecond=0)
-            ts = int(current_minute.timestamp())*1000
+        if self.settings.VERBOSE_LOGGING:
+            self.logger.info(f"GetTickerData started")
+        start=time.time()
+        # Get the current time and set the seconds and microseconds to zero
+        current_time = datetime.now()
+        current_minute = current_time.replace(second=0, microsecond=0)
+        ts = int(current_minute.timestamp())*1000
 
-            #api used insted of websocket
-            data = await self.bitunixApi.GetTickerData()
-            self.tickerdf = pd.DataFrame()
-            if data:
-                
-                # Create a DataFrame from the data
-                self.tickerdf = pd.DataFrame(data, columns=["symbol", "last"])
-                
-                #remove not required symbols
-                self.tickerdf.loc[~self.tickerdf['symbol'].isin(self.tickerObjects.symbols()), :] = None
-                self.tickerdf.dropna(inplace=True)
-                
-                self.tickerdf['ts']=ts
-                self.tickerdf["tickerObj"] = self.tickerdf["symbol"].map(self.tickerObjects.get_tickerDict())
-                self.tuples_list = list(zip(self.tickerdf["tickerObj"],  self.tickerdf["last"].astype(float), self.tickerdf["ts"]))
-                self.tickerObjects.form_candle(self.tuples_list)
+        #api used insted of websocket
+        data = await self.bitunixApi.GetTickerData()
+        self.tickerdf = pd.DataFrame()
+        if data:
+            
+            # Create a DataFrame from the data
+            self.tickerdf = pd.DataFrame(data, columns=["symbol", "last"])
+            
+            #remove not required symbols
+            self.tickerdf.loc[~self.tickerdf['symbol'].isin(self.tickerObjects.symbols()), :] = None
+            self.tickerdf.dropna(inplace=True)
+            
+            self.tickerdf['ts']=ts
+            self.tickerdf["tickerObj"] = self.tickerdf["symbol"].map(self.tickerObjects.get_tickerDict())
+            self.tuples_list = list(zip(self.tickerdf["tickerObj"],  self.tickerdf["last"].astype(float), self.tickerdf["ts"]))
+            self.tickerObjects.form_candle(self.tuples_list)
 
-            self.lastTickerDataTime = time.time()
-            if self.settings.VERBOSE_LOGGING:
-                self.logger.info(f"GetTickerData: elapsed time {time.time()-start}")
-            if self.settings.BENCHMARK:
-                self.connection = sqlite3.connect(self.settings.DATABASE) 
-                self.cursor = self.connection.cursor()
-                self.cursor.execute("INSERT INTO benchmark (process_name, time) VALUES (?, ?)", ("GetTickerData", time.time()-start))
-                self.connection.commit()
+        self.lastTickerDataTime = time.time()
+        if self.settings.VERBOSE_LOGGING:
+            self.logger.info(f"GetTickerData: elapsed time {time.time()-start}")
+        if self.settings.BENCHMARK:
+            self.connection = sqlite3.connect(self.settings.DATABASE) 
+            self.cursor = self.connection.cursor()
+            self.cursor.execute("INSERT INTO benchmark (process_name, time) VALUES (?, ?)", ("GetTickerData", time.time()-start))
+            self.connection.commit()
     
     async def drain_queue(self, queue):
         items = []
@@ -285,32 +286,34 @@ class BitunixSignal:
 
     # Function to process the last price deque
     async def ProcessTickerData(self):
-        while True:
-            try:
-                latest_data = {}
-                reversed_items = await self.drain_queue(self.ticker_que)
-                while reversed_items:
-                    message = reversed_items.popleft()
-                    data = json.loads(message)
-                    if data.get('symbol') and data.get('ch') == 'ticker':
-                        symbol = data["symbol"]
-                        ts = data["ts"]
-                        if symbol not in latest_data or ts > latest_data[symbol]['ts']:
-                            latest_data[symbol] = {'ts': ts, 'last': float(data['data']['la'])}
-                    await asyncio.sleep(0.01)
-                # Convert to DataFrame
-                self.tickerdf = pd.DataFrame.from_dict(latest_data, orient="index")
-                if not self.tickerdf.empty:
-                    self.tickerdf["tickerObj"] = self.tickerdf.index.map(self.tickerObjects.get_tickerDict())
-                    self.tuples_list = list(zip(self.tickerdf["tickerObj"],  self.tickerdf["last"].astype(float), self.tickerdf["ts"]))
-                    self.tickerObjects.form_candle(self.tuples_list)
-                    self.lastTickerDataTime = time.time()
-            except Exception as e:
-                self.logger.info(f"Function: ProcessTickerData, {e}, {e.args}, {type(e).__name__}")
-                self.logger.info(traceback.print_exc())
-            await asyncio.sleep(0.01)
-        self.logger.info(f"ProcessTickerData: exitied out of the loop, exiting app")
-        #os._exit(1)  # Exit the program 
+        if self.settings.VERBOSE_LOGGING:
+            self.logger.info(f"Started ProcessTickerData")
+        start=time.time()
+        try:
+            # Get the current time and set the seconds and microseconds to zero                    
+            latest_data = {}
+            reversed_items = await self.drain_queue(self.ticker_que)
+            while reversed_items:
+                message = reversed_items.popleft()
+                data = json.loads(message)
+                if data.get('symbol') and data.get('ch') == 'ticker':
+                    symbol = data["symbol"]
+                    ts = data["ts"]
+                    if symbol not in latest_data or ts > latest_data[symbol]['ts']:
+                        latest_data[symbol] = {'ts': ts, 'last': float(data['data']['la'])}
+                await asyncio.sleep(0.01)
+            # Convert to DataFrame
+            self.tickerdf = pd.DataFrame.from_dict(latest_data, orient="index")
+            if not self.tickerdf.empty:
+                self.tickerdf["tickerObj"] = self.tickerdf.index.map(self.tickerObjects.get_tickerDict())
+                self.tuples_list = list(zip(self.tickerdf["tickerObj"],  self.tickerdf["last"].astype(float), self.tickerdf["ts"]))
+                self.tickerObjects.form_candle(self.tuples_list)
+                self.lastTickerDataTime = time.time()
+        except Exception as e:
+            self.logger.info(f"Function: ProcessTickerData, {e}, {e.args}, {type(e).__name__}")
+            self.logger.info(traceback.print_exc())
+        if self.settings.VERBOSE_LOGGING:
+            self.logger.info(f"ProcessTickerData: elapsed time {time.time()-start}")
             
 
     #websocket data to update bid and ask
@@ -320,30 +323,31 @@ class BitunixSignal:
  
     # Function to process the bid, ask
     async def ProcessDepthData(self):
-        while True:
-            try:
-                latest_data = {}
-                reversed_items = await self.drain_queue(self.depth_que)
-                while reversed_items:
-                    message = reversed_items.popleft()
-                    data = json.loads(message)
-                    if data.get('symbol') and data.get('ch') == 'depth_book1':
-                        symbol = data["symbol"]
-                        ts = data["ts"]
-                        if symbol not in latest_data or ts > latest_data[symbol]['ts']:
-                            latest_data[symbol] = {'ts': ts, 'bid': float(data['data']['b'][0][0]), 'ask': float(data['data']['a'][0][0])}
-                    await asyncio.sleep(0.01)
-                # Convert to DataFrame
-                self.depthdf = pd.DataFrame.from_dict(latest_data, orient="index")
-                if not self.depthdf.empty:
-                    self.depthdf["tickerObj"] = self.depthdf.index.map(self.tickerObjects.get_tickerDict())
-                    self.depthdf.apply(self.apply_depth_data2, axis=1)
-            except Exception as e:
-                self.logger.info(f"Function: ProcessTickerData, {e}, {e.args}, {type(e).__name__}")
-                self.logger.info(traceback.print_exc())
-            await asyncio.sleep(0.01)
-        self.logger.info(f"ProcessDepthData: exitied out of the loop, exiting app")
-        #os._exit(1)  # Exit the program 
+        if self.settings.VERBOSE_LOGGING:
+            self.logger.info(f"Started ProcessDepthData")
+        start=time.time()
+        try:
+            latest_data = {}
+            reversed_items = await self.drain_queue(self.depth_que)
+            while reversed_items:
+                message = reversed_items.popleft()
+                data = json.loads(message)
+                if data.get('symbol') and data.get('ch') == 'depth_book1':
+                    symbol = data["symbol"]
+                    ts = data["ts"]
+                    if symbol not in latest_data or ts > latest_data[symbol]['ts']:
+                        latest_data[symbol] = {'ts': ts, 'bid': float(data['data']['b'][0][0]), 'ask': float(data['data']['a'][0][0])}
+                await asyncio.sleep(0.01)
+            # Convert to DataFrame
+            self.depthdf = pd.DataFrame.from_dict(latest_data, orient="index")
+            if not self.depthdf.empty:
+                self.depthdf["tickerObj"] = self.depthdf.index.map(self.tickerObjects.get_tickerDict())
+                self.depthdf.apply(self.apply_depth_data2, axis=1)
+        except Exception as e:
+            self.logger.info(f"Function: ProcessTickerData, {e}, {e.args}, {type(e).__name__}")
+            self.logger.info(traceback.print_exc())
+        if self.settings.VERBOSE_LOGGING:
+            self.logger.info(f"ProcessDepthData: elapsed time {time.time()-start}")
 
     def apply_depth_data2(self, row):
         row["tickerObj"].set_ask(row["ask"])
@@ -946,7 +950,7 @@ class BitunixSignal:
                                             datajs3 = await self.bitunixApi.ModifyTpSlOrder({'orderId':slorderId,'slPrice':str(slPrice),'slQty':str(qty),'slStopType':slStopType,'slOrderType':slOrderType})
                                             if datajs3 is not None:
                                                 self.notifications.add_notification(
-                                                    f'{colors.CYAN} Stop Loss order for {row.symbol} moved from {old_slPrice} to {"break even" if breakeven_calc  else ""} {slPrice}'
+                                                    f'{colors.CYAN} Stop Loss order for {row.symbol} moved from {old_slPrice} to {"profitable" if breakeven_calc  else ""} {slPrice}'
                                                 )
                                                                           
 

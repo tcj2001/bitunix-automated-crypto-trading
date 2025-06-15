@@ -330,8 +330,9 @@ class Interval:
                     
                     buy_conditions = ema_open or macd_open or bbm_open or rsi_open or bos_open or trendline_open
                     additional_buy_conditions = (
-                        (not self.settings.ADX_STUDY or not self.settings.ADX_CHECK_ON_OPEN or self.adx_signal == "STRONG") and
-                        (not self.settings.CANDLE_TREND_STUDY or not self.settings.CANDLE_TREND_CHECK_ON_OPEN or self.candle_trend == "BULLISH")
+                        (self.settings.ADX_STUDY and self.settings.ADX_CHECK_ON_OPEN and self.adx_signal == "STRONG") if self.settings.ADX_STUDY  and self.settings.ADX_CHECK_ON_OPEN else True
+                    ) and (
+                        (self.settings.CANDLE_TREND_STUDY and self.settings.CANDLE_TREND_CHECK_ON_OPEN and self.candle_trend == "BULLISH") if self.settings.CANDLE_TREND_STUDY  and self.settings.CANDLE_TREND_CHECK_ON_OPEN else True
                     )
 
 
@@ -345,8 +346,9 @@ class Interval:
 
                     sell_conditions = ema_close or macd_close or bbm_close or rsi_close or bos_close or trendline_close
                     additional_sell_conditions = (
-                        (self.settings.ADX_STUDY and self.settings.ADX_CHECK_ON_OPEN and self.adx_signal == "STRONG") and
-                        (self.settings.CANDLE_TREND_STUDY and self.settings.CANDLE_TREND_CHECK_ON_OPEN or self.candle_trend == "BEARISH")
+                        (self.settings.ADX_STUDY and self.settings.ADX_CHECK_ON_OPEN and self.adx_signal == "STRONG") if self.settings.ADX_STUDY  and self.settings.ADX_CHECK_ON_OPEN else True
+                    ) and (
+                        (self.settings.CANDLE_TREND_STUDY and self.settings.CANDLE_TREND_CHECK_ON_OPEN and self.candle_trend == "BEARISH") if self.settings.CANDLE_TREND_STUDY  and self.settings.CANDLE_TREND_CHECK_ON_OPEN else True
                     )
 
                     # Determine current signal
@@ -372,8 +374,9 @@ class Interval:
 
                     buy_conditions = ema_open and macd_open and bbm_open and rsi_open and bos_open and trendline_open
                     additional_buy_conditions = (
-                        (not self.settings.ADX_STUDY or not self.settings.ADX_CHECK_ON_OPEN or self.adx_signal == "STRONG") and
-                        (not self.settings.CANDLE_TREND_STUDY or not self.settings.CANDLE_TREND_CHECK_ON_OPEN or self.candle_trend == "BULLISH")
+                        (self.settings.ADX_STUDY and self.settings.ADX_CHECK_ON_OPEN and self.adx_signal == "STRONG") if self.settings.ADX_STUDY  and self.settings.ADX_CHECK_ON_OPEN else True
+                    ) and (
+                        (self.settings.CANDLE_TREND_STUDY and self.settings.CANDLE_TREND_CHECK_ON_OPEN and self.candle_trend == "BULLISH") if self.settings.CANDLE_TREND_STUDY  and self.settings.CANDLE_TREND_CHECK_ON_OPEN else True
                     )
 
                     # Check for SELL signal
@@ -392,8 +395,9 @@ class Interval:
 
                     sell_conditions = ema_close and macd_close and bbm_close and rsi_close and bos_close and trendline_close    
                     additional_sell_conditions = (
-                        (self.settings.ADX_STUDY and self.settings.ADX_CHECK_ON_OPEN and self.adx_signal == "STRONG") or
-                        (self.settings.CANDLE_TREND_STUDY and self.settings.CANDLE_TREND_CHECK_ON_OPEN or self.candle_trend == "BEARISH")
+                        (self.settings.ADX_STUDY and self.settings.ADX_CHECK_ON_OPEN and self.adx_signal == "STRONG") if self.settings.ADX_STUDY  and self.settings.ADX_CHECK_ON_OPEN else True
+                    ) and (
+                        (self.settings.CANDLE_TREND_STUDY and self.settings.CANDLE_TREND_CHECK_ON_OPEN and self.candle_trend == "BEARISH") if self.settings.CANDLE_TREND_STUDY  and self.settings.CANDLE_TREND_CHECK_ON_OPEN else True
                     )
 
                     # Determine current signal
