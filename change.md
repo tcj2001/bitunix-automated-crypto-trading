@@ -1,5 +1,8 @@
 # Change Log
-## version 3.3.8 ##
+## version 3.4.0 ##
+Fixed SL moved to breakeven when ROI > SL_BREAKEVEN_PERCENTAGE of PROFIT_PERCENTAGE and LOSS_PERCENTAGE < PROFIT_PERCENTAGE
+
+## version 3.3.9 ##
 Added new parms
 SL_BREAKEVEN_PERCENTAGE
     Percentage of profit to move the stop loss to breakeven, default is 50%
